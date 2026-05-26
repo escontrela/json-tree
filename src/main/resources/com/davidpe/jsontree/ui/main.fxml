@@ -10,6 +10,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Text?>
 
 <ControllerAwareBorderPane fx:id="rootPane"
                            xmlns="http://javafx.com/javafx/21"
@@ -44,13 +45,14 @@
             <padding>
                 <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
             </padding>
-            <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" vbarPolicy="AS_NEEDED">
+            <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="false" hbarPolicy="AS_NEEDED" pannable="true" vbarPolicy="AS_NEEDED">
                 <content>
-                    <VBox spacing="18.0" styleClass="viewer-content">
+                    <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
                         <padding>
                             <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
                         </padding>
                         <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true"/>
+                        <Text fx:id="treeContentText" styleClass="tree-content" visible="false"/>
                     </VBox>
                 </content>
             </ScrollPane>

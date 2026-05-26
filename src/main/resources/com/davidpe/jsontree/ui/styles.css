@@ -55,13 +55,19 @@
 
 .file-meta,
 .footer-meta,
-.empty-state {
+.empty-state,
+.tree-content {
     -fx-text-fill: #9095a2;
     -fx-font-size: 13px;
 }
 
 .empty-state {
     -fx-font-size: 16px;
+}
+
+.tree-content {
+    -fx-fill: #d9dce3;
+    -fx-font-size: 14px;
 }
 
 .status-pill {

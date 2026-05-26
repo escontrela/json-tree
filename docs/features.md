@@ -17,3 +17,9 @@
 - Parsed JSON structures can be rendered into an `AsciiTreeDocument` with deterministic branch indentation.
 - Object properties render as branches, arrays display their item count, and primitive values render inline.
 - Deeply nested objects and arrays preserve alignment so the viewer can remain monospace-friendly.
+
+## Scrollable Viewer
+
+- The main viewer shell contains dedicated ASCII tree content that can be refreshed independently from the empty state.
+- Horizontal and vertical scrolling stay enabled for long trees and long lines.
+- Rendering a new `AsciiTreeDocument` resets the viewer scroll position to the top-left for a predictable refresh.
