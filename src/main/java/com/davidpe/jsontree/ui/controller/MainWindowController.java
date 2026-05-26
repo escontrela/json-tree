@@ -3,17 +3,24 @@ package com.davidpe.jsontree.ui.controller;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.ui.model.ViewerVisualState;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
+import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MainWindowController implements UiScreenController {
+
+    private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
+
+    public MainWindowController(AsciiTreeSyntaxHighlighter syntaxHighlighter) {
+        this.syntaxHighlighter = syntaxHighlighter;
+    }
 
     @FXML
     private ControllerAwareBorderPane rootPane;
@@ -43,7 +50,7 @@ public class MainWindowController implements UiScreenController {
     private VBox viewerContentBox;
 
     @FXML
-    private Text treeContentText;
+    private TextFlow treeContentFlow;
 
     private ViewerVisualState currentState;
 
@@ -56,9 +63,11 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void renderAsciiTree(AsciiTreeDocument document) {
-        treeContentText.setText(document.content());
-        treeContentText.setManaged(true);
-        treeContentText.setVisible(true);
+        TextFlow highlightedContent = syntaxHighlighter.highlight(document);
+        viewerContentBox.getChildren().set(viewerContentBox.getChildren().indexOf(treeContentFlow), highlightedContent);
+        treeContentFlow = highlightedContent;
+        treeContentFlow.setManaged(true);
+        treeContentFlow.setVisible(true);
         emptyStateLabel.setManaged(false);
         emptyStateLabel.setVisible(false);
         validationStatusLabel.setText("Valid");
@@ -69,9 +78,9 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void showEmptyViewer() {
-        treeContentText.setText("");
-        treeContentText.setManaged(false);
-        treeContentText.setVisible(false);
+        treeContentFlow.getChildren().clear();
+        treeContentFlow.setManaged(false);
+        treeContentFlow.setVisible(false);
         emptyStateLabel.setManaged(true);
         emptyStateLabel.setVisible(true);
         emptyStateLabel.setText("Drop a JSON anywhere in the window");
@@ -94,9 +103,9 @@ public class MainWindowController implements UiScreenController {
         validationStatusLabel.setText("Loading");
         footerStatusLabel.setText("Parsing JSON");
         emptyStateLabel.setText("Loading JSON preview...");
-        treeContentText.setText("");
-        treeContentText.setManaged(false);
-        treeContentText.setVisible(false);
+        treeContentFlow.getChildren().clear();
+        treeContentFlow.setManaged(false);
+        treeContentFlow.setVisible(false);
         emptyStateLabel.setManaged(true);
         emptyStateLabel.setVisible(true);
         applyState(ViewerVisualState.LOADING);
@@ -106,9 +115,9 @@ public class MainWindowController implements UiScreenController {
         validationStatusLabel.setText("Invalid");
         footerStatusLabel.setText("JSON needs attention");
         emptyStateLabel.setText(message);
-        treeContentText.setText("");
-        treeContentText.setManaged(false);
-        treeContentText.setVisible(false);
+        treeContentFlow.getChildren().clear();
+        treeContentFlow.setManaged(false);
+        treeContentFlow.setVisible(false);
         emptyStateLabel.setManaged(true);
         emptyStateLabel.setVisible(true);
         applyState(ViewerVisualState.INVALID);

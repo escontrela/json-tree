@@ -29,3 +29,9 @@
 - The main viewer flow exposes explicit `EMPTY`, `DRAGGING`, `LOADING`, `VALID`, and `INVALID` visual states.
 - Dragging activates a stronger shell glow, while loading, valid, and invalid states update the status labels consistently.
 - Empty-file and invalid outcomes use concise, readable messages inside the viewer shell.
+
+## ASCII Syntax Highlighting
+
+- The viewer highlights structural labels, keys, strings, numbers, booleans, nulls, and array counts with distinct colors in the dark theme.
+- Highlighting is applied per text segment inside a monospace `TextFlow`, preserving ASCII alignment.
+- If a tree line cannot be tokenized cleanly, the fallback segment remains readable with the default tree color.

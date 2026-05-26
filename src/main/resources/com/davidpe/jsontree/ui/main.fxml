@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
 
 <ControllerAwareBorderPane fx:id="rootPane"
                            xmlns="http://javafx.com/javafx/21"
@@ -52,7 +52,7 @@
                             <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
                         </padding>
                         <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true"/>
-                        <Text fx:id="treeContentText" styleClass="tree-content" visible="false"/>
+                        <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false"/>
                     </VBox>
                 </content>
             </ScrollPane>

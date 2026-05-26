@@ -95,8 +95,47 @@
 }
 
 .tree-content {
-    -fx-fill: #d9dce3;
     -fx-font-size: 14px;
+}
+
+.tree-content-flow {
+    -fx-line-spacing: 2px;
+}
+
+.text.tree-prefix {
+    -fx-fill: #6f7482;
+}
+
+.text.tree-default {
+    -fx-fill: #d9dce3;
+}
+
+.text.tree-structure {
+    -fx-fill: #c6b7ff;
+}
+
+.text.tree-array-count {
+    -fx-fill: #8fd3ff;
+}
+
+.text.tree-key {
+    -fx-fill: #f5d98b;
+}
+
+.text.tree-string {
+    -fx-fill: #8ce7b3;
+}
+
+.text.tree-number {
+    -fx-fill: #7fd8ff;
+}
+
+.text.tree-boolean {
+    -fx-fill: #ffb86b;
+}
+
+.text.tree-null {
+    -fx-fill: #ff8fb1;
 }
 
 .status-pill {
