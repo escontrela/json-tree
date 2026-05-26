@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: json-tree
+  main:
+    web-application-type: none
+
+json-tree:
+  app-data:
+    root-directory: app-data
+    history-directory-name: history
+    metadata-file-name: metadata.json

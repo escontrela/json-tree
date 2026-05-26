@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<ControllerAwareBorderPane fx:id="rootPane"
+                           xmlns="http://javafx.com/javafx/21"
+                           xmlns:fx="http://javafx.com/fxml/1"
+                           fx:controller="com.davidpe.jsontree.ui.controller.MainWindowController">
+    <top>
+        <VBox spacing="12.0">
+            <padding>
+                <Insets top="18.0" right="18.0" bottom="0.0" left="18.0"/>
+            </padding>
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="header-bar">
+                <Label styleClass="app-icon" text="{}"/>
+                <Label styleClass="app-title" text="JSON → TREE"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button mnemonicParsing="false" styleClass="ghost-button" text="History"/>
+                <Button mnemonicParsing="false" styleClass="close-button" text="✕"/>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="file-bar">
+                <Label styleClass="file-icon" text="JSON"/>
+                <VBox spacing="2.0">
+                    <Label fx:id="fileNameLabel" styleClass="file-name"/>
+                    <Label fx:id="fileMetaLabel" styleClass="file-meta"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="validationStatusLabel" styleClass="status-pill"/>
+                <Button mnemonicParsing="false" styleClass="ghost-button" text="Clear"/>
+            </HBox>
+        </VBox>
+    </top>
+    <center>
+        <StackPane styleClass="viewer-shell">
+            <padding>
+                <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
+            </padding>
+            <ScrollPane fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" vbarPolicy="AS_NEEDED">
+                <content>
+                    <VBox spacing="18.0" styleClass="viewer-content">
+                        <padding>
+                            <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
+                        </padding>
+                        <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true"/>
+                    </VBox>
+                </content>
+            </ScrollPane>
+        </StackPane>
+    </center>
+    <bottom>
+        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="footer-bar">
+            <padding>
+                <Insets top="0.0" right="18.0" bottom="18.0" left="18.0"/>
+            </padding>
+            <Button mnemonicParsing="false" styleClass="primary-button" text="Copy"/>
+            <Label styleClass="footer-meta" text="0 lines"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="footerStatusLabel" styleClass="footer-status"/>
+        </HBox>
+    </bottom>
+</ControllerAwareBorderPane>

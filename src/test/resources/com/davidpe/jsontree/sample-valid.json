@@ -1,0 +1,11 @@
+{
+  "user": {
+    "id": 12345,
+    "name": "Terax",
+    "active": true
+  },
+  "tags": [
+    "dev",
+    "productivity"
+  ]
+}
