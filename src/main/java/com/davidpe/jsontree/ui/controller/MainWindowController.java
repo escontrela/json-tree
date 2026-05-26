@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
@@ -11,6 +12,7 @@ import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane;
+import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
@@ -30,16 +32,22 @@ import org.springframework.stereotype.Component;
 public class MainWindowController implements UiScreenController {
 
     private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
+    private final ImportJsonUseCase importJsonUseCase;
     private final JsonViewerWorkflowService workflowService;
     private final UiFlowManager uiFlowManager;
+    private final DroppedJsonPathResolver droppedJsonPathResolver;
 
     public MainWindowController(
             AsciiTreeSyntaxHighlighter syntaxHighlighter,
+            ImportJsonUseCase importJsonUseCase,
             JsonViewerWorkflowService workflowService,
+            DroppedJsonPathResolver droppedJsonPathResolver,
             @Lazy UiFlowManager uiFlowManager
     ) {
         this.syntaxHighlighter = syntaxHighlighter;
+        this.importJsonUseCase = importJsonUseCase;
         this.workflowService = workflowService;
+        this.droppedJsonPathResolver = droppedJsonPathResolver;
         this.uiFlowManager = uiFlowManager;
     }
 
@@ -195,7 +203,7 @@ public class MainWindowController implements UiScreenController {
         }
 
         showLoadingState(jsonPath.getFileName().toString());
-        JsonViewerLoadResult result = workflowService.loadFile(jsonPath);
+        JsonViewerLoadResult result = workflowService.loadImportedFile(importJsonUseCase.importFile(jsonPath));
         presentLoadResult(result);
         event.setDropCompleted(true);
         event.consume();
@@ -205,10 +213,7 @@ public class MainWindowController implements UiScreenController {
         if (!dragboard.hasFiles()) {
             return java.util.Optional.empty();
         }
-        return dragboard.getFiles().stream()
-                .map(java.io.File::toPath)
-                .filter(path -> path.getFileName().toString().toLowerCase().endsWith(".json"))
-                .findFirst();
+        return droppedJsonPathResolver.resolve(dragboard.getFiles());
     }
 
     private void restoreViewFromWorkflow() {

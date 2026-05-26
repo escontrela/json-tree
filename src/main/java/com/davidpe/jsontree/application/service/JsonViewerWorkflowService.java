@@ -77,6 +77,10 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
   public JsonViewerLoadResult loadFile(Path jsonFilePath) {
     JsonImportResult importResult = importFile(jsonFilePath);
+    return loadImportedFile(importResult);
+  }
+
+  public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult) {
     if (!importResult.available()) {
       JsonViewerLoadResult unavailableResult =
           new JsonViewerLoadResult(

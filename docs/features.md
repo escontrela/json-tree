@@ -42,6 +42,12 @@
 - Snapshot filenames start with a deterministic timestamp and preserve a sanitized version of the original filename.
 - History metadata is persisted in a filesystem JSON index so entries can be listed chronologically and reopened later without any database dependency.
 
+## OS Drag And Drop Handoff
+
+- The full main window accepts operating-system file drops and extracts the first supported `.json` path from the transfer payload.
+- The controller delegates the dropped path through `ImportJsonUseCase#importFile(Path)` before the workflow continues with validation, rendering, and optional history persistence.
+- Unsupported payloads restore a safe viewer state without calling filesystem metadata or parsing APIs directly from the controller.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.

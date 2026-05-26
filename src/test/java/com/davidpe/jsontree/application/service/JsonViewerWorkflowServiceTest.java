@@ -5,9 +5,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
 import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
+import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
@@ -59,6 +61,29 @@ class JsonViewerWorkflowServiceTest {
         assertFalse(result.exists());
         assertFalse(result.available());
         assertFalse(result.regularFile());
+    }
+
+    @Test
+    void loadsImportedFileUsingExistingImportResultObject() throws IOException {
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
+                new InMemoryHistoryRepository(),
+                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2)
+        );
+        Path importedFile = Files.writeString(tempDir.resolve("imported.json"), "{\"id\":1}");
+
+        JsonViewerLoadResult result = workflowService.loadImportedFile(new JsonImportResult(
+                importedFile,
+                "imported.json",
+                16L,
+                true,
+                true,
+                true
+        ));
+
+        assertTrue(result.validationResult().valid());
+        assertTrue(result.hasRenderableTree());
+        assertEquals("imported.json", result.importResult().fileName());
     }
 
     private JsonValidationPort unusedValidationPort() {
