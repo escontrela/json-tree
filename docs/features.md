@@ -11,3 +11,9 @@
 - JSON validation is delegated to a dedicated service boundary backed by Jackson parsing.
 - Validation outcomes distinguish `VALID`, `INVALID`, `PARSING_ERROR`, and `EMPTY`.
 - Invalid payloads include a concise error message plus line and column details when Jackson provides them.
+
+## ASCII Tree Formatting
+
+- Parsed JSON structures can be rendered into an `AsciiTreeDocument` with deterministic branch indentation.
+- Object properties render as branches, arrays display their item count, and primitive values render inline.
+- Deeply nested objects and arrays preserve alignment so the viewer can remain monospace-friendly.
