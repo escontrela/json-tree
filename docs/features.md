@@ -47,3 +47,9 @@
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.
 - The history view lists timestamp, original filename, size, and validation status for stored snapshots.
 - When no snapshots exist, the screen falls back to a graceful empty-history message instead of an empty list.
+
+## History Actions
+
+- Clicking a stored history entry reopens it in the main viewer flow.
+- Each history row exposes inline deletion without a confirmation modal.
+- If the currently open snapshot is deleted from history, the main viewer falls back to a safe empty state on return.
