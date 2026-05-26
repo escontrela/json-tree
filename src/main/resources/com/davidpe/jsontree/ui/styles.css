@@ -20,6 +20,35 @@
     -fx-background-color: rgba(0, 0, 0, 0.22);
 }
 
+.viewer-shell.viewer-dragging {
+    -fx-background-color: rgba(91, 54, 186, 0.22);
+    -fx-border-color: rgba(177, 143, 255, 0.5);
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+    -fx-effect: dropshadow(gaussian, rgba(139, 92, 246, 0.35), 28, 0.35, 0, 0);
+}
+
+.viewer-shell.viewer-loading {
+    -fx-background-color: rgba(36, 27, 61, 0.26);
+    -fx-border-color: rgba(154, 111, 255, 0.3);
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+}
+
+.viewer-shell.viewer-valid {
+    -fx-background-color: rgba(18, 28, 24, 0.26);
+    -fx-border-color: rgba(82, 194, 123, 0.24);
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+}
+
+.viewer-shell.viewer-invalid {
+    -fx-background-color: rgba(43, 20, 28, 0.28);
+    -fx-border-color: rgba(255, 110, 154, 0.28);
+    -fx-border-width: 1;
+    -fx-border-radius: 22;
+}
+
 .viewer-content {
     -fx-background-color: rgba(8, 10, 14, 0.92);
     -fx-background-radius: 22;

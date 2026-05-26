@@ -41,7 +41,7 @@
         </VBox>
     </top>
     <center>
-        <StackPane styleClass="viewer-shell">
+        <StackPane fx:id="viewerShell" styleClass="viewer-shell">
             <padding>
                 <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
             </padding>

@@ -23,3 +23,9 @@
 - The main viewer shell contains dedicated ASCII tree content that can be refreshed independently from the empty state.
 - Horizontal and vertical scrolling stay enabled for long trees and long lines.
 - Rendering a new `AsciiTreeDocument` resets the viewer scroll position to the top-left for a predictable refresh.
+
+## Viewer Visual States
+
+- The main viewer flow exposes explicit `EMPTY`, `DRAGGING`, `LOADING`, `VALID`, and `INVALID` visual states.
+- Dragging activates a stronger shell glow, while loading, valid, and invalid states update the status labels consistently.
+- Empty-file and invalid outcomes use concise, readable messages inside the viewer shell.
