@@ -35,3 +35,9 @@
 - The viewer highlights structural labels, keys, strings, numbers, booleans, nulls, and array counts with distinct colors in the dark theme.
 - Highlighting is applied per text segment inside a monospace `TextFlow`, preserving ASCII alignment.
 - If a tree line cannot be tokenized cleanly, the fallback segment remains readable with the default tree color.
+
+## Local History Snapshots
+
+- Dropping a valid `.json` file loads, validates, renders, and stores it as a local snapshot under the configured app-data history directory.
+- Snapshot filenames start with a deterministic timestamp and preserve a sanitized version of the original filename.
+- History metadata is persisted in a filesystem JSON index so entries can be listed chronologically and reopened later without any database dependency.

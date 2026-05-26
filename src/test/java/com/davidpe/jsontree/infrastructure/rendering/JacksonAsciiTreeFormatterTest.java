@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class JacksonAsciiTreeFormatterTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    private final JacksonAsciiTreeFormatter formatter = new JacksonAsciiTreeFormatter();
+    private final JacksonAsciiTreeFormatter formatter = new JacksonAsciiTreeFormatter(objectMapper);
 
     @Test
     void rendersObjectsArraysAndPrimitiveValuesWithStableIndentation() throws Exception {

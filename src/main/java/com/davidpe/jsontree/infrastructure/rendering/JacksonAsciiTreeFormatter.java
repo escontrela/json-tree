@@ -1,13 +1,33 @@
 package com.davidpe.jsontree.infrastructure.rendering;
 
+import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Iterator;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
-public class JacksonAsciiTreeFormatter {
+public class JacksonAsciiTreeFormatter implements AsciiTreeRendererPort {
+
+    private final ObjectMapper objectMapper;
+
+    public JacksonAsciiTreeFormatter(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
+    }
+
+    @Override
+    public AsciiTreeDocument render(Path jsonFilePath) {
+        try {
+            return format(objectMapper.readTree(Files.readString(jsonFilePath)));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to render ASCII tree from: " + jsonFilePath, exception);
+        }
+    }
 
     public AsciiTreeDocument format(JsonNode rootNode) {
         StringBuilder content = new StringBuilder("root");

@@ -5,16 +5,28 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
+import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
+import com.davidpe.jsontree.application.port.out.JsonValidationPort;
+import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
+import com.davidpe.jsontree.domain.model.JsonValidationResult;
+import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class JsonViewerWorkflowServiceTest {
 
-    private final JsonViewerWorkflowService service = new JsonViewerWorkflowService();
+    private final JsonViewerWorkflowService service = new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            new InMemoryHistoryRepository(),
+            unusedRendererPort()
+    );
 
     @TempDir
     Path tempDir;
@@ -47,5 +59,39 @@ class JsonViewerWorkflowServiceTest {
         assertFalse(result.exists());
         assertFalse(result.available());
         assertFalse(result.regularFile());
+    }
+
+    private JsonValidationPort unusedValidationPort() {
+        return path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);
+    }
+
+    private AsciiTreeRendererPort unusedRendererPort() {
+        return path -> null;
+    }
+
+    private static final class InMemoryHistoryRepository implements JsonHistoryRepository {
+
+        @Override
+        public List<ImportedJsonFile> findAll() {
+            return List.of();
+        }
+
+        @Override
+        public Optional<ImportedJsonFile> findByStoredName(String storedName) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<String> readStoredJson(String storedName) {
+            return Optional.empty();
+        }
+
+        @Override
+        public void save(ImportedJsonFile importedJsonFile, String jsonContent) {
+        }
+
+        @Override
+        public void deleteByStoredName(String storedName) {
+        }
     }
 }

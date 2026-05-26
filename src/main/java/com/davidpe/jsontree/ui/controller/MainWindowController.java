@@ -1,11 +1,23 @@
 package com.davidpe.jsontree.ui.controller;
 
+import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.JsonValidationResult;
+import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.model.ViewerVisualState;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane;
+import java.nio.file.Path;
+import java.text.CharacterIterator;
+import java.text.StringCharacterIterator;
+import java.util.List;
+import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
@@ -17,9 +29,14 @@ import org.springframework.stereotype.Component;
 public class MainWindowController implements UiScreenController {
 
     private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
+    private final JsonViewerWorkflowService workflowService;
 
-    public MainWindowController(AsciiTreeSyntaxHighlighter syntaxHighlighter) {
+    public MainWindowController(
+            AsciiTreeSyntaxHighlighter syntaxHighlighter,
+            JsonViewerWorkflowService workflowService
+    ) {
         this.syntaxHighlighter = syntaxHighlighter;
+        this.workflowService = workflowService;
     }
 
     @FXML
@@ -59,7 +76,15 @@ public class MainWindowController implements UiScreenController {
         rootPane.attachController(this);
         fileNameLabel.setText("No file loaded");
         fileMetaLabel.setText("Drop a JSON anywhere in the window");
+        rootPane.setOnDragOver(this::handleDragOver);
+        rootPane.setOnDragExited(event -> restoreViewFromWorkflow());
+        rootPane.setOnDragDropped(this::handleDragDropped);
         showEmptyViewer();
+    }
+
+    @Override
+    public void onShow() {
+        restoreViewFromWorkflow();
     }
 
     public void renderAsciiTree(AsciiTreeDocument document) {
@@ -148,5 +173,87 @@ public class MainWindowController implements UiScreenController {
                 // Base style only.
             }
         }
+    }
+
+    private void handleDragOver(DragEvent event) {
+        if (firstJsonFile(event.getDragboard()).isEmpty()) {
+            return;
+        }
+        event.acceptTransferModes(TransferMode.COPY);
+        showDraggingState();
+        event.consume();
+    }
+
+    private void handleDragDropped(DragEvent event) {
+        Path jsonPath = firstJsonFile(event.getDragboard()).orElse(null);
+        if (jsonPath == null) {
+            event.setDropCompleted(false);
+            restoreViewFromWorkflow();
+            return;
+        }
+
+        showLoadingState(jsonPath.getFileName().toString());
+        JsonViewerLoadResult result = workflowService.loadFile(jsonPath);
+        presentLoadResult(result);
+        event.setDropCompleted(true);
+        event.consume();
+    }
+
+    private java.util.Optional<Path> firstJsonFile(Dragboard dragboard) {
+        if (!dragboard.hasFiles()) {
+            return java.util.Optional.empty();
+        }
+        return dragboard.getFiles().stream()
+                .map(java.io.File::toPath)
+                .filter(path -> path.getFileName().toString().toLowerCase().endsWith(".json"))
+                .findFirst();
+    }
+
+    private void restoreViewFromWorkflow() {
+        workflowService.currentView().ifPresentOrElse(this::presentLoadResult, this::showEmptyViewer);
+    }
+
+    private void presentLoadResult(JsonViewerLoadResult result) {
+        fileNameLabel.setText(result.importResult().fileName());
+        fileMetaLabel.setText(formatFileMeta(result.importResult().sizeBytes(), result.historyEntry() != null));
+
+        JsonValidationResult validationResult = result.validationResult();
+        if (validationResult.status() == JsonValidationStatus.VALID && result.hasRenderableTree()) {
+            renderAsciiTree(result.asciiTreeDocument());
+            return;
+        }
+        if (validationResult.status() == JsonValidationStatus.EMPTY) {
+            showEmptyFileState();
+            return;
+        }
+        showInvalidState(composeValidationMessage(validationResult));
+    }
+
+    private String formatFileMeta(long sizeBytes, boolean storedInHistory) {
+        String meta = formatBytes(sizeBytes);
+        if (storedInHistory) {
+            return meta + " • saved to history";
+        }
+        return meta + " • not persisted";
+    }
+
+    private String formatBytes(long bytes) {
+        if (bytes < 1024) {
+            return bytes + " B";
+        }
+        CharacterIterator iterator = new StringCharacterIterator("KMGTPE");
+        double scaled = bytes;
+        while (scaled >= 1024 && iterator.current() != 'E') {
+            scaled /= 1024;
+            iterator.next();
+        }
+        return String.format(java.util.Locale.ROOT, "%.1f %cB", scaled, iterator.current());
+    }
+
+    private String composeValidationMessage(JsonValidationResult validationResult) {
+        if (validationResult.line() == null || validationResult.column() == null) {
+            return validationResult.message();
+        }
+        return validationResult.message() + " (line " + validationResult.line() + ", column " + validationResult.column() + ")";
     }
 }
