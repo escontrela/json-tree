@@ -6,7 +6,9 @@ import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.model.ViewerVisualState;
+import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
+import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane;
 import java.nio.file.Path;
@@ -23,6 +25,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextFlow;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -30,13 +33,16 @@ public class MainWindowController implements UiScreenController {
 
     private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
     private final JsonViewerWorkflowService workflowService;
+    private final UiFlowManager uiFlowManager;
 
     public MainWindowController(
             AsciiTreeSyntaxHighlighter syntaxHighlighter,
-            JsonViewerWorkflowService workflowService
+            JsonViewerWorkflowService workflowService,
+            @Lazy UiFlowManager uiFlowManager
     ) {
         this.syntaxHighlighter = syntaxHighlighter;
         this.workflowService = workflowService;
+        this.uiFlowManager = uiFlowManager;
     }
 
     @FXML
@@ -255,5 +261,10 @@ public class MainWindowController implements UiScreenController {
             return validationResult.message();
         }
         return validationResult.message() + " (line " + validationResult.line() + ", column " + validationResult.column() + ")";
+    }
+
+    @FXML
+    void openHistory() {
+        uiFlowManager.show(UiScreenId.HISTORY);
     }
 }

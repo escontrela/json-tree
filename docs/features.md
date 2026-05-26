@@ -41,3 +41,9 @@
 - Dropping a valid `.json` file loads, validates, renders, and stores it as a local snapshot under the configured app-data history directory.
 - Snapshot filenames start with a deterministic timestamp and preserve a sanitized version of the original filename.
 - History metadata is persisted in a filesystem JSON index so entries can be listed chronologically and reopened later without any database dependency.
+
+## History Screen
+
+- The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.
+- The history view lists timestamp, original filename, size, and validation status for stored snapshots.
+- When no snapshots exist, the screen falls back to a graceful empty-history message instead of an empty list.
