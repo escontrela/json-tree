@@ -5,3 +5,9 @@
 - The application exposes a dedicated import use case that accepts a local JSON file path.
 - Import metadata is normalized into a workflow-friendly result object with absolute path, filename, size, and basic availability flags.
 - JavaFX controllers are expected to consume the use case result instead of reading file metadata directly from the filesystem.
+
+## Validation States
+
+- JSON validation is delegated to a dedicated service boundary backed by Jackson parsing.
+- Validation outcomes distinguish `VALID`, `INVALID`, `PARSING_ERROR`, and `EMPTY`.
+- Invalid payloads include a concise error message plus line and column details when Jackson provides them.
