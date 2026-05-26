@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import org.springframework.stereotype.Component;
@@ -22,10 +23,15 @@ public class AsciiTreeSyntaxHighlighter {
         textFlow.getStyleClass().add("tree-content");
         textFlow.getStyleClass().add("tree-content-flow");
 
-        for (StyledSegment segment : tokenize(document)) {
-            textFlow.getChildren().add(styledText(segment.text(), segment.styleClass()));
-        }
+        appendHighlightedContent(textFlow, document);
         return textFlow;
+    }
+
+    public void appendHighlightedContent(TextFlow textFlow, AsciiTreeDocument document) {
+        textFlow.getChildren().clear();
+        for (StyledSegment segment : tokenize(document)) {
+            textFlow.getChildren().add(styledText(segment));
+        }
     }
 
     List<StyledSegment> tokenize(AsciiTreeDocument document) {
@@ -34,7 +40,7 @@ public class AsciiTreeSyntaxHighlighter {
         for (int index = 0; index < lines.length; index++) {
             segments.addAll(tokenizeLine(lines[index]));
             if (index < lines.length - 1) {
-                segments.add(new StyledSegment("\n", "tree-default"));
+                segments.add(styledSegment("\n", "tree-default"));
             }
         }
         return segments;
@@ -44,13 +50,13 @@ public class AsciiTreeSyntaxHighlighter {
         List<StyledSegment> segments = new ArrayList<>();
         Matcher prefixMatcher = PREFIX_PATTERN.matcher(line);
         if (!prefixMatcher.matches()) {
-            segments.add(new StyledSegment(line, "tree-default"));
+            segments.add(styledSegment(line, "tree-default"));
             return segments;
         }
 
         String prefix = prefixMatcher.group(1);
         String payload = prefixMatcher.group(2);
-        segments.add(new StyledSegment(prefix, "tree-prefix"));
+        segments.add(styledSegment(prefix, "tree-prefix"));
 
         if (payload.isBlank()) {
             return segments;
@@ -58,21 +64,21 @@ public class AsciiTreeSyntaxHighlighter {
 
         Matcher keyValueMatcher = KEY_VALUE_PATTERN.matcher(payload);
         if (keyValueMatcher.matches()) {
-            segments.add(new StyledSegment(keyValueMatcher.group(1), "tree-key"));
-            segments.add(new StyledSegment(": ", "tree-default"));
-            segments.add(new StyledSegment(keyValueMatcher.group(2), valueStyleClass(keyValueMatcher.group(2))));
+            segments.add(styledSegment(keyValueMatcher.group(1), "tree-key"));
+            segments.add(styledSegment(": ", "tree-default"));
+            segments.add(styledSegment(keyValueMatcher.group(2), valueStyleClass(keyValueMatcher.group(2))));
             return segments;
         }
 
         Matcher arrayLabelMatcher = ARRAY_LABEL_PATTERN.matcher(payload);
         if (arrayLabelMatcher.matches()) {
-            segments.add(new StyledSegment(arrayLabelMatcher.group(1), "tree-structure"));
-            segments.add(new StyledSegment(" ", "tree-default"));
-            segments.add(new StyledSegment(arrayLabelMatcher.group(2), "tree-array-count"));
+            segments.add(styledSegment(arrayLabelMatcher.group(1), "tree-structure"));
+            segments.add(styledSegment(" ", "tree-default"));
+            segments.add(styledSegment(arrayLabelMatcher.group(2), "tree-array-count"));
             return segments;
         }
 
-        segments.add(new StyledSegment(payload, "tree-structure"));
+        segments.add(styledSegment(payload, "tree-structure"));
         return segments;
     }
 
@@ -92,12 +98,31 @@ public class AsciiTreeSyntaxHighlighter {
         return "tree-default";
     }
 
-    private Text styledText(String text, String styleClass) {
-        Text node = new Text(text);
-        node.getStyleClass().add(styleClass);
+    private StyledSegment styledSegment(String text, String styleClass) {
+        return new StyledSegment(text, styleClass, colorFor(styleClass));
+    }
+
+    private Text styledText(StyledSegment segment) {
+        Text node = new Text(segment.text());
+        node.getStyleClass().add(segment.styleClass());
+        node.setFill(Color.web(segment.colorHex()));
         return node;
     }
 
-    record StyledSegment(String text, String styleClass) {
+    private String colorFor(String styleClass) {
+        return switch (styleClass) {
+            case "tree-prefix" -> "#6f7482";
+            case "tree-structure" -> "#c6b7ff";
+            case "tree-array-count" -> "#8fd3ff";
+            case "tree-key" -> "#f5d98b";
+            case "tree-string" -> "#8ce7b3";
+            case "tree-number" -> "#7fd8ff";
+            case "tree-boolean" -> "#ffb86b";
+            case "tree-null" -> "#ff8fb1";
+            default -> "#d9dce3";
+        };
+    }
+
+    record StyledSegment(String text, String styleClass, String colorHex) {
     }
 }

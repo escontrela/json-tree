@@ -14,8 +14,6 @@ import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane;
 import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
-import java.util.List;
-import javafx.collections.ListChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -94,9 +92,7 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void renderAsciiTree(AsciiTreeDocument document) {
-        TextFlow highlightedContent = syntaxHighlighter.highlight(document);
-        viewerContentBox.getChildren().set(viewerContentBox.getChildren().indexOf(treeContentFlow), highlightedContent);
-        treeContentFlow = highlightedContent;
+        syntaxHighlighter.appendHighlightedContent(treeContentFlow, document);
         treeContentFlow.setManaged(true);
         treeContentFlow.setVisible(true);
         emptyStateLabel.setManaged(false);
