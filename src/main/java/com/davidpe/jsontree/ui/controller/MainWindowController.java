@@ -107,6 +107,12 @@ public class MainWindowController implements UiScreenController {
     private Label footerStatusLabel;
 
     @FXML
+    private Label viewerAidTitleLabel;
+
+    @FXML
+    private Label viewerAidMetaLabel;
+
+    @FXML
     private ScrollPane viewerScrollPane;
 
     @FXML
@@ -158,6 +164,8 @@ public class MainWindowController implements UiScreenController {
         treeContentFlow.setVisible(true);
         emptyStateLabel.setManaged(false);
         emptyStateLabel.setVisible(false);
+        viewerAidTitleLabel.setText(document.rootLabel());
+        viewerAidMetaLabel.setText(document.lineCount() + " rendered lines\nSecondary viewer aid active");
         importUtilityTitleLabel.setText("Import another JSON");
         importUtilitySupportLabel.setText(
                 "Drop a new .json anywhere in the window or reopen one of the recent snapshots from the rail."
@@ -178,6 +186,8 @@ public class MainWindowController implements UiScreenController {
         fileTypeValueLabel.setText("application/json");
         fileLinesValueLabel.setText("--");
         fileSourceValueLabel.setText("Waiting for import");
+        viewerAidTitleLabel.setText("Awaiting JSON");
+        viewerAidMetaLabel.setText("Load a local JSON file to populate this secondary viewer aid.");
         importUtilityTitleLabel.setText("Drop JSON anywhere in this window");
         importUtilitySupportLabel.setText(
                 "The full window remains the drop target. Valid JSON snapshots will also appear in the recent history rail."
@@ -196,6 +206,8 @@ public class MainWindowController implements UiScreenController {
 
     public void showDraggingState() {
         emptyStateLabel.setText("Release to inspect this JSON file");
+        viewerAidTitleLabel.setText("Drop ready");
+        viewerAidMetaLabel.setText("Release to load the first supported .json file in the payload.");
         importUtilityTitleLabel.setText("Release to inspect this JSON");
         importUtilitySupportLabel.setText(
                 "The first supported .json file in the drop payload will enter the standard import and validation flow."
@@ -214,6 +226,8 @@ public class MainWindowController implements UiScreenController {
         fileTypeValueLabel.setText(detectContentType(fileName));
         fileLinesValueLabel.setText("--");
         fileSourceValueLabel.setText("Local file");
+        viewerAidTitleLabel.setText("Preparing outline");
+        viewerAidMetaLabel.setText("Workspace actions are in place while validation and rendering complete.");
         importUtilityTitleLabel.setText("Importing JSON");
         importUtilitySupportLabel.setText("Running validation, tree rendering, and local history persistence.");
         setValidationBadge("Loading", "status-muted");
@@ -228,6 +242,8 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void showInvalidState(String message) {
+        viewerAidTitleLabel.setText("Validation issue");
+        viewerAidMetaLabel.setText("The viewer contract remains active even when the payload cannot render.");
         importUtilityTitleLabel.setText("JSON needs attention");
         importUtilitySupportLabel.setText(
                 "Fix the payload and drop it again, or reopen a clean snapshot from the recent history list."

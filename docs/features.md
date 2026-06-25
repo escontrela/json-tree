@@ -84,6 +84,12 @@
 - Selecting an inline history entry replays the standard reopen flow inside the main viewer, while a `View all` action still routes to the dedicated history screen.
 - The import utility block in the rail remains informational only; the whole window is still the true drag-and-drop target.
 
+## Workspace Header And Viewer Controls
+
+- The primary viewer workspace now has a dedicated header with action slots for copy, raw JSON, and search, even when those actions are still placeholder-disabled.
+- A secondary viewer toolbar keeps room for display-mode utilities without pushing those stubs into the business workflow.
+- The right side also exposes a compact auxiliary viewer aid panel so the screenshot-inspired distribution can exist without copying its dark aesthetic.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.
