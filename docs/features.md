@@ -72,6 +72,12 @@
 - The screenshot-inspired redistribution is used only for layout grouping; colors, spacing, typography, and surface language continue to follow `DESIGN.md`.
 - The left rail keeps space reserved for file context, recent history, and import guidance without reducing the ASCII viewer to a secondary element.
 
+## Left-Rail File Summary
+
+- The active file is now summarized inside the left rail rather than a dedicated top metadata strip.
+- The summary card keeps filename, validation badge, file size, loaded timestamp, content type, rendered line count, and source when those values are available.
+- With no current file, the summary falls back to a waiting state instead of leaving stale metadata in place.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.

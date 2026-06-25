@@ -16,6 +16,10 @@ import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import javafx.fxml.FXML;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -30,6 +34,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class MainWindowController implements UiScreenController {
+
+    private static final DateTimeFormatter FILE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm:ss")
+                    .withLocale(Locale.ROOT)
+                    .withZone(ZoneId.systemDefault());
 
     private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
     private final ImportJsonUseCase importJsonUseCase;
@@ -61,6 +70,18 @@ public class MainWindowController implements UiScreenController {
     private Label fileMetaLabel;
 
     @FXML
+    private Label fileLoadedAtValueLabel;
+
+    @FXML
+    private Label fileTypeValueLabel;
+
+    @FXML
+    private Label fileLinesValueLabel;
+
+    @FXML
+    private Label fileSourceValueLabel;
+
+    @FXML
     private Label validationStatusLabel;
 
     @FXML
@@ -82,12 +103,12 @@ public class MainWindowController implements UiScreenController {
     private TextFlow treeContentFlow;
 
     private ViewerVisualState currentState;
+    private Instant currentLoadedAt;
+    private String currentViewIdentity;
 
     @FXML
     public void initialize() {
         rootPane.attachController(this);
-        fileNameLabel.setText("No file loaded");
-        fileMetaLabel.setText("Drop a JSON anywhere in the window");
         rootPane.setOnDragOver(this::handleDragOver);
         rootPane.setOnDragExited(event -> restoreViewFromWorkflow());
         rootPane.setOnDragDropped(this::handleDragDropped);
@@ -113,6 +134,14 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void showEmptyViewer() {
+        currentLoadedAt = null;
+        currentViewIdentity = null;
+        fileNameLabel.setText("No file loaded");
+        fileMetaLabel.setText("Drop a JSON anywhere in the window");
+        fileLoadedAtValueLabel.setText("Not loaded");
+        fileTypeValueLabel.setText("application/json");
+        fileLinesValueLabel.setText("--");
+        fileSourceValueLabel.setText("Waiting for import");
         treeContentFlow.getChildren().clear();
         treeContentFlow.setManaged(false);
         treeContentFlow.setVisible(false);
@@ -133,8 +162,14 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void showLoadingState(String fileName) {
+        currentLoadedAt = Instant.now();
+        currentViewIdentity = "loading:" + fileName;
         fileNameLabel.setText(fileName);
         fileMetaLabel.setText("Preparing JSON preview");
+        fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
+        fileTypeValueLabel.setText(detectContentType(fileName));
+        fileLinesValueLabel.setText("--");
+        fileSourceValueLabel.setText("Local file");
         setValidationBadge("Loading", "status-muted");
         footerStatusLabel.setText("Parsing JSON");
         emptyStateLabel.setText("Loading JSON preview...");
@@ -221,8 +256,7 @@ public class MainWindowController implements UiScreenController {
     }
 
     private void presentLoadResult(JsonViewerLoadResult result) {
-        fileNameLabel.setText(result.importResult().fileName());
-        fileMetaLabel.setText(formatFileMeta(result.importResult().sizeBytes(), result.historyEntry() != null));
+        updateFileSummary(result);
 
         JsonValidationResult validationResult = result.validationResult();
         if (validationResult.status() == JsonValidationStatus.VALID && result.hasRenderableTree()) {
@@ -239,9 +273,9 @@ public class MainWindowController implements UiScreenController {
     private String formatFileMeta(long sizeBytes, boolean storedInHistory) {
         String meta = formatBytes(sizeBytes);
         if (storedInHistory) {
-            return meta + " • saved to history";
+            return meta + " • reopened from history";
         }
-        return meta + " • not persisted";
+        return meta + " • local import";
     }
 
     private String formatBytes(long bytes) {
@@ -262,6 +296,37 @@ public class MainWindowController implements UiScreenController {
             return validationResult.message();
         }
         return validationResult.message() + " (line " + validationResult.line() + ", column " + validationResult.column() + ")";
+    }
+
+    private void updateFileSummary(JsonViewerLoadResult result) {
+        fileNameLabel.setText(result.importResult().fileName());
+        fileMetaLabel.setText(formatFileMeta(result.importResult().sizeBytes(), result.historyEntry() != null));
+        fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(resolveLoadedAt(result)));
+        fileTypeValueLabel.setText(detectContentType(result.importResult().fileName()));
+        fileLinesValueLabel.setText(result.hasRenderableTree()
+                ? Integer.toString(result.asciiTreeDocument().lineCount())
+                : "--");
+        fileSourceValueLabel.setText(result.historyEntry() != null ? "History snapshot" : "Local file");
+    }
+
+    private Instant resolveLoadedAt(JsonViewerLoadResult result) {
+        String identity = currentViewIdentity(result);
+        if (!identity.equals(currentViewIdentity)) {
+            currentLoadedAt = result.historyEntry() != null ? result.historyEntry().importedAt() : Instant.now();
+            currentViewIdentity = identity;
+        }
+        return currentLoadedAt;
+    }
+
+    private String currentViewIdentity(JsonViewerLoadResult result) {
+        if (result.historyEntry() != null) {
+            return "history:" + result.historyEntry().storedName();
+        }
+        return "file:" + result.importResult().path().toAbsolutePath().normalize();
+    }
+
+    private String detectContentType(String fileName) {
+        return fileName.toLowerCase(Locale.ROOT).endsWith(".json") ? "application/json" : "Unknown";
     }
 
     private void setValidationBadge(String text, String styleClass) {
