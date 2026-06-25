@@ -90,6 +90,12 @@
 - A secondary viewer toolbar keeps room for display-mode utilities without pushing those stubs into the business workflow.
 - The right side also exposes a compact auxiliary viewer aid panel so the screenshot-inspired distribution can exist without copying its dark aesthetic.
 
+## Status Rail Synchronization
+
+- The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.
+- Empty, dragging, loading, valid, invalid, and reopened-history flows all update the footer metadata, file summary border treatment, import utility, and viewer shell coherently.
+- Reopened snapshots preserve the dedicated history screen flow while still surfacing `History snapshot` as the current source in the main layout.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.

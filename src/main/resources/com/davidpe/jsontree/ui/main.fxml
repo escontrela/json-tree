@@ -24,7 +24,7 @@
                 <Insets top="24.0" right="24.0" bottom="24.0" left="24.0"/>
             </padding>
             <VBox prefWidth="336.0" spacing="20.0" styleClass="utility-rail">
-                <VBox spacing="16.0" styleClass="rail-card file-summary-card">
+                <VBox fx:id="fileSummaryCard" spacing="16.0" styleClass="rail-card file-summary-card">
                     <padding>
                         <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
                     </padding>
@@ -152,10 +152,31 @@
                         <Label fx:id="viewerAidMetaLabel" styleClass="viewer-aid-meta" text="Load a local JSON file to populate this secondary viewer aid." wrapText="true"/>
                     </VBox>
                 </HBox>
-                <VBox spacing="4.0" styleClass="status-rail">
-                    <Label styleClass="eyebrow-label" text="Render status"/>
-                    <Label fx:id="footerStatusLabel" styleClass="footer-status"/>
-                </VBox>
+                <HBox fx:id="statusRail" alignment="CENTER_LEFT" spacing="20.0" styleClass="status-rail">
+                    <VBox spacing="4.0">
+                        <Label styleClass="eyebrow-label" text="Render status"/>
+                        <Label fx:id="footerStatusLabel" styleClass="footer-status"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <HBox alignment="CENTER_RIGHT" spacing="16.0" styleClass="status-rail-details">
+                        <VBox spacing="4.0" styleClass="status-detail-card">
+                            <Label styleClass="status-detail-label" text="State"/>
+                            <Label fx:id="statusStateValueLabel" styleClass="status-detail-value"/>
+                        </VBox>
+                        <VBox spacing="4.0" styleClass="status-detail-card">
+                            <Label styleClass="status-detail-label" text="Size"/>
+                            <Label fx:id="statusSizeValueLabel" styleClass="status-detail-value"/>
+                        </VBox>
+                        <VBox spacing="4.0" styleClass="status-detail-card">
+                            <Label styleClass="status-detail-label" text="Lines"/>
+                            <Label fx:id="statusLinesValueLabel" styleClass="status-detail-value"/>
+                        </VBox>
+                        <VBox spacing="4.0" styleClass="status-detail-card">
+                            <Label styleClass="status-detail-label" text="Source"/>
+                            <Label fx:id="statusSourceValueLabel" styleClass="status-detail-value"/>
+                        </VBox>
+                    </HBox>
+                </HBox>
             </VBox>
         </HBox>
     </center>

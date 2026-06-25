@@ -30,6 +30,7 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextFlow;
@@ -107,6 +108,18 @@ public class MainWindowController implements UiScreenController {
     private Label footerStatusLabel;
 
     @FXML
+    private Label statusStateValueLabel;
+
+    @FXML
+    private Label statusSizeValueLabel;
+
+    @FXML
+    private Label statusLinesValueLabel;
+
+    @FXML
+    private Label statusSourceValueLabel;
+
+    @FXML
     private Label viewerAidTitleLabel;
 
     @FXML
@@ -116,7 +129,13 @@ public class MainWindowController implements UiScreenController {
     private ScrollPane viewerScrollPane;
 
     @FXML
+    private HBox statusRail;
+
+    @FXML
     private StackPane viewerShell;
+
+    @FXML
+    private VBox fileSummaryCard;
 
     @FXML
     private VBox importUtilityCard;
@@ -165,13 +184,14 @@ public class MainWindowController implements UiScreenController {
         emptyStateLabel.setManaged(false);
         emptyStateLabel.setVisible(false);
         viewerAidTitleLabel.setText(document.rootLabel());
-        viewerAidMetaLabel.setText(document.lineCount() + " rendered lines\nSecondary viewer aid active");
+        viewerAidMetaLabel.setText(document.lineCount() + " rendered lines\nSource: " + fileSourceValueLabel.getText());
         importUtilityTitleLabel.setText("Import another JSON");
         importUtilitySupportLabel.setText(
                 "Drop a new .json anywhere in the window or reopen one of the recent snapshots from the rail."
         );
         setValidationBadge("Valid", "status-valid");
         footerStatusLabel.setText("Rendered " + document.lineCount() + " lines");
+        statusStateValueLabel.setText("VALID");
         viewerScrollPane.setHvalue(0);
         viewerScrollPane.setVvalue(0);
         applyState(ViewerVisualState.VALID);
@@ -200,6 +220,7 @@ public class MainWindowController implements UiScreenController {
         emptyStateLabel.setText("Drop a JSON anywhere in the window");
         setValidationBadge("Waiting", "status-idle");
         footerStatusLabel.setText("No JSON loaded");
+        setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
         viewerContentBox.autosize();
         applyState(ViewerVisualState.EMPTY);
     }
@@ -214,6 +235,7 @@ public class MainWindowController implements UiScreenController {
         );
         setValidationBadge("Drop ready", "status-accent");
         footerStatusLabel.setText("Waiting for JSON drop");
+        setStatusRailValues("DROP READY", "--", "--", "Drag payload");
         applyState(ViewerVisualState.DRAGGING);
     }
 
@@ -232,6 +254,7 @@ public class MainWindowController implements UiScreenController {
         importUtilitySupportLabel.setText("Running validation, tree rendering, and local history persistence.");
         setValidationBadge("Loading", "status-muted");
         footerStatusLabel.setText("Parsing JSON");
+        setStatusRailValues("LOADING", "--", "--", "Local file");
         emptyStateLabel.setText("Loading JSON preview...");
         treeContentFlow.getChildren().clear();
         treeContentFlow.setManaged(false);
@@ -250,6 +273,9 @@ public class MainWindowController implements UiScreenController {
         );
         setValidationBadge("Invalid", "status-error");
         footerStatusLabel.setText("JSON needs attention");
+        if ("VALID".equals(statusStateValueLabel.getText())) {
+            statusStateValueLabel.setText("INVALID");
+        }
         emptyStateLabel.setText(message);
         treeContentFlow.getChildren().clear();
         treeContentFlow.setManaged(false);
@@ -261,6 +287,9 @@ public class MainWindowController implements UiScreenController {
 
     public void showEmptyFileState() {
         showInvalidState("The JSON file is empty.");
+        viewerAidTitleLabel.setText("Empty file");
+        viewerAidMetaLabel.setText("The selected file exists but does not contain any JSON content to render.");
+        footerStatusLabel.setText("The JSON file is empty");
     }
 
     ViewerVisualState currentState() {
@@ -275,6 +304,18 @@ public class MainWindowController implements UiScreenController {
                 "viewer-valid",
                 "viewer-invalid"
         );
+        statusRail.getStyleClass().removeAll(
+                "shell-dragging",
+                "shell-loading",
+                "shell-valid",
+                "shell-invalid"
+        );
+        fileSummaryCard.getStyleClass().removeAll(
+                "shell-dragging",
+                "shell-loading",
+                "shell-valid",
+                "shell-invalid"
+        );
         importUtilityCard.getStyleClass().removeAll(
                 "utility-dragging",
                 "utility-loading",
@@ -284,18 +325,26 @@ public class MainWindowController implements UiScreenController {
         switch (state) {
             case DRAGGING -> {
                 viewerShell.getStyleClass().add("viewer-dragging");
+                statusRail.getStyleClass().add("shell-dragging");
+                fileSummaryCard.getStyleClass().add("shell-dragging");
                 importUtilityCard.getStyleClass().add("utility-dragging");
             }
             case LOADING -> {
                 viewerShell.getStyleClass().add("viewer-loading");
+                statusRail.getStyleClass().add("shell-loading");
+                fileSummaryCard.getStyleClass().add("shell-loading");
                 importUtilityCard.getStyleClass().add("utility-loading");
             }
             case VALID -> {
                 viewerShell.getStyleClass().add("viewer-valid");
+                statusRail.getStyleClass().add("shell-valid");
+                fileSummaryCard.getStyleClass().add("shell-valid");
                 importUtilityCard.getStyleClass().add("utility-valid");
             }
             case INVALID -> {
                 viewerShell.getStyleClass().add("viewer-invalid");
+                statusRail.getStyleClass().add("shell-invalid");
+                fileSummaryCard.getStyleClass().add("shell-invalid");
                 importUtilityCard.getStyleClass().add("utility-invalid");
             }
             case EMPTY -> {
@@ -341,6 +390,7 @@ public class MainWindowController implements UiScreenController {
 
     private void presentLoadResult(JsonViewerLoadResult result) {
         updateFileSummary(result);
+        syncStatusRail(result);
         refreshInlineHistory();
 
         JsonValidationResult validationResult = result.validationResult();
@@ -412,6 +462,30 @@ public class MainWindowController implements UiScreenController {
 
     private String detectContentType(String fileName) {
         return fileName.toLowerCase(Locale.ROOT).endsWith(".json") ? "application/json" : "Unknown";
+    }
+
+    private void syncStatusRail(JsonViewerLoadResult result) {
+        String state = switch (result.validationResult().status()) {
+            case VALID -> "VALID";
+            case EMPTY -> "EMPTY";
+            case INVALID, PARSING_ERROR -> "INVALID";
+        };
+        String lines = result.hasRenderableTree()
+                ? Integer.toString(result.asciiTreeDocument().lineCount())
+                : "--";
+        setStatusRailValues(
+                state,
+                formatBytes(result.importResult().sizeBytes()),
+                lines,
+                result.historyEntry() != null ? "History snapshot" : "Local file"
+        );
+    }
+
+    private void setStatusRailValues(String state, String size, String lines, String source) {
+        statusStateValueLabel.setText(state);
+        statusSizeValueLabel.setText(size);
+        statusLinesValueLabel.setText(lines);
+        statusSourceValueLabel.setText(source);
     }
 
     private void refreshInlineHistory() {

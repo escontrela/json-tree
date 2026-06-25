@@ -36,6 +36,34 @@
     -fx-padding: 20 24 20 24;
 }
 
+.status-rail {
+    -fx-alignment: center-left;
+    -fx-spacing: 20;
+}
+
+.status-rail.shell-dragging,
+.file-summary-card.shell-dragging {
+    -fx-border-color: #1c69d4;
+    -fx-background-color: #f3f7fd;
+}
+
+.status-rail.shell-loading,
+.file-summary-card.shell-loading {
+    -fx-border-color: #bfc7d2;
+    -fx-background-color: #f8f9fb;
+}
+
+.status-rail.shell-valid,
+.file-summary-card.shell-valid {
+    -fx-border-color: #d6e5f8;
+}
+
+.status-rail.shell-invalid,
+.file-summary-card.shell-invalid {
+    -fx-border-color: #c23b32;
+    -fx-background-color: #fff7f7;
+}
+
 .workspace-main {
     -fx-alignment: top-left;
 }
@@ -219,6 +247,26 @@
     -fx-text-fill: #1f242a;
     -fx-font-size: 13px;
     -fx-font-weight: 500;
+}
+
+.status-rail-details {
+    -fx-alignment: center-right;
+}
+
+.status-detail-card {
+    -fx-min-width: 112;
+}
+
+.status-detail-label {
+    -fx-text-fill: #7c8794;
+    -fx-font-size: 11px;
+    -fx-font-weight: 700;
+}
+
+.status-detail-value {
+    -fx-text-fill: #1a2129;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
 }
 
 .viewer-toolbar {
