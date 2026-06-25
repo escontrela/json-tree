@@ -66,6 +66,12 @@
 - BMW blue is reserved for meaningful emphasis such as active CTA, focused surfaces, drag-ready affordances, and ready/history states.
 - The previous purple glow and pill-heavy cues have been removed from the shared shell interactions.
 
+## Two-Column Workspace Shell
+
+- The main window is now distributed as a persistent left utility rail plus a larger right inspection workspace instead of a stacked top-to-bottom shell.
+- The screenshot-inspired redistribution is used only for layout grouping; colors, spacing, typography, and surface language continue to follow `DESIGN.md`.
+- The left rail keeps space reserved for file context, recent history, and import guidance without reducing the ASCII viewer to a secondary element.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.
