@@ -2,7 +2,9 @@
 
 <?import com.davidpe.jsontree.ui.support.ControllerAwareBorderPane?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
@@ -64,20 +66,26 @@
                     <padding>
                         <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
                     </padding>
-                    <Label styleClass="eyebrow-label" text="History"/>
-                    <Label styleClass="rail-placeholder-title" text="Inline history list"/>
-                    <Label styleClass="rail-placeholder-body" text="Recent local snapshots will live here so the left rail can support quick reopen without leaving the viewer." wrapText="true"/>
-                    <Region VBox.vgrow="ALWAYS"/>
-                    <Label styleClass="rail-placeholder-meta" text="Dedicated history screen remains the full archive." wrapText="true"/>
+                    <HBox alignment="CENTER_LEFT" spacing="12.0">
+                        <VBox spacing="4.0">
+                            <Label styleClass="eyebrow-label" text="History"/>
+                            <Label fx:id="historyInlineMetaLabel" styleClass="rail-placeholder-meta"/>
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Button mnemonicParsing="false" onAction="#openHistory" styleClass="ghost-button" text="View all"/>
+                    </HBox>
+                    <ListView fx:id="historyListView" prefHeight="264.0" VBox.vgrow="ALWAYS"/>
+                    <Label fx:id="emptyHistoryInlineLabel" styleClass="rail-placeholder-body" managed="false" text="No snapshots yet. Valid imports will appear here for quick reopen." visible="false" wrapText="true"/>
+                    <Label styleClass="rail-placeholder-meta" text="Dedicated history screen remains the full archive and deletion flow." wrapText="true"/>
                 </VBox>
 
-                <VBox spacing="12.0" styleClass="rail-card import-utility-card">
+                <VBox fx:id="importUtilityCard" spacing="12.0" styleClass="rail-card import-utility-card">
                     <padding>
                         <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
                     </padding>
                     <Label styleClass="eyebrow-label" text="Import"/>
-                    <Label styleClass="rail-placeholder-title" text="Drop JSON anywhere in this window"/>
-                    <Label styleClass="rail-placeholder-body" text="This block is informational only. The full window remains the drop target so the layout stays light and consistent with the product rules." wrapText="true"/>
+                    <Label fx:id="importUtilityTitleLabel" styleClass="rail-placeholder-title" text="Drop JSON anywhere in this window"/>
+                    <Label fx:id="importUtilitySupportLabel" styleClass="rail-placeholder-body" text="This block is informational only. The full window remains the drop target so the layout stays light and consistent with the product rules." wrapText="true"/>
                 </VBox>
             </VBox>
 

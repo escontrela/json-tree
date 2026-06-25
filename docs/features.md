@@ -78,6 +78,12 @@
 - The summary card keeps filename, validation badge, file size, loaded timestamp, content type, rendered line count, and source when those values are available.
 - With no current file, the summary falls back to a waiting state instead of leaving stale metadata in place.
 
+## Inline Rail History
+
+- The main window now exposes up to five recent local snapshots directly inside the left rail for fast reopen.
+- Selecting an inline history entry replays the standard reopen flow inside the main viewer, while a `View all` action still routes to the dedicated history screen.
+- The import utility block in the rail remains informational only; the whole window is still the true drag-and-drop target.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.

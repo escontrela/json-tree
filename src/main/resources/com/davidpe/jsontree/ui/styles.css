@@ -67,6 +67,25 @@
     -fx-border-color: #c23b32;
 }
 
+.import-utility-card.utility-dragging {
+    -fx-border-color: #1c69d4;
+    -fx-background-color: #f3f7fd;
+}
+
+.import-utility-card.utility-loading {
+    -fx-border-color: #bfc7d2;
+    -fx-background-color: #f8f9fb;
+}
+
+.import-utility-card.utility-valid {
+    -fx-border-color: #d6e5f8;
+}
+
+.import-utility-card.utility-invalid {
+    -fx-border-color: #c23b32;
+    -fx-background-color: #fff7f7;
+}
+
 .viewer-content {
     -fx-background-color: #fafbfc;
     -fx-border-color: #e3e7ec;
@@ -88,6 +107,37 @@
 .scroll-bar:vertical .thumb {
     -fx-background-color: #b7c0cb;
     -fx-background-radius: 0;
+}
+
+.list-view {
+    -fx-background-color: #ffffff;
+    -fx-background-insets: 0;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+}
+
+.list-cell {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #eceff3;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 16 16 16 16;
+}
+
+.list-cell:filled:hover,
+.list-cell:filled:selected {
+    -fx-background-color: #f4f7fb;
+}
+
+.history-inline-title {
+    -fx-text-fill: #1a2129;
+    -fx-font-size: 14px;
+    -fx-font-weight: 700;
+}
+
+.history-inline-meta {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
 }
 
 .app-title {

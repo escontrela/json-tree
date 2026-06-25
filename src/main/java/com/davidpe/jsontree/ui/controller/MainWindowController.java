@@ -4,6 +4,7 @@ import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.model.ViewerVisualState;
@@ -19,8 +20,11 @@ import java.text.StringCharacterIterator;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Locale;
 import javafx.fxml.FXML;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
@@ -85,6 +89,18 @@ public class MainWindowController implements UiScreenController {
     private Label validationStatusLabel;
 
     @FXML
+    private Label historyInlineMetaLabel;
+
+    @FXML
+    private Label emptyHistoryInlineLabel;
+
+    @FXML
+    private Label importUtilityTitleLabel;
+
+    @FXML
+    private Label importUtilitySupportLabel;
+
+    @FXML
     private Label emptyStateLabel;
 
     @FXML
@@ -97,10 +113,16 @@ public class MainWindowController implements UiScreenController {
     private StackPane viewerShell;
 
     @FXML
+    private VBox importUtilityCard;
+
+    @FXML
     private VBox viewerContentBox;
 
     @FXML
     private TextFlow treeContentFlow;
+
+    @FXML
+    private ListView<ImportedJsonFile> historyListView;
 
     private ViewerVisualState currentState;
     private Instant currentLoadedAt;
@@ -112,11 +134,21 @@ public class MainWindowController implements UiScreenController {
         rootPane.setOnDragOver(this::handleDragOver);
         rootPane.setOnDragExited(event -> restoreViewFromWorkflow());
         rootPane.setOnDragDropped(this::handleDragDropped);
+        historyListView.setCellFactory(unused -> new InlineHistoryListCell());
+        historyListView.getSelectionModel().selectedItemProperty().addListener((unused, oldValue, newValue) -> {
+            if (newValue == null || newValue.equals(oldValue)) {
+                return;
+            }
+            reopenHistoryEntry(newValue);
+            historyListView.getSelectionModel().clearSelection();
+        });
         showEmptyViewer();
+        refreshInlineHistory();
     }
 
     @Override
     public void onShow() {
+        refreshInlineHistory();
         restoreViewFromWorkflow();
     }
 
@@ -126,6 +158,10 @@ public class MainWindowController implements UiScreenController {
         treeContentFlow.setVisible(true);
         emptyStateLabel.setManaged(false);
         emptyStateLabel.setVisible(false);
+        importUtilityTitleLabel.setText("Import another JSON");
+        importUtilitySupportLabel.setText(
+                "Drop a new .json anywhere in the window or reopen one of the recent snapshots from the rail."
+        );
         setValidationBadge("Valid", "status-valid");
         footerStatusLabel.setText("Rendered " + document.lineCount() + " lines");
         viewerScrollPane.setHvalue(0);
@@ -142,6 +178,10 @@ public class MainWindowController implements UiScreenController {
         fileTypeValueLabel.setText("application/json");
         fileLinesValueLabel.setText("--");
         fileSourceValueLabel.setText("Waiting for import");
+        importUtilityTitleLabel.setText("Drop JSON anywhere in this window");
+        importUtilitySupportLabel.setText(
+                "The full window remains the drop target. Valid JSON snapshots will also appear in the recent history rail."
+        );
         treeContentFlow.getChildren().clear();
         treeContentFlow.setManaged(false);
         treeContentFlow.setVisible(false);
@@ -156,6 +196,10 @@ public class MainWindowController implements UiScreenController {
 
     public void showDraggingState() {
         emptyStateLabel.setText("Release to inspect this JSON file");
+        importUtilityTitleLabel.setText("Release to inspect this JSON");
+        importUtilitySupportLabel.setText(
+                "The first supported .json file in the drop payload will enter the standard import and validation flow."
+        );
         setValidationBadge("Drop ready", "status-accent");
         footerStatusLabel.setText("Waiting for JSON drop");
         applyState(ViewerVisualState.DRAGGING);
@@ -170,6 +214,8 @@ public class MainWindowController implements UiScreenController {
         fileTypeValueLabel.setText(detectContentType(fileName));
         fileLinesValueLabel.setText("--");
         fileSourceValueLabel.setText("Local file");
+        importUtilityTitleLabel.setText("Importing JSON");
+        importUtilitySupportLabel.setText("Running validation, tree rendering, and local history persistence.");
         setValidationBadge("Loading", "status-muted");
         footerStatusLabel.setText("Parsing JSON");
         emptyStateLabel.setText("Loading JSON preview...");
@@ -182,6 +228,10 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void showInvalidState(String message) {
+        importUtilityTitleLabel.setText("JSON needs attention");
+        importUtilitySupportLabel.setText(
+                "Fix the payload and drop it again, or reopen a clean snapshot from the recent history list."
+        );
         setValidationBadge("Invalid", "status-error");
         footerStatusLabel.setText("JSON needs attention");
         emptyStateLabel.setText(message);
@@ -209,11 +259,29 @@ public class MainWindowController implements UiScreenController {
                 "viewer-valid",
                 "viewer-invalid"
         );
+        importUtilityCard.getStyleClass().removeAll(
+                "utility-dragging",
+                "utility-loading",
+                "utility-valid",
+                "utility-invalid"
+        );
         switch (state) {
-            case DRAGGING -> viewerShell.getStyleClass().add("viewer-dragging");
-            case LOADING -> viewerShell.getStyleClass().add("viewer-loading");
-            case VALID -> viewerShell.getStyleClass().add("viewer-valid");
-            case INVALID -> viewerShell.getStyleClass().add("viewer-invalid");
+            case DRAGGING -> {
+                viewerShell.getStyleClass().add("viewer-dragging");
+                importUtilityCard.getStyleClass().add("utility-dragging");
+            }
+            case LOADING -> {
+                viewerShell.getStyleClass().add("viewer-loading");
+                importUtilityCard.getStyleClass().add("utility-loading");
+            }
+            case VALID -> {
+                viewerShell.getStyleClass().add("viewer-valid");
+                importUtilityCard.getStyleClass().add("utility-valid");
+            }
+            case INVALID -> {
+                viewerShell.getStyleClass().add("viewer-invalid");
+                importUtilityCard.getStyleClass().add("utility-invalid");
+            }
             case EMPTY -> {
                 // Base style only.
             }
@@ -257,6 +325,7 @@ public class MainWindowController implements UiScreenController {
 
     private void presentLoadResult(JsonViewerLoadResult result) {
         updateFileSummary(result);
+        refreshInlineHistory();
 
         JsonValidationResult validationResult = result.validationResult();
         if (validationResult.status() == JsonValidationStatus.VALID && result.hasRenderableTree()) {
@@ -327,6 +396,66 @@ public class MainWindowController implements UiScreenController {
 
     private String detectContentType(String fileName) {
         return fileName.toLowerCase(Locale.ROOT).endsWith(".json") ? "application/json" : "Unknown";
+    }
+
+    private void refreshInlineHistory() {
+        List<ImportedJsonFile> entries = workflowService.loadHistoryEntries();
+        int visibleCount = Math.min(entries.size(), 5);
+        historyInlineMetaLabel.setText(
+                visibleCount == 0
+                        ? "No recent snapshots"
+                        : visibleCount + " recent snapshot" + (visibleCount == 1 ? "" : "s")
+        );
+
+        if (entries.isEmpty()) {
+            historyListView.getItems().clear();
+            historyListView.setManaged(false);
+            historyListView.setVisible(false);
+            emptyHistoryInlineLabel.setManaged(true);
+            emptyHistoryInlineLabel.setVisible(true);
+            return;
+        }
+
+        emptyHistoryInlineLabel.setManaged(false);
+        emptyHistoryInlineLabel.setVisible(false);
+        historyListView.setManaged(true);
+        historyListView.setVisible(true);
+        historyListView.getItems().setAll(entries.stream().limit(5).toList());
+    }
+
+    private void reopenHistoryEntry(ImportedJsonFile entry) {
+        workflowService.reopenHistoryEntry(entry.storedName()).ifPresent(this::presentLoadResult);
+    }
+
+    private final class InlineHistoryListCell extends ListCell<ImportedJsonFile> {
+
+        private final Label titleLabel = new Label();
+        private final Label metaLabel = new Label();
+        private final VBox content = new VBox(4.0);
+
+        private InlineHistoryListCell() {
+            titleLabel.getStyleClass().add("history-inline-title");
+            metaLabel.getStyleClass().add("history-inline-meta");
+            content.getChildren().addAll(titleLabel, metaLabel);
+        }
+
+        @Override
+        protected void updateItem(ImportedJsonFile item, boolean empty) {
+            super.updateItem(item, empty);
+            if (empty || item == null) {
+                setText(null);
+                setGraphic(null);
+                return;
+            }
+            titleLabel.setText(item.originalName());
+            metaLabel.setText(
+                    FILE_TIME_FORMATTER.format(item.importedAt()) + " • "
+                            + formatBytes(item.sizeBytes()) + " • "
+                            + item.lineCount() + " lines"
+            );
+            setText(null);
+            setGraphic(content);
+        }
     }
 
     private void setValidationBadge(String text, String styleClass) {
