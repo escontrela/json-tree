@@ -26,7 +26,9 @@
 }
 
 .viewer-shell {
-    -fx-background-color: #f7f7f7;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #e6e6e6;
+    -fx-border-width: 1;
 }
 
 .main-content-shell {
@@ -40,25 +42,25 @@
 }
 
 .viewer-shell.viewer-dragging {
-    -fx-background-color: #ebf3ff;
+    -fx-background-color: #f3f7fd;
     -fx-border-color: #1c69d4;
     -fx-border-width: 1;
 }
 
 .viewer-shell.viewer-loading {
-    -fx-background-color: #f3f6fb;
+    -fx-background-color: #f7f7f7;
     -fx-border-color: #cccccc;
     -fx-border-width: 1;
 }
 
 .viewer-shell.viewer-valid {
-    -fx-background-color: #f7f7f7;
+    -fx-background-color: #ffffff;
     -fx-border-color: #d9e8fb;
     -fx-border-width: 1;
 }
 
 .viewer-shell.viewer-invalid {
-    -fx-background-color: #fff4f4;
+    -fx-background-color: #fff8f8;
     -fx-border-color: #dc2626;
     -fx-border-width: 1;
 }
@@ -67,6 +69,7 @@
     -fx-background-color: #fafafa;
     -fx-border-color: #e6e6e6;
     -fx-border-width: 1;
+    -fx-spacing: 20;
 }
 
 .scroll-pane,
@@ -193,6 +196,27 @@
 .tree-content {
     -fx-font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
     -fx-font-size: 14px;
+}
+
+.viewer-card-header {
+    -fx-padding: 0 0 4 0;
+}
+
+.viewer-card-title {
+    -fx-text-fill: #1a1a1a;
+    -fx-font-size: 20px;
+    -fx-font-weight: 700;
+}
+
+.viewer-card-meta {
+    -fx-text-fill: #9a9a9a;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.viewer-divider {
+    -fx-pref-height: 1;
+    -fx-background-color: #e6e6e6;
 }
 
 .tree-content-flow {
