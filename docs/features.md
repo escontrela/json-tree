@@ -48,6 +48,12 @@
 - The controller delegates the dropped path through `ImportJsonUseCase#importFile(Path)` before the workflow continues with validation, rendering, and optional history persistence.
 - Unsupported payloads restore a safe viewer state without calling filesystem metadata or parsing APIs directly from the controller.
 
+## BMW Theme Tokens
+
+- The shared JavaFX theme now uses a BMW-inspired token baseline: white canvas, dark navy structure, BMW blue primary actions, neutral hairlines, and restrained grayscale body copy.
+- Application typography defaults to a BMW-safe sans hierarchy, with the ASCII tree explicitly kept as a monospace rendering exception.
+- Shared shell controls no longer rely on glow-heavy borders or pill geometry as the default component language.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.
