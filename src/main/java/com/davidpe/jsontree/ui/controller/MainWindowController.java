@@ -105,7 +105,7 @@ public class MainWindowController implements UiScreenController {
         treeContentFlow.setVisible(true);
         emptyStateLabel.setManaged(false);
         emptyStateLabel.setVisible(false);
-        validationStatusLabel.setText("Valid");
+        setValidationBadge("Valid", "status-valid");
         footerStatusLabel.setText("Rendered " + document.lineCount() + " lines");
         viewerScrollPane.setHvalue(0);
         viewerScrollPane.setVvalue(0);
@@ -119,7 +119,7 @@ public class MainWindowController implements UiScreenController {
         emptyStateLabel.setManaged(true);
         emptyStateLabel.setVisible(true);
         emptyStateLabel.setText("Drop a JSON anywhere in the window");
-        validationStatusLabel.setText("Waiting");
+        setValidationBadge("Waiting", "status-idle");
         footerStatusLabel.setText("No JSON loaded");
         viewerContentBox.autosize();
         applyState(ViewerVisualState.EMPTY);
@@ -127,7 +127,7 @@ public class MainWindowController implements UiScreenController {
 
     public void showDraggingState() {
         emptyStateLabel.setText("Release to inspect this JSON file");
-        validationStatusLabel.setText("Drop ready");
+        setValidationBadge("Drop ready", "status-accent");
         footerStatusLabel.setText("Waiting for JSON drop");
         applyState(ViewerVisualState.DRAGGING);
     }
@@ -135,7 +135,7 @@ public class MainWindowController implements UiScreenController {
     public void showLoadingState(String fileName) {
         fileNameLabel.setText(fileName);
         fileMetaLabel.setText("Preparing JSON preview");
-        validationStatusLabel.setText("Loading");
+        setValidationBadge("Loading", "status-muted");
         footerStatusLabel.setText("Parsing JSON");
         emptyStateLabel.setText("Loading JSON preview...");
         treeContentFlow.getChildren().clear();
@@ -147,7 +147,7 @@ public class MainWindowController implements UiScreenController {
     }
 
     public void showInvalidState(String message) {
-        validationStatusLabel.setText("Invalid");
+        setValidationBadge("Invalid", "status-error");
         footerStatusLabel.setText("JSON needs attention");
         emptyStateLabel.setText(message);
         treeContentFlow.getChildren().clear();
@@ -262,6 +262,18 @@ public class MainWindowController implements UiScreenController {
             return validationResult.message();
         }
         return validationResult.message() + " (line " + validationResult.line() + ", column " + validationResult.column() + ")";
+    }
+
+    private void setValidationBadge(String text, String styleClass) {
+        validationStatusLabel.setText(text);
+        validationStatusLabel.getStyleClass().removeAll(
+                "status-idle",
+                "status-accent",
+                "status-muted",
+                "status-valid",
+                "status-error"
+        );
+        validationStatusLabel.getStyleClass().add(styleClass);
     }
 
     @FXML

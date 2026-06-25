@@ -74,7 +74,7 @@ public class HistoryScreenController implements UiScreenController {
     public void onShow() {
         List<ImportedJsonFile> entries = workflowService.loadHistoryEntries();
         historyMetaLabel.setText(entries.size() + " stored snapshot" + (entries.size() == 1 ? "" : "s"));
-        historyStatusLabel.setText(entries.isEmpty() ? "Empty" : "Ready");
+        setHistoryBadge(entries.isEmpty() ? "Empty" : "Ready", entries.isEmpty() ? "status-idle" : "status-accent");
         historyFooterLabel.setText(entries.isEmpty() ? "No snapshots stored yet" : "Browsing local JSON history");
 
         if (entries.isEmpty()) {
@@ -120,6 +120,18 @@ public class HistoryScreenController implements UiScreenController {
             iterator.next();
         }
         return String.format(Locale.ROOT, "%.1f %cB", scaled, iterator.current());
+    }
+
+    private void setHistoryBadge(String text, String styleClass) {
+        historyStatusLabel.setText(text);
+        historyStatusLabel.getStyleClass().removeAll(
+                "status-idle",
+                "status-accent",
+                "status-muted",
+                "status-valid",
+                "status-error"
+        );
+        historyStatusLabel.getStyleClass().add(styleClass);
     }
 
     private final class HistoryEntryListCell extends ListCell<ImportedJsonFile> {

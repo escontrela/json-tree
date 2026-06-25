@@ -111,6 +111,11 @@
     -fx-text-fill: #1a1a1a;
 }
 
+.list-cell:filled:focused {
+    -fx-border-color: #1c69d4;
+    -fx-border-width: 0 0 1 0;
+}
+
 .history-entry-title {
     -fx-text-fill: #1a1a1a;
     -fx-font-size: 16px;
@@ -233,6 +238,34 @@
     -fx-font-weight: 700;
 }
 
+.status-pill.status-idle {
+    -fx-background-color: #f7f7f7;
+    -fx-text-fill: #6b6b6b;
+}
+
+.status-pill.status-accent {
+    -fx-background-color: #eef4fd;
+    -fx-border-color: #1c69d4;
+    -fx-text-fill: #1c69d4;
+}
+
+.status-pill.status-muted {
+    -fx-background-color: #f3f6fb;
+    -fx-text-fill: #6b6b6b;
+}
+
+.status-pill.status-valid {
+    -fx-background-color: #eef8f1;
+    -fx-border-color: #22c55e;
+    -fx-text-fill: #1f7a3d;
+}
+
+.status-pill.status-error {
+    -fx-background-color: #fff1f1;
+    -fx-border-color: #dc2626;
+    -fx-text-fill: #b91c1c;
+}
+
 .button {
     -fx-cursor: hand;
     -fx-font-size: 14px;
@@ -253,12 +286,41 @@
     -fx-border-color: #1c69d4;
 }
 
+.primary-button:hover {
+    -fx-background-color: #0653b6;
+    -fx-border-color: #0653b6;
+}
+
+.primary-button:pressed {
+    -fx-background-color: #004a9f;
+    -fx-border-color: #004a9f;
+}
+
 .ghost-button,
 .close-button {
     -fx-background-color: #ffffff;
     -fx-border-color: #cccccc;
     -fx-border-width: 1;
     -fx-text-fill: #262626;
+}
+
+.ghost-button:hover,
+.close-button:hover,
+.history-delete-button:hover {
+    -fx-background-color: #f7f7f7;
+    -fx-border-color: #1c69d4;
+}
+
+.ghost-button:pressed,
+.close-button:pressed,
+.history-delete-button:pressed {
+    -fx-background-color: #ebebeb;
+}
+
+.button:focused,
+.list-view:focused,
+.scroll-pane:focused {
+    -fx-border-color: #1c69d4;
 }
 
 .text.tree-prefix {

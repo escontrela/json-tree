@@ -60,6 +60,12 @@
 - The ASCII viewer is framed as a dedicated content card with supporting captions instead of floating rounded utility chrome.
 - The history screen follows the same shell system so navigation between viewer and archive reads as one product.
 
+## Shared Interactive States
+
+- Validation badges, drag-over states, list selection, focus rings, and button hover/pressed treatments now share one restrained BMW-inspired state model.
+- BMW blue is reserved for meaningful emphasis such as active CTA, focused surfaces, drag-ready affordances, and ready/history states.
+- The previous purple glow and pill-heavy cues have been removed from the shared shell interactions.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.
