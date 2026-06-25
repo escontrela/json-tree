@@ -6,6 +6,10 @@
     -fx-padding: 0;
 }
 
+.shell-top {
+    -fx-background-color: #ffffff;
+}
+
 .header-bar {
     -fx-background-color: #1a2129;
     -fx-padding: 20 24 20 24;
@@ -23,6 +27,16 @@
 
 .viewer-shell {
     -fx-background-color: #f7f7f7;
+}
+
+.main-content-shell {
+    -fx-background-color: #ffffff;
+}
+
+.section-band {
+    -fx-padding: 20 0 12 0;
+    -fx-border-color: #e6e6e6;
+    -fx-border-width: 0 0 1 0;
 }
 
 .viewer-shell.viewer-dragging {
@@ -128,6 +142,27 @@
     -fx-text-fill: #ffffff;
     -fx-font-size: 24px;
     -fx-font-weight: 700;
+}
+
+.eyebrow-label {
+    -fx-text-fill: #6b6b6b;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-letter-spacing: 1.2px;
+}
+
+.hero-support {
+    -fx-text-fill: #bbbbbb;
+    -fx-font-size: 14px;
+    -fx-font-weight: 300;
+    -fx-max-width: 420px;
+}
+
+.hero-meta,
+.section-caption {
+    -fx-text-fill: #9a9a9a;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
 }
 
 .file-name {

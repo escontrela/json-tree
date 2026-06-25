@@ -5,6 +5,8 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
@@ -17,56 +19,83 @@
                            xmlns:fx="http://javafx.com/fxml/1"
                            fx:controller="com.davidpe.jsontree.ui.controller.MainWindowController">
     <top>
-        <VBox spacing="12.0">
-            <padding>
-                <Insets top="18.0" right="18.0" bottom="0.0" left="18.0"/>
-            </padding>
-            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="header-bar">
-                <Label styleClass="app-icon" text="{}"/>
-                <Label styleClass="app-title" text="JSON → TREE"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button mnemonicParsing="false" onAction="#openHistory" styleClass="ghost-button" text="History"/>
-                <Button mnemonicParsing="false" styleClass="close-button" text="✕"/>
-            </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="file-bar">
-                <Label styleClass="file-icon" text="JSON"/>
-                <VBox spacing="2.0">
-                    <Label fx:id="fileNameLabel" styleClass="file-name"/>
-                    <Label fx:id="fileMetaLabel" styleClass="file-meta"/>
+        <VBox spacing="0.0" styleClass="shell-top">
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="header-bar">
+                <VBox spacing="8.0">
+                    <Label styleClass="eyebrow-label" text="Developer utility"/>
+                    <Label styleClass="app-title" text="JSON → TREE"/>
+                    <Label styleClass="hero-support" text="Inspect JSON as a structured ASCII tree with instant local history." wrapText="true"/>
                 </VBox>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="validationStatusLabel" styleClass="status-pill"/>
-                <Button mnemonicParsing="false" styleClass="ghost-button" text="Clear"/>
+                <VBox alignment="CENTER_RIGHT" spacing="12.0">
+                    <HBox alignment="CENTER_RIGHT" spacing="12.0">
+                        <Button mnemonicParsing="false" onAction="#openHistory" styleClass="ghost-button" text="History"/>
+                        <Button mnemonicParsing="false" styleClass="close-button" text="Close"/>
+                    </HBox>
+                    <Label styleClass="hero-meta" text="BMW editorial shell"/>
+                </VBox>
             </HBox>
+            <GridPane hgap="24.0" vgap="8.0" styleClass="file-bar">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="45.0"/>
+                    <ColumnConstraints percentWidth="20.0"/>
+                    <ColumnConstraints percentWidth="35.0"/>
+                </columnConstraints>
+                <VBox spacing="6.0" GridPane.columnIndex="0">
+                    <Label styleClass="eyebrow-label" text="Current file"/>
+                    <Label fx:id="fileNameLabel" styleClass="file-name"/>
+                    <Label fx:id="fileMetaLabel" styleClass="file-meta" wrapText="true"/>
+                </VBox>
+                <VBox spacing="6.0" GridPane.columnIndex="1">
+                    <Label styleClass="eyebrow-label" text="Validation"/>
+                    <Label fx:id="validationStatusLabel" styleClass="status-pill"/>
+                </VBox>
+                <HBox alignment="CENTER_RIGHT" spacing="12.0" GridPane.columnIndex="2">
+                    <Button mnemonicParsing="false" styleClass="primary-button" text="Copy tree"/>
+                    <Button mnemonicParsing="false" styleClass="ghost-button" text="Reset view"/>
+                </HBox>
+            </GridPane>
         </VBox>
     </top>
     <center>
-        <StackPane fx:id="viewerShell" styleClass="viewer-shell">
+        <VBox spacing="0.0" styleClass="main-content-shell">
             <padding>
-                <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
+                <Insets top="0.0" right="24.0" bottom="0.0" left="24.0"/>
             </padding>
-            <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="false" hbarPolicy="AS_NEEDED" pannable="true" vbarPolicy="AS_NEEDED">
-                <content>
-                    <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
-                        <padding>
-                            <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
-                        </padding>
-                        <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true"/>
-                        <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false"/>
-                    </VBox>
-                </content>
-            </ScrollPane>
-        </StackPane>
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="section-band">
+                <Label styleClass="eyebrow-label" text="Viewer"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label styleClass="section-caption" text="Monospace rendering exception"/>
+            </HBox>
+            <StackPane fx:id="viewerShell" styleClass="viewer-shell">
+                <padding>
+                    <Insets top="24.0" right="0.0" bottom="24.0" left="0.0"/>
+                </padding>
+                <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="false" hbarPolicy="AS_NEEDED" pannable="true" vbarPolicy="AS_NEEDED">
+                    <content>
+                        <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
+                            <padding>
+                                <Insets top="32.0" right="32.0" bottom="32.0" left="32.0"/>
+                            </padding>
+                            <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true"/>
+                            <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false"/>
+                        </VBox>
+                    </content>
+                </ScrollPane>
+            </StackPane>
+        </VBox>
     </center>
     <bottom>
-        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="footer-bar">
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="footer-bar">
             <padding>
-                <Insets top="0.0" right="18.0" bottom="18.0" left="18.0"/>
+                <Insets top="0.0" right="24.0" bottom="24.0" left="24.0"/>
             </padding>
-            <Button mnemonicParsing="false" styleClass="primary-button" text="Copy"/>
-            <Label styleClass="footer-meta" text="0 lines"/>
+            <VBox spacing="4.0">
+                <Label styleClass="eyebrow-label" text="Render status"/>
+                <Label fx:id="footerStatusLabel" styleClass="footer-status"/>
+            </VBox>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="footerStatusLabel" styleClass="footer-status"/>
+            <Label styleClass="footer-meta" text="ASCII tree remains functional monospace content"/>
         </HBox>
     </bottom>
 </ControllerAwareBorderPane>
