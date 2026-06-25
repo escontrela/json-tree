@@ -54,6 +54,12 @@
 - Application typography defaults to a BMW-safe sans hierarchy, with the ASCII tree explicitly kept as a monospace rendering exception.
 - Shared shell controls no longer rely on glow-heavy borders or pill geometry as the default component language.
 
+## BMW Shell Layout
+
+- The main window now uses an editorial BMW-style shell with a dark structural header, a reorganized metadata band, and restrained rectangular CTA language.
+- The ASCII viewer is framed as a dedicated content card with supporting captions instead of floating rounded utility chrome.
+- The history screen follows the same shell system so navigation between viewer and archive reads as one product.
+
 ## History Screen
 
 - The app now includes a dedicated `History` screen registered through `UiScreenId`, `UiScreenFactory`, and `UiFlowManager`.

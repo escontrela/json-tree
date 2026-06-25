@@ -16,49 +16,63 @@
                            xmlns:fx="http://javafx.com/fxml/1"
                            fx:controller="com.davidpe.jsontree.ui.controller.HistoryScreenController">
     <top>
-        <VBox spacing="12.0">
-            <padding>
-                <Insets top="18.0" right="18.0" bottom="0.0" left="18.0"/>
-            </padding>
-            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="header-bar">
-                <Label styleClass="app-icon" text="{}"/>
-                <Label styleClass="app-title" text="JSON History"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="Back"/>
-            </HBox>
-            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="file-bar">
-                <Label styleClass="file-icon" text="LOG"/>
-                <VBox spacing="2.0">
-                    <Label styleClass="file-name" text="Stored inspections"/>
-                    <Label fx:id="historyMetaLabel" styleClass="file-meta"/>
+        <VBox spacing="0.0" styleClass="shell-top">
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="header-bar">
+                <VBox spacing="8.0">
+                    <Label styleClass="eyebrow-label" text="Local archive"/>
+                    <Label styleClass="app-title" text="JSON History"/>
+                    <Label styleClass="hero-support" text="Review previous inspections, reopen stored trees, and manage local snapshots." wrapText="true"/>
                 </VBox>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="historyStatusLabel" styleClass="status-pill"/>
+                <VBox alignment="CENTER_RIGHT" spacing="12.0">
+                    <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="Back to viewer"/>
+                    <Label styleClass="hero-meta" text="Filesystem-backed timeline"/>
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="24.0" styleClass="file-bar">
+                <VBox spacing="6.0">
+                    <Label styleClass="eyebrow-label" text="Stored inspections"/>
+                    <Label fx:id="historyMetaLabel" styleClass="file-name"/>
+                </VBox>
+                <Region HBox.hgrow="ALWAYS"/>
+                <VBox alignment="CENTER_RIGHT" spacing="6.0">
+                    <Label styleClass="eyebrow-label" text="State"/>
+                    <Label fx:id="historyStatusLabel" styleClass="status-pill"/>
+                </VBox>
             </HBox>
         </VBox>
     </top>
     <center>
-        <StackPane styleClass="viewer-shell">
+        <VBox spacing="0.0" styleClass="main-content-shell">
             <padding>
-                <Insets top="18.0" right="18.0" bottom="18.0" left="18.0"/>
+                <Insets top="0.0" right="24.0" bottom="0.0" left="24.0"/>
             </padding>
-            <VBox spacing="16.0" styleClass="viewer-content">
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="section-band">
+                <Label styleClass="eyebrow-label" text="History list"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label styleClass="section-caption" text="Chronological local snapshots"/>
+            </HBox>
+            <StackPane styleClass="viewer-shell">
                 <padding>
-                    <Insets top="28.0" right="28.0" bottom="28.0" left="28.0"/>
+                    <Insets top="24.0" right="0.0" bottom="24.0" left="0.0"/>
                 </padding>
-                <Label fx:id="emptyHistoryLabel" styleClass="empty-state" wrapText="true"/>
-                <ListView fx:id="historyListView" prefHeight="520.0" visible="false"/>
-            </VBox>
-        </StackPane>
+                <VBox spacing="20.0" styleClass="viewer-content">
+                    <padding>
+                        <Insets top="32.0" right="32.0" bottom="32.0" left="32.0"/>
+                    </padding>
+                    <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-card-header">
+                        <VBox spacing="6.0">
+                            <Label styleClass="eyebrow-label" text="Timeline"/>
+                            <Label styleClass="viewer-card-title" text="Stored JSON inspections"/>
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS"/>
+                        <Label fx:id="historyFooterLabel" styleClass="viewer-card-meta"/>
+                    </HBox>
+                    <Region styleClass="viewer-divider"/>
+                    <Label fx:id="emptyHistoryLabel" styleClass="empty-state" wrapText="true"/>
+                    <ListView fx:id="historyListView" prefHeight="520.0" visible="false"/>
+                </VBox>
+            </StackPane>
+        </VBox>
     </center>
-    <bottom>
-        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="footer-bar">
-            <padding>
-                <Insets top="0.0" right="18.0" bottom="18.0" left="18.0"/>
-            </padding>
-            <Label styleClass="footer-meta" text="Filesystem history"/>
-            <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="historyFooterLabel" styleClass="footer-status"/>
-        </HBox>
-    </bottom>
 </ControllerAwareBorderPane>
