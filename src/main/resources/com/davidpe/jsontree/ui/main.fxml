@@ -5,187 +5,166 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Priority?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.text.TextFlow?>
 
-<BorderPane fx:id="rootPane"
-                           xmlns="http://javafx.com/javafx/21"
-                           xmlns:fx="http://javafx.com/fxml/1"
-                           fx:controller="com.davidpe.jsontree.ui.controller.MainWindowController"
-                           styleClass="app-shell">
-    <center>
-        <HBox spacing="24.0" styleClass="layout-shell">
-            <padding>
-                <Insets top="24.0" right="24.0" bottom="24.0" left="24.0"/>
-            </padding>
-            <VBox prefWidth="336.0" spacing="20.0" styleClass="utility-rail">
-                <VBox fx:id="fileSummaryCard" spacing="16.0" styleClass="rail-card file-summary-card">
-                    <padding>
-                        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
-                    </padding>
-                    <HBox alignment="CENTER_LEFT" spacing="12.0">
-                        <VBox spacing="4.0">
-                            <Label styleClass="eyebrow-label" text="Current file"/>
-                            <Label fx:id="fileNameLabel" styleClass="file-name"/>
-                        </VBox>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Label fx:id="validationStatusLabel" styleClass="status-pill"/>
-                    </HBox>
-                    <Region styleClass="card-divider"/>
-                    <Label fx:id="fileMetaLabel" styleClass="file-meta" wrapText="true"/>
-                    <VBox spacing="10.0" styleClass="metric-stack">
-                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="metric-row">
-                            <Label styleClass="metric-label" text="Loaded"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Label fx:id="fileLoadedAtValueLabel" styleClass="metric-value"/>
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="metric-row">
-                            <Label styleClass="metric-label" text="Type"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Label fx:id="fileTypeValueLabel" styleClass="metric-value"/>
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="metric-row">
-                            <Label styleClass="metric-label" text="Lines"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Label fx:id="fileLinesValueLabel" styleClass="metric-value"/>
-                        </HBox>
-                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="metric-row">
-                            <Label styleClass="metric-label" text="Source"/>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <Label fx:id="fileSourceValueLabel" styleClass="metric-value"/>
-                        </HBox>
-                    </VBox>
-                </VBox>
+<BorderPane fx:id="rootPane" styleClass="app-shell" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.MainWindowController">
 
-                <VBox spacing="12.0" styleClass="rail-card history-preview-card" VBox.vgrow="ALWAYS">
-                    <padding>
-                        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
-                    </padding>
-                    <HBox alignment="CENTER_LEFT" spacing="12.0">
-                        <VBox spacing="4.0">
-                            <Label styleClass="eyebrow-label" text="History"/>
-                            <Label fx:id="historyInlineMetaLabel" styleClass="rail-placeholder-meta"/>
-                        </VBox>
-                        <Region HBox.hgrow="ALWAYS"/>
-                        <Button mnemonicParsing="false" onAction="#openHistory" styleClass="ghost-button" text="View all"/>
-                    </HBox>
-                    <ListView fx:id="historyListView" prefHeight="264.0" VBox.vgrow="ALWAYS"/>
-                    <Label fx:id="emptyHistoryInlineLabel" styleClass="rail-placeholder-body" managed="false" text="No snapshots yet. Valid imports will appear here for quick reopen." visible="false" wrapText="true"/>
-                    <Label styleClass="rail-placeholder-meta" text="Dedicated history screen remains the full archive and deletion flow." wrapText="true"/>
-                </VBox>
-
-                <VBox fx:id="importUtilityCard" spacing="12.0" styleClass="rail-card import-utility-card">
-                    <padding>
-                        <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
-                    </padding>
-                    <Label styleClass="eyebrow-label" text="Import"/>
-                    <Label fx:id="importUtilityTitleLabel" styleClass="rail-placeholder-title" text="Drop JSON anywhere in this window"/>
-                    <Label fx:id="importUtilitySupportLabel" styleClass="rail-placeholder-body" text="This block is informational only. The full window remains the drop target so the layout stays light and consistent with the product rules." wrapText="true"/>
-                </VBox>
+    <!-- ═══ TOP: workspace header ═══ -->
+    <top>
+        <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
+            <VBox spacing="8.0">
+                <Label styleClass="eyebrow-label" text="Workspace" />
+                <Label styleClass="app-title" text="JSON → TREE" />
+                <Label styleClass="hero-support" text="Inspect JSON as a structured ASCII tree with a persistent utility rail and primary viewer workspace." wrapText="true" />
             </VBox>
-
-            <VBox spacing="20.0" styleClass="workspace-shell" HBox.hgrow="ALWAYS">
-                <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="workspace-header">
-                    <VBox spacing="8.0">
-                        <Label styleClass="eyebrow-label" text="Workspace"/>
-                        <Label styleClass="app-title" text="JSON → TREE"/>
-                        <Label styleClass="hero-support" text="Inspect JSON as a structured ASCII tree with a persistent utility rail and primary viewer workspace." wrapText="true"/>
-                    </VBox>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
-                        <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Copy tree"/>
-                        <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Raw JSON"/>
-                        <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Search"/>
-                    </HBox>
-                </HBox>
-                <HBox spacing="20.0" styleClass="workspace-main" VBox.vgrow="ALWAYS">
-                    <VBox spacing="16.0" HBox.hgrow="ALWAYS">
-                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-toolbar">
-                            <VBox spacing="4.0">
-                                <Label styleClass="eyebrow-label" text="ASCII viewer"/>
-                                <Label styleClass="viewer-card-title" text="Structured developer output"/>
-                            </VBox>
-                            <Region HBox.hgrow="ALWAYS"/>
-                            <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
-                                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Focus"/>
-                                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Density"/>
-                                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Outline"/>
-                            </HBox>
-                        </HBox>
-                        <StackPane fx:id="viewerShell" styleClass="viewer-shell" VBox.vgrow="ALWAYS">
-                            <padding>
-                                <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
-                            </padding>
-                            <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="false" hbarPolicy="AS_NEEDED" pannable="true" vbarPolicy="AS_NEEDED">
-                                <content>
-                                    <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
-                                        <padding>
-                                            <Insets top="32.0" right="32.0" bottom="32.0" left="32.0"/>
-                                        </padding>
-                                        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-card-header">
-                                            <VBox spacing="6.0">
-                                                <Label styleClass="eyebrow-label" text="ASCII viewer"/>
-                                                <Label styleClass="viewer-card-title" text="Structured developer output"/>
-                                            </VBox>
-                                            <Region HBox.hgrow="ALWAYS"/>
-                                            <Label styleClass="viewer-card-meta" text="Primary inspection workspace"/>
-                                        </HBox>
-                                        <Region styleClass="viewer-divider"/>
-                                        <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true"/>
-                                        <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false"/>
-                                    </VBox>
-                                </content>
-                            </ScrollPane>
-                        </StackPane>
-                    </VBox>
-                    <VBox prefWidth="176.0" spacing="12.0" styleClass="rail-card viewer-aid-card">
-                        <padding>
-                            <Insets top="20.0" right="20.0" bottom="20.0" left="20.0"/>
-                        </padding>
-                        <Label styleClass="eyebrow-label" text="Outline"/>
-                        <Label fx:id="viewerAidTitleLabel" styleClass="viewer-aid-title" text="Awaiting JSON"/>
-                        <Label fx:id="viewerAidMetaLabel" styleClass="viewer-aid-meta" text="Load a local JSON file to populate this secondary viewer aid." wrapText="true"/>
-                    </VBox>
-                </HBox>
-                <HBox fx:id="statusRail" alignment="CENTER_LEFT" spacing="20.0" styleClass="status-rail">
-                    <VBox spacing="4.0">
-                        <Label styleClass="eyebrow-label" text="Render status"/>
-                        <Label fx:id="footerStatusLabel" styleClass="footer-status"/>
-                    </VBox>
-                    <Region HBox.hgrow="ALWAYS"/>
-                    <HBox alignment="CENTER_RIGHT" spacing="16.0" styleClass="status-rail-details">
-                        <VBox spacing="4.0" styleClass="status-detail-card">
-                            <Label styleClass="status-detail-label" text="State"/>
-                            <Label fx:id="statusStateValueLabel" styleClass="status-detail-value"/>
-                        </VBox>
-                        <VBox spacing="4.0" styleClass="status-detail-card">
-                            <Label styleClass="status-detail-label" text="Size"/>
-                            <Label fx:id="statusSizeValueLabel" styleClass="status-detail-value"/>
-                        </VBox>
-                        <VBox spacing="4.0" styleClass="status-detail-card">
-                            <Label styleClass="status-detail-label" text="Lines"/>
-                            <Label fx:id="statusLinesValueLabel" styleClass="status-detail-value"/>
-                        </VBox>
-                        <VBox spacing="4.0" styleClass="status-detail-card">
-                            <Label styleClass="status-detail-label" text="Source"/>
-                            <Label fx:id="statusSourceValueLabel" styleClass="status-detail-value"/>
-                        </VBox>
-                    </HBox>
-                </HBox>
-            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
+                <Button mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button header-action-button" text="Copy tree" />
+                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Raw JSON" />
+                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Search" />
+            </HBox>
         </HBox>
-    </center>
-    <bottom>
-        <HBox managed="false" visible="false">
-            <VBox spacing="4.0">
-                <Label styleClass="eyebrow-label" text="Legacy footer"/>
-                <Label styleClass="footer-status" text="Unused"/>
+    </top>
+
+    <!-- ═══ LEFT: utility rail ═══ -->
+    <left>
+        <VBox prefWidth="336.0" spacing="20.0" styleClass="utility-rail">
+            <BorderPane.margin>
+                <Insets bottom="24.0" left="24.0" right="12.0" top="24.0" />
+            </BorderPane.margin>
+
+            <VBox fx:id="fileSummaryCard" spacing="16.0" styleClass="rail-card file-summary-card">
+                <padding>
+                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <VBox spacing="4.0">
+                        <Label styleClass="eyebrow-label" text="Current file" />
+                        <Label fx:id="fileNameLabel" styleClass="file-name" />
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Label fx:id="validationStatusLabel" styleClass="status-pill" />
+                </HBox>
+                <Region styleClass="card-divider" />
+                <Label fx:id="fileMetaLabel" styleClass="file-meta" wrapText="true" />
+                <VBox spacing="10.0" styleClass="metric-stack">
+                    <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="metric-row">
+                        <Label styleClass="metric-label" text="Loaded" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label fx:id="fileLoadedAtValueLabel" styleClass="metric-value" />
+                    </HBox>
+                    <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="metric-row">
+                        <Label styleClass="metric-label" text="Source" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label fx:id="fileSourceValueLabel" styleClass="metric-value" />
+                    </HBox>
+                </VBox>
             </VBox>
+
+            <VBox spacing="12.0" styleClass="rail-card history-preview-card" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                </padding>
+                <HBox alignment="CENTER_LEFT" spacing="12.0">
+                    <VBox spacing="4.0">
+                        <Label styleClass="eyebrow-label" text="History" />
+                        <Label fx:id="historyInlineMetaLabel" styleClass="rail-placeholder-meta" />
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button mnemonicParsing="false" onAction="#openHistory" styleClass="ghost-button" text="View all" />
+                </HBox>
+                <ListView fx:id="historyListView" prefHeight="264.0" VBox.vgrow="ALWAYS" />
+                <Label fx:id="emptyHistoryInlineLabel" managed="false" styleClass="rail-placeholder-body" text="No snapshots yet. Valid imports will appear here for quick reopen." visible="false" wrapText="true" />
+            </VBox>
+        </VBox>
+    </left>
+
+    <!-- ═══ CENTER: viewer principal ═══ -->
+    <center>
+        <VBox spacing="16.0">
+            <BorderPane.margin>
+                <Insets bottom="24.0" left="12.0" right="12.0" top="24.0" />
+            </BorderPane.margin>
+
+            <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-toolbar">
+                <VBox spacing="4.0">
+                    <Label styleClass="eyebrow-label" text="ASCII viewer" />
+                    <Label styleClass="viewer-card-title" text="Structured developer output" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
+                    <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Focus" />
+                    <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Density" />
+                    <Button mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button toolbar-button" text="Outline" />
+                </HBox>
+            </HBox>
+
+            <StackPane fx:id="viewerShell" styleClass="viewer-shell" VBox.vgrow="ALWAYS">
+                <padding>
+                    <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                </padding>
+                <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="viewer-scroll-pane" vbarPolicy="AS_NEEDED">
+                    <content>
+                        <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
+                            <padding>
+                                <Insets bottom="32.0" left="32.0" right="32.0" top="32.0" />
+                            </padding>
+                            <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false" />
+                            <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true" />
+                        </VBox>
+                    </content>
+                </ScrollPane>
+            </StackPane>
+        </VBox>
+    </center>
+
+    <!-- ═══ RIGHT: outline / aid panel ═══ -->
+    <right>
+        <VBox fx:id="outlineVBox" prefWidth="176.0" spacing="12.0" styleClass="rail-card viewer-aid-card">
+            <BorderPane.margin>
+                <Insets bottom="24.0" left="0.0" right="24.0" top="24.0" />
+            </BorderPane.margin>
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
+            <Label styleClass="eyebrow-label" text="Outline" />
+            <Label fx:id="viewerAidTitleLabel" styleClass="viewer-aid-title" text="Awaiting JSON" />
+            <Label fx:id="viewerAidMetaLabel" styleClass="viewer-aid-meta" text="Load a local JSON file to populate this secondary viewer aid." wrapText="true" />
+        </VBox>
+    </right>
+
+    <!-- ═══ BOTTOM: status rail ═══ -->
+    <bottom>
+        <HBox fx:id="statusRail" alignment="CENTER_LEFT" spacing="20.0" styleClass="status-rail">
+            <VBox spacing="4.0">
+                <Label styleClass="eyebrow-label" text="Render status" />
+                <Label fx:id="footerStatusLabel" styleClass="footer-status" />
+            </VBox>
+            <Region HBox.hgrow="ALWAYS" />
+            <HBox alignment="CENTER_RIGHT" spacing="16.0" styleClass="status-rail-details">
+                <VBox spacing="4.0" styleClass="status-detail-card">
+                    <Label styleClass="status-detail-label" text="State" />
+                    <Label fx:id="statusStateValueLabel" styleClass="status-detail-value" />
+                </VBox>
+                <VBox spacing="4.0" styleClass="status-detail-card">
+                    <Label styleClass="status-detail-label" text="Size" />
+                    <Label fx:id="statusSizeValueLabel" styleClass="status-detail-value" />
+                </VBox>
+                <VBox spacing="4.0" styleClass="status-detail-card">
+                    <Label styleClass="status-detail-label" text="Lines" />
+                    <Label fx:id="statusLinesValueLabel" styleClass="status-detail-value" />
+                </VBox>
+                <VBox spacing="4.0" styleClass="status-detail-card">
+                    <Label styleClass="status-detail-label" text="Source" />
+                    <Label fx:id="statusSourceValueLabel" styleClass="status-detail-value" />
+                </VBox>
+            </HBox>
         </HBox>
     </bottom>
+
 </BorderPane>

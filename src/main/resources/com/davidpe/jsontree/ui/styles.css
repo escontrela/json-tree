@@ -120,15 +120,21 @@
 }
 
 .viewer-content {
-    -fx-background-color: #fafbfc;
-    -fx-border-color: #e3e7ec;
-    -fx-border-width: 1;
+    -fx-background-color: #ffffff;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
     -fx-spacing: 20;
 }
 
 .scroll-pane,
 .scroll-pane > .viewport {
     -fx-background-color: transparent;
+}
+
+.viewer-scroll-pane,
+.viewer-scroll-pane > .viewport,
+.viewer-scroll-pane .corner {
+    -fx-background-color: #ffffff;
 }
 
 .scroll-bar:horizontal,

@@ -2,6 +2,7 @@ package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
+import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
@@ -21,6 +22,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -34,11 +36,15 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.TextFlow;
+import javafx.stage.Window;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 @Component
 public class MainWindowController implements UiScreenController {
+
+  private static final double INLINE_HISTORY_CELL_SIZE = 72.0;
+  private static final int INLINE_HISTORY_MIN_VISIBLE_ROWS = 3;
 
   private static final DateTimeFormatter FILE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm:ss")
@@ -48,6 +54,7 @@ public class MainWindowController implements UiScreenController {
   private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
+  private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
 
@@ -55,11 +62,13 @@ public class MainWindowController implements UiScreenController {
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
+      ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
+    this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
     this.uiFlowManager = uiFlowManager;
   }
@@ -72,10 +81,6 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Label fileLoadedAtValueLabel;
 
-  @FXML private Label fileTypeValueLabel;
-
-  @FXML private Label fileLinesValueLabel;
-
   @FXML private Label fileSourceValueLabel;
 
   @FXML private Label validationStatusLabel;
@@ -83,10 +88,6 @@ public class MainWindowController implements UiScreenController {
   @FXML private Label historyInlineMetaLabel;
 
   @FXML private Label emptyHistoryInlineLabel;
-
-  @FXML private Label importUtilityTitleLabel;
-
-  @FXML private Label importUtilitySupportLabel;
 
   @FXML private Label emptyStateLabel;
 
@@ -112,24 +113,30 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private VBox fileSummaryCard;
 
-  @FXML private VBox importUtilityCard;
-
   @FXML private VBox viewerContentBox;
 
   @FXML private TextFlow treeContentFlow;
 
   @FXML private ListView<ImportedJsonFile> historyListView;
 
+  @FXML private VBox outlineVBox;
+
   private ViewerVisualState currentState;
   private Instant currentLoadedAt;
   private String currentViewIdentity;
+  private boolean windowMetricsLoggingAttached;
 
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
+    configureWindowMetricsLogging();
     rootPane.setOnDragOver(this::handleDragOver);
     rootPane.setOnDragExited(event -> restoreViewFromWorkflow());
     rootPane.setOnDragDropped(this::handleDragDropped);
+    historyListView.setFixedCellSize(INLINE_HISTORY_CELL_SIZE);
+    double historyListHeight = (INLINE_HISTORY_CELL_SIZE * INLINE_HISTORY_MIN_VISIBLE_ROWS) + 2.0;
+    historyListView.setMinHeight(historyListHeight);
+    historyListView.setPrefHeight(historyListHeight);
     historyListView.setCellFactory(unused -> new InlineHistoryListCell());
     historyListView
         .getSelectionModel()
@@ -144,6 +151,48 @@ public class MainWindowController implements UiScreenController {
             });
     showEmptyViewer();
     refreshInlineHistory();
+  }
+
+  private void configureWindowMetricsLogging() {
+    rootPane
+        .sceneProperty()
+        .addListener(
+            (unused, oldScene, newScene) -> {
+              if (newScene == null) {
+                return;
+              }
+              newScene
+                  .windowProperty()
+                  .addListener(
+                      (unusedWindow, oldWindow, newWindow) ->
+                          attachWindowMetricsLogging(newWindow));
+              attachWindowMetricsLogging(newScene.getWindow());
+            });
+  }
+
+  private void attachWindowMetricsLogging(Window window) {
+    if (window == null || windowMetricsLoggingAttached) {
+      return;
+    }
+    windowMetricsLoggingAttached = true;
+
+    ChangeListener<Number> metricsListener =
+        (unused, oldValue, newValue) -> printWindowMetrics(window);
+    window.xProperty().addListener(metricsListener);
+    window.yProperty().addListener(metricsListener);
+    window.widthProperty().addListener(metricsListener);
+    window.heightProperty().addListener(metricsListener);
+    printWindowMetrics(window);
+  }
+
+  private void printWindowMetrics(Window window) {
+    System.out.printf(
+        Locale.ROOT,
+        "[window-metrics] x=%.1f y=%.1f width=%.1f height=%.1f%n",
+        window.getX(),
+        window.getY(),
+        window.getWidth(),
+        window.getHeight());
   }
 
   @Override
@@ -161,10 +210,6 @@ public class MainWindowController implements UiScreenController {
     viewerAidTitleLabel.setText(document.rootLabel());
     viewerAidMetaLabel.setText(
         document.lineCount() + " rendered lines\nSource: " + fileSourceValueLabel.getText());
-    importUtilityTitleLabel.setText("Import another JSON");
-    importUtilitySupportLabel.setText(
-        "Drop a new .json anywhere in the window or reopen one of the recent snapshots from the"
-            + " rail.");
     setValidationBadge("Valid", "status-valid");
     footerStatusLabel.setText("Rendered " + document.lineCount() + " lines");
     statusStateValueLabel.setText("VALID");
@@ -179,15 +224,9 @@ public class MainWindowController implements UiScreenController {
     fileNameLabel.setText("No file loaded");
     fileMetaLabel.setText("Drop a JSON anywhere in the window");
     fileLoadedAtValueLabel.setText("Not loaded");
-    fileTypeValueLabel.setText("application/json");
-    fileLinesValueLabel.setText("--");
     fileSourceValueLabel.setText("Waiting for import");
     viewerAidTitleLabel.setText("Awaiting JSON");
     viewerAidMetaLabel.setText("Load a local JSON file to populate this secondary viewer aid.");
-    importUtilityTitleLabel.setText("Drop JSON anywhere in this window");
-    importUtilitySupportLabel.setText(
-        "The full window remains the drop target. Valid JSON snapshots will also appear in the"
-            + " recent history rail.");
     treeContentFlow.getChildren().clear();
     treeContentFlow.setManaged(false);
     treeContentFlow.setVisible(false);
@@ -205,10 +244,6 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setText("Release to inspect this JSON file");
     viewerAidTitleLabel.setText("Drop ready");
     viewerAidMetaLabel.setText("Release to load the first supported .json file in the payload.");
-    importUtilityTitleLabel.setText("Release to inspect this JSON");
-    importUtilitySupportLabel.setText(
-        "The first supported .json file in the drop payload will enter the standard import and"
-            + " validation flow.");
     setValidationBadge("Drop ready", "status-accent");
     footerStatusLabel.setText("Waiting for JSON drop");
     setStatusRailValues("DROP READY", "--", "--", "Drag payload");
@@ -221,15 +256,10 @@ public class MainWindowController implements UiScreenController {
     fileNameLabel.setText(fileName);
     fileMetaLabel.setText("Preparing JSON preview");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
-    fileTypeValueLabel.setText(detectContentType(fileName));
-    fileLinesValueLabel.setText("--");
     fileSourceValueLabel.setText("Local file");
     viewerAidTitleLabel.setText("Preparing outline");
     viewerAidMetaLabel.setText(
         "Workspace actions are in place while validation and rendering complete.");
-    importUtilityTitleLabel.setText("Importing JSON");
-    importUtilitySupportLabel.setText(
-        "Running validation, tree rendering, and local history persistence.");
     setValidationBadge("Loading", "status-muted");
     footerStatusLabel.setText("Parsing JSON");
     setStatusRailValues("LOADING", "--", "--", "Local file");
@@ -246,10 +276,6 @@ public class MainWindowController implements UiScreenController {
     viewerAidTitleLabel.setText("Validation issue");
     viewerAidMetaLabel.setText(
         "The viewer contract remains active even when the payload cannot render.");
-    importUtilityTitleLabel.setText("JSON needs attention");
-    importUtilitySupportLabel.setText(
-        "Fix the payload and drop it again, or reopen a clean snapshot from the recent history"
-            + " list.");
     setValidationBadge("Invalid", "status-error");
     footerStatusLabel.setText("JSON needs attention");
     if ("VALID".equals(statusStateValueLabel.getText())) {
@@ -287,33 +313,26 @@ public class MainWindowController implements UiScreenController {
     fileSummaryCard
         .getStyleClass()
         .removeAll("shell-dragging", "shell-loading", "shell-valid", "shell-invalid");
-    importUtilityCard
-        .getStyleClass()
-        .removeAll("utility-dragging", "utility-loading", "utility-valid", "utility-invalid");
     switch (state) {
       case DRAGGING -> {
         viewerShell.getStyleClass().add("viewer-dragging");
         statusRail.getStyleClass().add("shell-dragging");
         fileSummaryCard.getStyleClass().add("shell-dragging");
-        importUtilityCard.getStyleClass().add("utility-dragging");
       }
       case LOADING -> {
         viewerShell.getStyleClass().add("viewer-loading");
         statusRail.getStyleClass().add("shell-loading");
         fileSummaryCard.getStyleClass().add("shell-loading");
-        importUtilityCard.getStyleClass().add("utility-loading");
       }
       case VALID -> {
         viewerShell.getStyleClass().add("viewer-valid");
         statusRail.getStyleClass().add("shell-valid");
         fileSummaryCard.getStyleClass().add("shell-valid");
-        importUtilityCard.getStyleClass().add("utility-valid");
       }
       case INVALID -> {
         viewerShell.getStyleClass().add("viewer-invalid");
         statusRail.getStyleClass().add("shell-invalid");
         fileSummaryCard.getStyleClass().add("shell-invalid");
-        importUtilityCard.getStyleClass().add("utility-invalid");
       }
       case EMPTY -> {
         // Base style only.
@@ -412,11 +431,6 @@ public class MainWindowController implements UiScreenController {
     fileMetaLabel.setText(
         formatFileMeta(result.importResult().sizeBytes(), result.historyEntry() != null));
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(resolveLoadedAt(result)));
-    fileTypeValueLabel.setText(detectContentType(result.importResult().fileName()));
-    fileLinesValueLabel.setText(
-        result.hasRenderableTree()
-            ? Integer.toString(result.asciiTreeDocument().lineCount())
-            : "--");
     fileSourceValueLabel.setText(result.historyEntry() != null ? "History snapshot" : "Local file");
   }
 
@@ -435,10 +449,6 @@ public class MainWindowController implements UiScreenController {
       return "history:" + result.historyEntry().storedName();
     }
     return "file:" + result.importResult().path().toAbsolutePath().normalize();
-  }
-
-  private String detectContentType(String fileName) {
-    return fileName.toLowerCase(Locale.ROOT).endsWith(".json") ? "application/json" : "Unknown";
   }
 
   private void syncStatusRail(JsonViewerLoadResult result) {
@@ -538,5 +548,17 @@ public class MainWindowController implements UiScreenController {
   @FXML
   void openHistory() {
     uiFlowManager.show(UiScreenId.HISTORY);
+  }
+
+  @FXML
+  void copyTree() {
+    workflowService.currentViewRawJson().ifPresent(clipboardPort::copy);
+  }
+
+  @FXML
+  void toggleOutline() {
+    boolean nextVisible = !outlineVBox.isVisible();
+    outlineVBox.setVisible(nextVisible);
+    outlineVBox.setManaged(nextVisible);
   }
 }

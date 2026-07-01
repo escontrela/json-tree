@@ -154,6 +154,27 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return Optional.ofNullable(currentView);
   }
 
+  public Optional<String> currentViewRawJson() {
+    if (currentView == null) {
+      return Optional.empty();
+    }
+
+    if (currentView.historyEntry() != null) {
+      return jsonHistoryRepository.readStoredJson(currentView.historyEntry().storedName());
+    }
+
+    Path sourcePath = currentView.importResult().path();
+    if (!Files.exists(sourcePath) || !Files.isReadable(sourcePath)) {
+      return Optional.empty();
+    }
+    try {
+      return Optional.of(Files.readString(sourcePath));
+    } catch (IOException exception) {
+      throw new IllegalStateException(
+          "Unable to read current JSON source: " + sourcePath, exception);
+    }
+  }
+
   @Override
   public void openHistory() {
     throw new UnsupportedOperationException("Pending implementation.");
