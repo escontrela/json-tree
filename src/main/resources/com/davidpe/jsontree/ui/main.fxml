@@ -24,9 +24,9 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
-                <Button mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button header-action-button" text="Copy tree" />
-                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Raw JSON" />
-                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button header-action-button" text="Search" />
+                <Button mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button" text="Copy tree" />
+                <Button fx:id="rawJsonButton" disable="true" mnemonicParsing="false" onAction="#toggleRawJson" styleClass="ghost-button" text="Raw JSON" />
+                <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Search" />
             </HBox>
         </HBox>
     </top>
@@ -98,9 +98,9 @@
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
                 <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
-                    <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Focus" />
-                    <Button disable="true" mnemonicParsing="false" styleClass="ghost-button toolbar-button" text="Density" />
-                    <Button mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button toolbar-button" text="Outline" />
+                    <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Focus" />
+                    <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Density" />
+                    <Button mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
                 </HBox>
             </HBox>
 
@@ -115,6 +115,7 @@
                                 <Insets bottom="32.0" left="32.0" right="32.0" top="32.0" />
                             </padding>
                             <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false" />
+                            <TextFlow fx:id="rawJsonContentFlow" managed="false" styleClass="raw-json-content" visible="false" />
                             <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true" />
                         </VBox>
                     </content>

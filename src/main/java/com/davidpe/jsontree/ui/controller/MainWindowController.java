@@ -14,6 +14,8 @@ import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
@@ -24,6 +26,7 @@ import java.util.List;
 import java.util.Locale;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -35,6 +38,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Window;
 import org.springframework.context.annotation.Lazy;
@@ -57,6 +61,7 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
+  private final ObjectMapper objectMapper;
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
@@ -64,12 +69,14 @@ public class MainWindowController implements UiScreenController {
       JsonViewerWorkflowService workflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
+      ObjectMapper objectMapper,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
+    this.objectMapper = objectMapper;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -117,6 +124,10 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private TextFlow treeContentFlow;
 
+  @FXML private TextFlow rawJsonContentFlow;
+
+  @FXML private Button rawJsonButton;
+
   @FXML private ListView<ImportedJsonFile> historyListView;
 
   @FXML private VBox outlineVBox;
@@ -125,6 +136,7 @@ public class MainWindowController implements UiScreenController {
   private Instant currentLoadedAt;
   private String currentViewIdentity;
   private boolean windowMetricsLoggingAttached;
+  private boolean showingRawJson = false;
 
   @FXML
   public void initialize() {
@@ -202,6 +214,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void renderAsciiTree(AsciiTreeDocument document) {
+    resetViewModeIfNeeded();
     syntaxHighlighter.appendHighlightedContent(treeContentFlow, document);
     treeContentFlow.setManaged(true);
     treeContentFlow.setVisible(true);
@@ -216,6 +229,7 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
     applyState(ViewerVisualState.VALID);
+    rawJsonButton.setDisable(false);
   }
 
   public void showEmptyViewer() {
@@ -237,6 +251,8 @@ public class MainWindowController implements UiScreenController {
     footerStatusLabel.setText("No JSON loaded");
     setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
     viewerContentBox.autosize();
+    rawJsonButton.setDisable(true);
+    resetViewModeIfNeeded();
     applyState(ViewerVisualState.EMPTY);
   }
 
@@ -269,6 +285,8 @@ public class MainWindowController implements UiScreenController {
     treeContentFlow.setVisible(false);
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
+    rawJsonButton.setDisable(true);
+    resetViewModeIfNeeded();
     applyState(ViewerVisualState.LOADING);
   }
 
@@ -287,6 +305,8 @@ public class MainWindowController implements UiScreenController {
     treeContentFlow.setVisible(false);
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
+    rawJsonButton.setDisable(true);
+    resetViewModeIfNeeded();
     applyState(ViewerVisualState.INVALID);
   }
 
@@ -534,6 +554,54 @@ public class MainWindowController implements UiScreenController {
               + " lines");
       setText(null);
       setGraphic(content);
+    }
+  }
+
+  @FXML
+  void toggleRawJson() {
+    if (showingRawJson) {
+      rawJsonContentFlow.getChildren().clear();
+      rawJsonContentFlow.setManaged(false);
+      rawJsonContentFlow.setVisible(false);
+      treeContentFlow.setManaged(true);
+      treeContentFlow.setVisible(true);
+      rawJsonButton.setText("Raw JSON");
+      showingRawJson = false;
+    } else {
+      String formatted = workflowService.currentViewRawJson().map(this::prettyPrint).orElse("");
+      Text jsonText = new Text(formatted);
+      jsonText.getStyleClass().add("raw-json-text");
+      rawJsonContentFlow.getChildren().clear();
+      rawJsonContentFlow.getChildren().add(jsonText);
+      treeContentFlow.setManaged(false);
+      treeContentFlow.setVisible(false);
+      rawJsonContentFlow.setManaged(true);
+      rawJsonContentFlow.setVisible(true);
+      rawJsonButton.setText("ASCII tree");
+      showingRawJson = true;
+    }
+    viewerScrollPane.setHvalue(0);
+    viewerScrollPane.setVvalue(0);
+  }
+
+  private void resetViewModeIfNeeded() {
+    if (!showingRawJson) {
+      return;
+    }
+    rawJsonContentFlow.getChildren().clear();
+    rawJsonContentFlow.setManaged(false);
+    rawJsonContentFlow.setVisible(false);
+    rawJsonButton.setText("Raw JSON");
+    showingRawJson = false;
+  }
+
+  private String prettyPrint(String rawJson) {
+    try {
+      return objectMapper
+          .writerWithDefaultPrettyPrinter()
+          .writeValueAsString(objectMapper.readTree(rawJson));
+    } catch (JsonProcessingException e) {
+      return rawJson;
     }
   }
 

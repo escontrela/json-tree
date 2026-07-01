@@ -367,18 +367,6 @@
     -fx-background-color: #e8edf4;
 }
 
-.header-action-button,
-.toolbar-button {
-    -fx-padding: 10 14 10 14;
-}
-
-.header-action-button:disabled,
-.toolbar-button:disabled {
-    -fx-background-color: #f7f8fa;
-    -fx-border-color: #d8dde3;
-    -fx-text-fill: #66727f;
-}
-
 .button:focused,
 .scroll-pane:focused {
     -fx-border-color: #1c69d4;
@@ -428,4 +416,13 @@
 
 .text.tree-null {
     -fx-fill: #c23b32;
+}
+
+.raw-json-content {
+    -fx-font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+    -fx-font-size: 14px;
+}
+
+.text.raw-json-text {
+    -fx-fill: #2d333a;
 }
