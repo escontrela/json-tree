@@ -217,6 +217,14 @@ public class MainWindowController implements UiScreenController {
     double historyListHeight = (INLINE_HISTORY_CELL_SIZE * INLINE_HISTORY_MIN_VISIBLE_ROWS) + 2.0;
     historyListView.setMinHeight(historyListHeight);
     historyListView.setPrefHeight(historyListHeight);
+    historyListView.setDisable(true);
+    historyListView.addEventFilter(
+        MouseEvent.MOUSE_PRESSED,
+        event -> {
+          if (historyListView.getItems().isEmpty()) {
+            event.consume();
+          }
+        });
     historyListView.setCellFactory(unused -> new InlineHistoryListCell());
     historyListView
         .getSelectionModel()
@@ -226,8 +234,11 @@ public class MainWindowController implements UiScreenController {
               if (newValue == null || newValue.equals(oldValue)) {
                 return;
               }
-              reopenHistoryEntry(newValue);
-              Platform.runLater(() -> historyListView.getSelectionModel().clearSelection());
+              Platform.runLater(
+                  () -> {
+                    reopenHistoryEntry(newValue);
+                    historyListView.getSelectionModel().clearSelection();
+                  });
             });
     configureOutlineShell();
     showEmptyViewer();
@@ -798,6 +809,7 @@ public class MainWindowController implements UiScreenController {
 
     if (entries.isEmpty()) {
       historyListView.getItems().clear();
+      historyListView.setDisable(true);
       historyListView.setManaged(false);
       historyListView.setVisible(false);
       emptyHistoryInlineLabel.setManaged(true);
@@ -807,6 +819,7 @@ public class MainWindowController implements UiScreenController {
 
     emptyHistoryInlineLabel.setManaged(false);
     emptyHistoryInlineLabel.setVisible(false);
+    historyListView.setDisable(false);
     historyListView.setManaged(true);
     historyListView.setVisible(true);
     historyListView.getItems().setAll(entries.stream().limit(5).toList());
