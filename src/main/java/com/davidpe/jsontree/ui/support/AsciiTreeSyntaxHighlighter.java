@@ -2,6 +2,7 @@ package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -29,10 +30,83 @@ public class AsciiTreeSyntaxHighlighter {
   }
 
   public void appendHighlightedContent(TextFlow textFlow, AsciiTreeDocument document) {
+    appendHighlightedContent(textFlow, document, List.of());
+  }
+
+  public void appendHighlightedContent(
+      TextFlow textFlow,
+      AsciiTreeDocument document,
+      List<SearchHighlightRange> highlightRanges
+  ) {
     textFlow.getChildren().clear();
+    List<SearchHighlightRange> orderedRanges =
+        highlightRanges.stream()
+            .sorted(Comparator.comparingInt(SearchHighlightRange::startIndex))
+            .toList();
+
+    int cursor = 0;
     for (StyledSegment segment : tokenize(document)) {
-      textFlow.getChildren().add(styledText(segment));
+      int segmentStart = cursor;
+      int segmentEnd = cursor + segment.text().length();
+      int localCursor = segmentStart;
+
+      for (SearchHighlightRange range : orderedRanges) {
+        if (range.endIndex() <= segmentStart) {
+          continue;
+        }
+        if (range.startIndex() >= segmentEnd) {
+          break;
+        }
+
+        int overlapStart = Math.max(segmentStart, range.startIndex());
+        int overlapEnd = Math.min(segmentEnd, range.endIndex());
+        if (overlapStart > localCursor) {
+          textFlow.getChildren().add(styledText(sliceSegment(segment, segmentStart, localCursor, overlapStart), false, false));
+        }
+        if (overlapEnd > overlapStart) {
+          textFlow.getChildren().add(styledText(sliceSegment(segment, segmentStart, overlapStart, overlapEnd), true, range.active()));
+        }
+        localCursor = Math.max(localCursor, overlapEnd);
+      }
+
+      if (localCursor < segmentEnd) {
+        textFlow.getChildren().add(styledText(sliceSegment(segment, segmentStart, localCursor, segmentEnd), false, false));
+      }
+      cursor = segmentEnd;
     }
+  }
+
+  private StyledSegment sliceSegment(
+      StyledSegment segment,
+      int segmentStart,
+      int sliceStart,
+      int sliceEnd
+  ) {
+    int localStart = sliceStart - segmentStart;
+    int localEnd = sliceEnd - segmentStart;
+    return new StyledSegment(
+        segment.text().substring(localStart, localEnd),
+        segment.styleClass(),
+        segment.colorHex());
+  }
+
+  private Text styledText(StyledSegment segment, boolean highlighted, boolean activeHighlight) {
+    Text node = new Text(segment.text());
+    node.getStyleClass().add(segment.styleClass());
+    if (highlighted) {
+      node.getStyleClass().add("search-match");
+      if (activeHighlight) {
+        node.getStyleClass().add("search-match-active");
+        node.setFill(Color.web("#1c69d4"));
+        node.setStyle("-fx-font-weight: 700;");
+      } else {
+        node.setFill(Color.web("#355c8a"));
+      }
+      node.setUnderline(true);
+      return node;
+    }
+    node.setFill(Color.web(segment.colorHex()));
+    return node;
   }
 
   List<StyledSegment> tokenize(AsciiTreeDocument document) {
@@ -102,13 +176,6 @@ public class AsciiTreeSyntaxHighlighter {
 
   private StyledSegment styledSegment(String text, String styleClass) {
     return new StyledSegment(text, styleClass, colorFor(styleClass));
-  }
-
-  private Text styledText(StyledSegment segment) {
-    Text node = new Text(segment.text());
-    node.getStyleClass().add(segment.styleClass());
-    node.setFill(Color.web(segment.colorHex()));
-    return node;
   }
 
   private String colorFor(String styleClass) {

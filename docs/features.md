@@ -108,6 +108,12 @@
 - Invalid expressions surface concise modal errors and do not replace the active header strip state.
 - Valid searches create a session with ordered match metadata and active-occurrence state so later highlighting and navigation can build on the same workflow contract.
 
+## Search Highlighting
+
+- The currently selected search occurrence is now highlighted at fragment level rather than by whole line, both in the raw JSON view and in the ASCII tree view.
+- Raw JSON highlighting uses the exact match offsets returned by the raw-search workflow, while the ASCII view projects the same match sequence onto its rendered text.
+- Clearing the active search session rerenders both viewers without leftover highlight fragments.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

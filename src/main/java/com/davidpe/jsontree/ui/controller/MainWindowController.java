@@ -17,8 +17,9 @@ import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.davidpe.jsontree.ui.support.SearchHighlightRange;
+import com.davidpe.jsontree.ui.support.SearchMatchProjector;
+import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
 import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
@@ -43,7 +44,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Window;
 import org.springframework.context.annotation.Lazy;
@@ -67,7 +67,8 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
-  private final ObjectMapper objectMapper;
+  private final SearchMatchProjector searchMatchProjector;
+  private final SearchTextFlowHighlighter searchTextFlowHighlighter;
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
@@ -76,7 +77,8 @@ public class MainWindowController implements UiScreenController {
       JsonSearchWorkflowService searchWorkflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
-      ObjectMapper objectMapper,
+      SearchMatchProjector searchMatchProjector,
+      SearchTextFlowHighlighter searchTextFlowHighlighter,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importJsonUseCase = importJsonUseCase;
@@ -84,7 +86,8 @@ public class MainWindowController implements UiScreenController {
     this.searchWorkflowService = searchWorkflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
-    this.objectMapper = objectMapper;
+    this.searchMatchProjector = searchMatchProjector;
+    this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -238,9 +241,14 @@ public class MainWindowController implements UiScreenController {
 
   public void renderAsciiTree(AsciiTreeDocument document) {
     resetViewModeIfNeeded();
-    syntaxHighlighter.appendHighlightedContent(treeContentFlow, document);
+    syntaxHighlighter.appendHighlightedContent(
+        treeContentFlow,
+        document,
+        currentAsciiHighlightRanges(document));
     treeContentFlow.setManaged(true);
     treeContentFlow.setVisible(true);
+    rawJsonContentFlow.setManaged(false);
+    rawJsonContentFlow.setVisible(false);
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     viewerAidTitleLabel.setText(document.rootLabel());
@@ -277,7 +285,8 @@ public class MainWindowController implements UiScreenController {
     viewerContentBox.autosize();
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
-    clearSearchSession();
+    searchWorkflowService.clear();
+    syncActiveSearchStrip();
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.EMPTY);
@@ -314,7 +323,8 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setVisible(true);
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
-    clearSearchSession();
+    searchWorkflowService.clear();
+    syncActiveSearchStrip();
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.LOADING);
@@ -337,7 +347,8 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setVisible(true);
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
-    clearSearchSession();
+    searchWorkflowService.clear();
+    syncActiveSearchStrip();
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.INVALID);
@@ -595,25 +606,13 @@ public class MainWindowController implements UiScreenController {
   @FXML
   void toggleRawJson() {
     if (showingRawJson) {
-      rawJsonContentFlow.getChildren().clear();
-      rawJsonContentFlow.setManaged(false);
-      rawJsonContentFlow.setVisible(false);
-      treeContentFlow.setManaged(true);
-      treeContentFlow.setVisible(true);
-      rawJsonButton.setText("Raw JSON");
-      showingRawJson = false;
+      workflowService
+          .currentView()
+          .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
+          .filter(JsonViewerLoadResult::hasRenderableTree)
+          .ifPresent(result -> renderAsciiTree(result.asciiTreeDocument()));
     } else {
-      String formatted = workflowService.currentViewRawJson().map(this::prettyPrint).orElse("");
-      Text jsonText = new Text(formatted);
-      jsonText.getStyleClass().add("raw-json-text");
-      rawJsonContentFlow.getChildren().clear();
-      rawJsonContentFlow.getChildren().add(jsonText);
-      treeContentFlow.setManaged(false);
-      treeContentFlow.setVisible(false);
-      rawJsonContentFlow.setManaged(true);
-      rawJsonContentFlow.setVisible(true);
-      rawJsonButton.setText("ASCII tree");
-      showingRawJson = true;
+      workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
     }
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
@@ -628,16 +627,6 @@ public class MainWindowController implements UiScreenController {
     rawJsonContentFlow.setVisible(false);
     rawJsonButton.setText("Raw JSON");
     showingRawJson = false;
-  }
-
-  private String prettyPrint(String rawJson) {
-    try {
-      return objectMapper
-          .writerWithDefaultPrettyPrinter()
-          .writeValueAsString(objectMapper.readTree(rawJson));
-    } catch (JsonProcessingException e) {
-      return rawJson;
-    }
   }
 
   private void setValidationBadge(String text, String styleClass) {
@@ -687,12 +676,14 @@ public class MainWindowController implements UiScreenController {
 
     syncActiveSearchStrip();
     hideSearchModal();
+    refreshCurrentViewerContent();
   }
 
   @FXML
   void clearSearchSession() {
     searchWorkflowService.clear();
     syncActiveSearchStrip();
+    refreshCurrentViewerContent();
   }
 
   @FXML
@@ -722,6 +713,22 @@ public class MainWindowController implements UiScreenController {
     searchModalCard.setVisible(false);
   }
 
+  private void refreshCurrentViewerContent() {
+    workflowService
+        .currentView()
+        .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
+        .ifPresent(
+            result -> {
+              if (showingRawJson) {
+                workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
+                return;
+              }
+              if (result.hasRenderableTree()) {
+                renderAsciiTree(result.asciiTreeDocument());
+              }
+            });
+  }
+
   private void syncActiveSearchStrip() {
     searchWorkflowService
         .currentSession()
@@ -745,5 +752,38 @@ public class MainWindowController implements UiScreenController {
       return "0 matches";
     }
     return (session.activeMatchIndex() + 1) + " / " + session.totalMatches();
+  }
+
+  private void renderRawJsonContent(String rawJson) {
+    searchTextFlowHighlighter.appendHighlightedText(
+        rawJsonContentFlow,
+        rawJson,
+        currentRawHighlightRanges(),
+        "raw-json-text",
+        "#2d333a");
+    treeContentFlow.setManaged(false);
+    treeContentFlow.setVisible(false);
+    rawJsonContentFlow.setManaged(true);
+    rawJsonContentFlow.setVisible(true);
+    emptyStateLabel.setManaged(false);
+    emptyStateLabel.setVisible(false);
+    rawJsonButton.setText("ASCII tree");
+    showingRawJson = true;
+  }
+
+  private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {
+    return searchWorkflowService
+        .currentSession()
+        .filter(JsonSearchSession::hasMatches)
+        .map(session -> searchMatchProjector.asciiRanges(document.content(), session))
+        .orElse(List.of());
+  }
+
+  private List<SearchHighlightRange> currentRawHighlightRanges() {
+    return searchWorkflowService
+        .currentSession()
+        .filter(JsonSearchSession::hasMatches)
+        .map(searchMatchProjector::rawRanges)
+        .orElse(List.of());
   }
 }
