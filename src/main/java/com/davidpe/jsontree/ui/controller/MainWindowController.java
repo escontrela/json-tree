@@ -1,9 +1,9 @@
 package com.davidpe.jsontree.ui.controller;
 
-import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
-import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
+import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
+import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
@@ -42,7 +42,6 @@ import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.paint.Color;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -58,6 +57,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Window;
@@ -227,7 +227,7 @@ public class MainWindowController implements UiScreenController {
                 return;
               }
               reopenHistoryEntry(newValue);
-              historyListView.getSelectionModel().clearSelection();
+              Platform.runLater(() -> historyListView.getSelectionModel().clearSelection());
             });
     configureOutlineShell();
     showEmptyViewer();
@@ -282,8 +282,12 @@ public class MainWindowController implements UiScreenController {
     outlinePreviewShell.heightProperty().addListener(resizeListener);
     outlinePreviewShell.setOnMousePressed(this::handleOutlineInteraction);
     outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
-    viewerScrollPane.vvalueProperty().addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
-    viewerScrollPane.viewportBoundsProperty().addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
+    viewerScrollPane
+        .vvalueProperty()
+        .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
+    viewerScrollPane
+        .viewportBoundsProperty()
+        .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
     viewerContentBox
         .layoutBoundsProperty()
         .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
@@ -308,7 +312,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void showOutlineValidShell(AsciiTreeDocument document) {
-    viewerAidTitleLabel.setText("JSON outline ready");
+    viewerAidTitleLabel.setText("JSON outline");
     viewerAidMetaLabel.setText(
         currentOutlineModel.totalEntries()
             + " outline nodes • depth "
@@ -329,10 +333,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void showOutlineShellState(
-      String title,
-      String stateMessage,
-      String metaMessage,
-      String previewStateClass) {
+      String title, String stateMessage, String metaMessage, String previewStateClass) {
     viewerAidTitleLabel.setText(title);
     viewerAidMetaLabel.setText(metaMessage);
     outlineStateLabel.setText(stateMessage);
@@ -364,9 +365,7 @@ public class MainWindowController implements UiScreenController {
   private void drawOutlineMinimap() {
     currentOutlineLayout =
         outlineLayoutPlanner.plan(
-            currentOutlineModel,
-            outlineCanvas.getWidth(),
-            outlineCanvas.getHeight());
+            currentOutlineModel, outlineCanvas.getWidth(), outlineCanvas.getHeight());
 
     GraphicsContext graphics = outlineCanvas.getGraphicsContext2D();
     double width = outlineCanvas.getWidth();
@@ -402,10 +401,7 @@ public class MainWindowController implements UiScreenController {
     double viewportHeight = viewerScrollPane.getViewportBounds().getHeight();
     double scrollValue =
         outlineScrollMapper.scrollValueForPointer(
-            event.getY(),
-            outlinePreviewShell.getHeight(),
-            viewportHeight,
-            contentHeight);
+            event.getY(), outlinePreviewShell.getHeight(), viewportHeight, contentHeight);
     viewerScrollPane.setVvalue(scrollValue);
     event.consume();
   }
@@ -440,7 +436,8 @@ public class MainWindowController implements UiScreenController {
     }
 
     double markerWidth = Math.max(24.0, outlineCanvas.getWidth() - 20.0);
-    outlineViewportMarker.resizeRelocate(10.0, 1.0 + projection.y(), markerWidth, projection.height());
+    outlineViewportMarker.resizeRelocate(
+        10.0, 1.0 + projection.y(), markerWidth, projection.height());
     outlineViewportMarker.setManaged(false);
     outlineViewportMarker.setVisible(true);
   }
@@ -484,9 +481,7 @@ public class MainWindowController implements UiScreenController {
     syncOutlineModelWithCurrentView();
     resetViewModeIfNeeded();
     syntaxHighlighter.appendHighlightedContent(
-        treeContentFlow,
-        document,
-        currentAsciiHighlightRanges(document));
+        treeContentFlow, document, currentAsciiHighlightRanges(document));
     treeContentFlow.setManaged(true);
     treeContentFlow.setVisible(true);
     rawJsonContentFlow.setManaged(false);
@@ -896,16 +891,18 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void openSearchModal() {
-    searchQueryField.setText(searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(""));
+    searchQueryField.setText(
+        searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(""));
     searchModalErrorLabel.setManaged(false);
     searchModalErrorLabel.setVisible(false);
     searchModalErrorLabel.setText("");
     searchModalCard.setManaged(true);
     searchModalCard.setVisible(true);
-    Platform.runLater(() -> {
-      searchQueryField.requestFocus();
-      searchQueryField.selectAll();
-    });
+    Platform.runLater(
+        () -> {
+          searchQueryField.requestFocus();
+          searchQueryField.selectAll();
+        });
   }
 
   @FXML
@@ -941,20 +938,26 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void showPreviousSearchResult() {
-    searchWorkflowService.moveToPreviousMatch().ifPresent(unused -> {
-      syncActiveSearchStrip();
-      refreshCurrentViewerContent();
-      scrollToActiveSearchHighlight();
-    });
+    searchWorkflowService
+        .moveToPreviousMatch()
+        .ifPresent(
+            unused -> {
+              syncActiveSearchStrip();
+              refreshCurrentViewerContent();
+              scrollToActiveSearchHighlight();
+            });
   }
 
   @FXML
   void showNextSearchResult() {
-    searchWorkflowService.moveToNextMatch().ifPresent(unused -> {
-      syncActiveSearchStrip();
-      refreshCurrentViewerContent();
-      scrollToActiveSearchHighlight();
-    });
+    searchWorkflowService
+        .moveToNextMatch()
+        .ifPresent(
+            unused -> {
+              syncActiveSearchStrip();
+              refreshCurrentViewerContent();
+              scrollToActiveSearchHighlight();
+            });
   }
 
   @FXML
@@ -1051,11 +1054,7 @@ public class MainWindowController implements UiScreenController {
 
   private void renderRawJsonContent(String rawJson) {
     searchTextFlowHighlighter.appendHighlightedText(
-        rawJsonContentFlow,
-        rawJson,
-        currentRawHighlightRanges(),
-        "raw-json-text",
-        "#2d333a");
+        rawJsonContentFlow, rawJson, currentRawHighlightRanges(), "raw-json-text", "#2d333a");
     treeContentFlow.setManaged(false);
     treeContentFlow.setVisible(false);
     rawJsonContentFlow.setManaged(true);
@@ -1104,12 +1103,15 @@ public class MainWindowController implements UiScreenController {
     viewerContentBox.applyCss();
     viewerContentBox.layout();
 
-    Bounds nodeBounds = viewerContentBox.sceneToLocal(textNode.localToScene(textNode.getBoundsInLocal()));
+    Bounds nodeBounds =
+        viewerContentBox.sceneToLocal(textNode.localToScene(textNode.getBoundsInLocal()));
     Bounds viewportBounds = viewerScrollPane.getViewportBounds();
     Bounds contentBounds = viewerContentBox.getLayoutBounds();
 
-    double maxHorizontalOffset = Math.max(1.0, contentBounds.getWidth() - viewportBounds.getWidth());
-    double maxVerticalOffset = Math.max(1.0, contentBounds.getHeight() - viewportBounds.getHeight());
+    double maxHorizontalOffset =
+        Math.max(1.0, contentBounds.getWidth() - viewportBounds.getWidth());
+    double maxVerticalOffset =
+        Math.max(1.0, contentBounds.getHeight() - viewportBounds.getHeight());
 
     double targetX = Math.max(0.0, nodeBounds.getMinX() - (viewportBounds.getWidth() * 0.2));
     double targetY = Math.max(0.0, nodeBounds.getMinY() - (viewportBounds.getHeight() * 0.2));
