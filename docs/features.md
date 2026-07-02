@@ -126,6 +126,12 @@
 - Empty, dragging, loading, valid, invalid, and empty-file flows all update the outline panel coherently inside the existing screen.
 - The shell reserves a compact thumbnail surface and keeps the existing outline toggle behavior intact while the interactive minimap feature is layered in.
 
+## Outline Model Generation
+
+- A dedicated application service now derives a compact outline model from the active raw JSON source without depending on JavaFX viewer nodes.
+- The outline model keeps structural depth, entry kind, and lightweight visual weight hints so the minimap can render schema shape instead of full-detail content.
+- The model is regenerated when a new valid file becomes the current view or when a stored history snapshot is reopened, while ordinary viewer rerenders reuse the current outline state.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

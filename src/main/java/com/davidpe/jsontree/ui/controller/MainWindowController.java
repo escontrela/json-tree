@@ -2,9 +2,11 @@ package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
+import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.JsonSearchWorkflowService;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
@@ -69,6 +71,7 @@ public class MainWindowController implements UiScreenController {
   private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
+  private final JsonOutlineModelService outlineModelService;
   private final JsonSearchWorkflowService searchWorkflowService;
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
@@ -80,6 +83,7 @@ public class MainWindowController implements UiScreenController {
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
+      JsonOutlineModelService outlineModelService,
       JsonSearchWorkflowService searchWorkflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
@@ -89,6 +93,7 @@ public class MainWindowController implements UiScreenController {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
+    this.outlineModelService = outlineModelService;
     this.searchWorkflowService = searchWorkflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
@@ -180,6 +185,8 @@ public class MainWindowController implements UiScreenController {
   private String currentViewIdentity;
   private boolean windowMetricsLoggingAttached;
   private boolean showingRawJson = false;
+  private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
+  private String currentOutlineSourceIdentity;
 
   @FXML
   public void initialize() {
@@ -275,8 +282,14 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void showOutlineValidShell(AsciiTreeDocument document) {
-    viewerAidTitleLabel.setText("Minimap shell ready");
-    viewerAidMetaLabel.setText(document.lineCount() + " viewer lines reserved for outline rendering.");
+    viewerAidTitleLabel.setText("JSON outline ready");
+    viewerAidMetaLabel.setText(
+        currentOutlineModel.totalEntries()
+            + " outline nodes • depth "
+            + currentOutlineModel.maxDepth()
+            + " • "
+            + document.lineCount()
+            + " viewer lines");
     outlineStateLabel.setManaged(false);
     outlineStateLabel.setVisible(false);
     outlineViewportMarker.setManaged(false);
@@ -340,6 +353,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void renderAsciiTree(AsciiTreeDocument document) {
+    syncOutlineModelWithCurrentView();
     resetViewModeIfNeeded();
     syntaxHighlighter.appendHighlightedContent(
         treeContentFlow,
@@ -363,6 +377,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showEmptyViewer() {
+    resetOutlineModel();
     currentLoadedAt = null;
     currentViewIdentity = null;
     fileNameLabel.setText("No file loaded");
@@ -403,6 +418,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showLoadingState(String fileName) {
+    resetOutlineModel();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
     fileNameLabel.setText(fileName);
@@ -433,6 +449,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showInvalidState(String message) {
+    resetOutlineModel();
     showOutlineShellState(
         "Outline unavailable",
         "The current JSON payload cannot produce an outline minimap.",
@@ -825,6 +842,28 @@ public class MainWindowController implements UiScreenController {
   private void hideSearchModal() {
     searchModalCard.setManaged(false);
     searchModalCard.setVisible(false);
+  }
+
+  private void syncOutlineModelWithCurrentView() {
+    if (currentViewIdentity == null) {
+      resetOutlineModel();
+      return;
+    }
+    if (currentViewIdentity.equals(currentOutlineSourceIdentity)) {
+      return;
+    }
+
+    currentOutlineModel =
+        workflowService
+            .currentViewRawJson()
+            .map(outlineModelService::buildFromRawJson)
+            .orElse(JsonOutlineModel.empty());
+    currentOutlineSourceIdentity = currentViewIdentity;
+  }
+
+  private void resetOutlineModel() {
+    currentOutlineModel = JsonOutlineModel.empty();
+    currentOutlineSourceIdentity = null;
   }
 
   private void refreshCurrentViewerContent() {
