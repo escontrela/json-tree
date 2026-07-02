@@ -138,6 +138,12 @@
 - Rendering uses lightweight sampled rows derived from the outline model so large documents can still produce a readable thumbnail without painting every entry at full detail.
 - A visible viewport marker placeholder is now exposed in the minimap shell, ready for later navigation and synchronization work.
 
+## Outline Navigation
+
+- The outline minimap now accepts click and drag interaction to drive the main viewer vertical scroll without replacing the native scrollbars or search navigation flow.
+- Coordinate mapping from minimap pointer position to `ScrollPane` scroll value lives in a dedicated helper so the JavaFX controller only wires UI events and current dimensions.
+- Short documents that do not require scrolling resolve safely to the top of the viewer instead of producing unstable scroll jumps.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

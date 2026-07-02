@@ -22,6 +22,7 @@ import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
+import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
@@ -48,6 +49,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -76,6 +78,7 @@ public class MainWindowController implements UiScreenController {
   private final JsonViewerWorkflowService workflowService;
   private final JsonOutlineModelService outlineModelService;
   private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
+  private final OutlineMinimapScrollMapper outlineScrollMapper;
   private final JsonSearchWorkflowService searchWorkflowService;
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
@@ -89,6 +92,7 @@ public class MainWindowController implements UiScreenController {
       JsonViewerWorkflowService workflowService,
       JsonOutlineModelService outlineModelService,
       OutlineMinimapLayoutPlanner outlineLayoutPlanner,
+      OutlineMinimapScrollMapper outlineScrollMapper,
       JsonSearchWorkflowService searchWorkflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
@@ -100,6 +104,7 @@ public class MainWindowController implements UiScreenController {
     this.workflowService = workflowService;
     this.outlineModelService = outlineModelService;
     this.outlineLayoutPlanner = outlineLayoutPlanner;
+    this.outlineScrollMapper = outlineScrollMapper;
     this.searchWorkflowService = searchWorkflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
@@ -269,6 +274,8 @@ public class MainWindowController implements UiScreenController {
     ChangeListener<Number> resizeListener = (unused, oldValue, newValue) -> resizeOutlineCanvas();
     outlinePreviewShell.widthProperty().addListener(resizeListener);
     outlinePreviewShell.heightProperty().addListener(resizeListener);
+    outlinePreviewShell.setOnMousePressed(this::handleOutlineInteraction);
+    outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
     resizeOutlineCanvas();
   }
 
@@ -386,6 +393,23 @@ public class MainWindowController implements UiScreenController {
     outlineViewportMarker.resizeRelocate(10.0, 16.0, markerWidth, markerHeight);
     outlineViewportMarker.setManaged(false);
     outlineViewportMarker.setVisible(true);
+  }
+
+  private void handleOutlineInteraction(MouseEvent event) {
+    if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
+      return;
+    }
+
+    double contentHeight = viewerContentBox.getLayoutBounds().getHeight();
+    double viewportHeight = viewerScrollPane.getViewportBounds().getHeight();
+    double scrollValue =
+        outlineScrollMapper.scrollValueForPointer(
+            event.getY(),
+            outlinePreviewShell.getHeight(),
+            viewportHeight,
+            contentHeight);
+    viewerScrollPane.setVvalue(scrollValue);
+    event.consume();
   }
 
   private void drawOutlineShellPlaceholder() {
