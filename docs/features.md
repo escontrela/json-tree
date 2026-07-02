@@ -132,6 +132,12 @@
 - The outline model keeps structural depth, entry kind, and lightweight visual weight hints so the minimap can render schema shape instead of full-detail content.
 - The model is regenerated when a new valid file becomes the current view or when a stored history snapshot is reopened, while ordinary viewer rerenders reuse the current outline state.
 
+## Outline Minimap Rendering
+
+- The outline panel now paints a compact structural minimap into its reserved canvas instead of a static shell placeholder when a valid JSON document is active.
+- Rendering uses lightweight sampled rows derived from the outline model so large documents can still produce a readable thumbnail without painting every entry at full detail.
+- A visible viewport marker placeholder is now exposed in the minimap shell, ready for later navigation and synchronization work.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

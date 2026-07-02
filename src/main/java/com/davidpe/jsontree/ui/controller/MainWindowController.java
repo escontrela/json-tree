@@ -19,6 +19,9 @@ import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
+import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
+import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
+import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
@@ -72,6 +75,7 @@ public class MainWindowController implements UiScreenController {
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
   private final JsonOutlineModelService outlineModelService;
+  private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
   private final JsonSearchWorkflowService searchWorkflowService;
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
@@ -84,6 +88,7 @@ public class MainWindowController implements UiScreenController {
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
       JsonOutlineModelService outlineModelService,
+      OutlineMinimapLayoutPlanner outlineLayoutPlanner,
       JsonSearchWorkflowService searchWorkflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
@@ -94,6 +99,7 @@ public class MainWindowController implements UiScreenController {
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
     this.outlineModelService = outlineModelService;
+    this.outlineLayoutPlanner = outlineLayoutPlanner;
     this.searchWorkflowService = searchWorkflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
@@ -186,6 +192,7 @@ public class MainWindowController implements UiScreenController {
   private boolean windowMetricsLoggingAttached;
   private boolean showingRawJson = false;
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
+  private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentOutlineSourceIdentity;
 
   @FXML
@@ -270,10 +277,11 @@ public class MainWindowController implements UiScreenController {
     double height = Math.max(0.0, outlinePreviewShell.getHeight() - 2.0);
     outlineCanvas.setWidth(width);
     outlineCanvas.setHeight(height);
-    drawOutlineShellPlaceholder();
+    refreshOutlineCanvas();
   }
 
   private void showOutlineEmptyShell() {
+    currentOutlineLayout = OutlineMinimapLayout.empty();
     showOutlineShellState(
         "Awaiting JSON",
         "Load a valid JSON file to populate the outline minimap shell.",
@@ -298,7 +306,8 @@ public class MainWindowController implements UiScreenController {
         .getStyleClass()
         .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
     outlinePreviewShell.getStyleClass().add("outline-state-valid");
-    drawOutlineShellPlaceholder();
+    drawOutlineMinimap();
+    showOutlineViewportPlaceholder();
   }
 
   private void showOutlineShellState(
@@ -319,7 +328,64 @@ public class MainWindowController implements UiScreenController {
     if (previewStateClass != null) {
       outlinePreviewShell.getStyleClass().add(previewStateClass);
     }
+    currentOutlineLayout = OutlineMinimapLayout.empty();
     drawOutlineShellPlaceholder();
+  }
+
+  private void refreshOutlineCanvas() {
+    if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel()) {
+      currentOutlineLayout = OutlineMinimapLayout.empty();
+      drawOutlineShellPlaceholder();
+      return;
+    }
+    drawOutlineMinimap();
+    showOutlineViewportPlaceholder();
+  }
+
+  private void drawOutlineMinimap() {
+    currentOutlineLayout =
+        outlineLayoutPlanner.plan(
+            currentOutlineModel,
+            outlineCanvas.getWidth(),
+            outlineCanvas.getHeight());
+
+    GraphicsContext graphics = outlineCanvas.getGraphicsContext2D();
+    double width = outlineCanvas.getWidth();
+    double height = outlineCanvas.getHeight();
+    graphics.clearRect(0, 0, width, height);
+    if (currentOutlineLayout.emptyLayout()) {
+      return;
+    }
+
+    graphics.setFill(Color.web("#f6f8fb"));
+    graphics.fillRect(0, 0, width, height);
+
+    for (OutlineMinimapRow row : currentOutlineLayout.rows()) {
+      graphics.setFill(outlineRowColor(row));
+      graphics.fillRoundRect(row.x(), row.y(), row.width(), row.height(), 2.0, 2.0);
+    }
+  }
+
+  private Color outlineRowColor(OutlineMinimapRow row) {
+    return switch (row.kind()) {
+      case OBJECT -> Color.web("#3569a3");
+      case ARRAY -> Color.web("#6f8bad");
+      case VALUE -> Color.web("#b5c0cd");
+    };
+  }
+
+  private void showOutlineViewportPlaceholder() {
+    if (currentOutlineLayout.emptyLayout()) {
+      outlineViewportMarker.setManaged(false);
+      outlineViewportMarker.setVisible(false);
+      return;
+    }
+
+    double markerWidth = Math.max(24.0, outlineCanvas.getWidth() - 20.0);
+    double markerHeight = Math.max(32.0, outlineCanvas.getHeight() * 0.18);
+    outlineViewportMarker.resizeRelocate(10.0, 16.0, markerWidth, markerHeight);
+    outlineViewportMarker.setManaged(false);
+    outlineViewportMarker.setVisible(true);
   }
 
   private void drawOutlineShellPlaceholder() {
@@ -863,6 +929,7 @@ public class MainWindowController implements UiScreenController {
 
   private void resetOutlineModel() {
     currentOutlineModel = JsonOutlineModel.empty();
+    currentOutlineLayout = OutlineMinimapLayout.empty();
     currentOutlineSourceIdentity = null;
   }
 
