@@ -204,6 +204,12 @@
     -fx-font-weight: 700;
 }
 
+.active-search-occurrence {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
 .eyebrow-label {
     -fx-text-fill: #5f6c79;
     -fx-font-size: 11px;
@@ -423,6 +429,10 @@
 .primary-button:pressed {
     -fx-background-color: #004a9f;
     -fx-border-color: #004a9f;
+}
+
+.search-strip-button {
+    -fx-padding: 8 12 8 12;
 }
 
 .button:focused,

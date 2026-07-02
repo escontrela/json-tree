@@ -96,6 +96,12 @@
 - The entry panel lives inside the current JavaFX shell and includes a RegExp input plus accept and cancel actions.
 - The header layout now reserves a hidden compact strip area to the left of `Copy tree` so accepted searches can later promote into persistent controls without redistributing the top bar again.
 
+## Active Search Strip
+
+- Accepting a search query now promotes a compact utility strip into the workspace header without reopening or replacing the modal.
+- The strip occupies the reserved region to the left of `Copy tree` and includes previous, next, occurrence-status, and clear controls as a separate UI state from the entry panel.
+- When no search session is active, the strip is fully hidden so the top bar returns to its default editorial layout.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

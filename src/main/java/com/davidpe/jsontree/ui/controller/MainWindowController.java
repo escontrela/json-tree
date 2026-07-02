@@ -102,6 +102,8 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Label activeSearchQueryLabel;
 
+  @FXML private Label activeSearchOccurrenceLabel;
+
   @FXML private Label emptyStateLabel;
 
   @FXML private Label footerStatusLabel;
@@ -268,6 +270,7 @@ public class MainWindowController implements UiScreenController {
     viewerContentBox.autosize();
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
+    clearSearchSession();
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.EMPTY);
@@ -304,6 +307,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setVisible(true);
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
+    clearSearchSession();
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.LOADING);
@@ -326,6 +330,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setVisible(true);
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
+    clearSearchSession();
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.INVALID);
@@ -656,10 +661,33 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void acceptSearchModal() {
-    activeSearchQueryLabel.setText(searchQueryField.getText().isBlank()
-        ? "Search ready"
-        : searchQueryField.getText());
+    String acceptedQuery = searchQueryField.getText().trim();
+    if (acceptedQuery.isBlank()) {
+      acceptedQuery = "Search ready";
+    }
+    activeSearchQueryLabel.setText(acceptedQuery);
+    activeSearchOccurrenceLabel.setText("Pending");
+    activeSearchStrip.setManaged(true);
+    activeSearchStrip.setVisible(true);
     hideSearchModal();
+  }
+
+  @FXML
+  void clearSearchSession() {
+    activeSearchStrip.setManaged(false);
+    activeSearchStrip.setVisible(false);
+    activeSearchQueryLabel.setText("Search ready");
+    activeSearchOccurrenceLabel.setText("Ready");
+  }
+
+  @FXML
+  void showPreviousSearchResult() {
+    // Navigation wiring lands in the search workflow tickets.
+  }
+
+  @FXML
+  void showNextSearchResult() {
+    // Navigation wiring lands in the search workflow tickets.
   }
 
   @FXML

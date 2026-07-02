@@ -26,7 +26,11 @@
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
                 <HBox fx:id="activeSearchStrip" managed="false" spacing="8.0" styleClass="active-search-strip" visible="false">
+                    <Button disable="true" mnemonicParsing="false" onAction="#showPreviousSearchResult" styleClass="ghost-button search-strip-button" text="Prev" />
+                    <Button disable="true" mnemonicParsing="false" onAction="#showNextSearchResult" styleClass="ghost-button search-strip-button" text="Next" />
                     <Label fx:id="activeSearchQueryLabel" styleClass="active-search-query" text="Search ready" />
+                    <Label fx:id="activeSearchOccurrenceLabel" styleClass="active-search-occurrence" text="Ready" />
+                    <Button mnemonicParsing="false" onAction="#clearSearchSession" styleClass="ghost-button search-strip-button" text="Clear" />
                 </HBox>
                 <Button mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button" text="Copy tree" />
                 <Button fx:id="rawJsonButton" disable="true" mnemonicParsing="false" onAction="#toggleRawJson" styleClass="ghost-button" text="Raw JSON" />
