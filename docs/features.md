@@ -144,6 +144,12 @@
 - Coordinate mapping from minimap pointer position to `ScrollPane` scroll value lives in a dedicated helper so the JavaFX controller only wires UI events and current dimensions.
 - Short documents that do not require scrolling resolve safely to the top of the viewer instead of producing unstable scroll jumps.
 
+## Outline Viewport Tracking
+
+- The minimap viewport marker now reflects the current visible region of the main viewer instead of staying as a static placeholder.
+- Marker updates are deferred to the next JavaFX pulse so scroll changes, viewer rerenders, raw/ASCII toggles, and history reopen flows do not create jittery feedback loops.
+- Large files keep the existing sampled minimap rendering and only update marker geometry during scroll, which avoids repainting the full outline on every viewport change.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

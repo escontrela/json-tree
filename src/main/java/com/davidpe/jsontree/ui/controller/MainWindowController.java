@@ -23,6 +23,8 @@ import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
 import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
+import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
+import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
@@ -79,6 +81,7 @@ public class MainWindowController implements UiScreenController {
   private final JsonOutlineModelService outlineModelService;
   private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
   private final OutlineMinimapScrollMapper outlineScrollMapper;
+  private final OutlineViewportProjector outlineViewportProjector;
   private final JsonSearchWorkflowService searchWorkflowService;
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
@@ -93,6 +96,7 @@ public class MainWindowController implements UiScreenController {
       JsonOutlineModelService outlineModelService,
       OutlineMinimapLayoutPlanner outlineLayoutPlanner,
       OutlineMinimapScrollMapper outlineScrollMapper,
+      OutlineViewportProjector outlineViewportProjector,
       JsonSearchWorkflowService searchWorkflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
@@ -105,6 +109,7 @@ public class MainWindowController implements UiScreenController {
     this.outlineModelService = outlineModelService;
     this.outlineLayoutPlanner = outlineLayoutPlanner;
     this.outlineScrollMapper = outlineScrollMapper;
+    this.outlineViewportProjector = outlineViewportProjector;
     this.searchWorkflowService = searchWorkflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
@@ -199,6 +204,7 @@ public class MainWindowController implements UiScreenController {
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentOutlineSourceIdentity;
+  private boolean outlineViewportRefreshPending;
 
   @FXML
   public void initialize() {
@@ -276,6 +282,11 @@ public class MainWindowController implements UiScreenController {
     outlinePreviewShell.heightProperty().addListener(resizeListener);
     outlinePreviewShell.setOnMousePressed(this::handleOutlineInteraction);
     outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
+    viewerScrollPane.vvalueProperty().addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
+    viewerScrollPane.viewportBoundsProperty().addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
+    viewerContentBox
+        .layoutBoundsProperty()
+        .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
     resizeOutlineCanvas();
   }
 
@@ -314,7 +325,7 @@ public class MainWindowController implements UiScreenController {
         .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
     outlinePreviewShell.getStyleClass().add("outline-state-valid");
     drawOutlineMinimap();
-    showOutlineViewportPlaceholder();
+    scheduleOutlineViewportRefresh();
   }
 
   private void showOutlineShellState(
@@ -343,10 +354,11 @@ public class MainWindowController implements UiScreenController {
     if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel()) {
       currentOutlineLayout = OutlineMinimapLayout.empty();
       drawOutlineShellPlaceholder();
+      hideOutlineViewportMarker();
       return;
     }
     drawOutlineMinimap();
-    showOutlineViewportPlaceholder();
+    scheduleOutlineViewportRefresh();
   }
 
   private void drawOutlineMinimap() {
@@ -381,20 +393,6 @@ public class MainWindowController implements UiScreenController {
     };
   }
 
-  private void showOutlineViewportPlaceholder() {
-    if (currentOutlineLayout.emptyLayout()) {
-      outlineViewportMarker.setManaged(false);
-      outlineViewportMarker.setVisible(false);
-      return;
-    }
-
-    double markerWidth = Math.max(24.0, outlineCanvas.getWidth() - 20.0);
-    double markerHeight = Math.max(32.0, outlineCanvas.getHeight() * 0.18);
-    outlineViewportMarker.resizeRelocate(10.0, 16.0, markerWidth, markerHeight);
-    outlineViewportMarker.setManaged(false);
-    outlineViewportMarker.setVisible(true);
-  }
-
   private void handleOutlineInteraction(MouseEvent event) {
     if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
       return;
@@ -410,6 +408,46 @@ public class MainWindowController implements UiScreenController {
             contentHeight);
     viewerScrollPane.setVvalue(scrollValue);
     event.consume();
+  }
+
+  private void scheduleOutlineViewportRefresh() {
+    if (outlineViewportRefreshPending) {
+      return;
+    }
+    outlineViewportRefreshPending = true;
+    Platform.runLater(
+        () -> {
+          outlineViewportRefreshPending = false;
+          refreshOutlineViewportMarker();
+        });
+  }
+
+  private void refreshOutlineViewportMarker() {
+    if (currentOutlineLayout.emptyLayout() || !outlinePreviewShell.isVisible()) {
+      hideOutlineViewportMarker();
+      return;
+    }
+
+    OutlineViewportProjection projection =
+        outlineViewportProjector.project(
+            viewerScrollPane.getVvalue(),
+            outlineCanvas.getHeight(),
+            viewerScrollPane.getViewportBounds().getHeight(),
+            viewerContentBox.getLayoutBounds().getHeight());
+    if (!projection.visible()) {
+      hideOutlineViewportMarker();
+      return;
+    }
+
+    double markerWidth = Math.max(24.0, outlineCanvas.getWidth() - 20.0);
+    outlineViewportMarker.resizeRelocate(10.0, 1.0 + projection.y(), markerWidth, projection.height());
+    outlineViewportMarker.setManaged(false);
+    outlineViewportMarker.setVisible(true);
+  }
+
+  private void hideOutlineViewportMarker() {
+    outlineViewportMarker.setManaged(false);
+    outlineViewportMarker.setVisible(false);
   }
 
   private void drawOutlineShellPlaceholder() {
@@ -462,6 +500,7 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
     applyState(ViewerVisualState.VALID);
+    scheduleOutlineViewportRefresh();
     rawJsonButton.setDisable(false);
     searchButton.setDisable(false);
   }
@@ -828,6 +867,7 @@ public class MainWindowController implements UiScreenController {
     }
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
+    scheduleOutlineViewportRefresh();
   }
 
   private void resetViewModeIfNeeded() {
@@ -927,6 +967,12 @@ public class MainWindowController implements UiScreenController {
     boolean nextVisible = !outlineVBox.isVisible();
     outlineVBox.setVisible(nextVisible);
     outlineVBox.setManaged(nextVisible);
+    if (nextVisible) {
+      resizeOutlineCanvas();
+      scheduleOutlineViewportRefresh();
+      return;
+    }
+    hideOutlineViewportMarker();
   }
 
   private void hideSearchModal() {
@@ -1018,6 +1064,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
+    scheduleOutlineViewportRefresh();
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {
