@@ -85,6 +85,27 @@ class JsonSearchWorkflowServiceTest {
     assertTrue(searchService.currentSession().isEmpty());
   }
 
+  @Test
+  void movesNextAndPreviousThroughMatchesInStableWrappedOrder() {
+    JsonSearchWorkflowService searchService = new JsonSearchWorkflowService(viewerWorkflowService());
+    searchService.activateSearch("file:/sample.json", "\"(?:David|admin)\"");
+
+    JsonSearchSession initial = searchService.currentSession().orElseThrow();
+    assertEquals(0, initial.activeMatchIndex());
+    assertEquals(2, initial.totalMatches());
+
+    JsonSearchSession next = searchService.moveToNextMatch().orElseThrow();
+    assertEquals(1, next.activeMatchIndex());
+    assertEquals("\"admin\"", next.activeMatch().orElseThrow().fragment());
+
+    JsonSearchSession wrapped = searchService.moveToNextMatch().orElseThrow();
+    assertEquals(0, wrapped.activeMatchIndex());
+    assertEquals("\"David\"", wrapped.activeMatch().orElseThrow().fragment());
+
+    JsonSearchSession previous = searchService.moveToPreviousMatch().orElseThrow();
+    assertEquals(1, previous.activeMatchIndex());
+  }
+
   private JsonViewerWorkflowService viewerWorkflowService() {
     JsonValidationPort validationPort =
         path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);

@@ -114,6 +114,12 @@
 - Raw JSON highlighting uses the exact match offsets returned by the raw-search workflow, while the ASCII view projects the same match sequence onto its rendered text.
 - Clearing the active search session rerenders both viewers without leftover highlight fragments.
 
+## Search Navigation Lifecycle
+
+- Search sessions now track the active occurrence index and expose wrapped previous or next navigation in stable match order.
+- The active-search strip shows `current / total` when matches exist and disables navigation controls coherently for zero or one occurrence.
+- Moving between matches rerenders the current viewer and scrolls the active highlighted fragment into view; clearing the session hides the strip and restores the viewer to its unhighlighted state.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

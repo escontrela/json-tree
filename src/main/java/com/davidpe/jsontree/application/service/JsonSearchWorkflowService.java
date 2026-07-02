@@ -61,6 +61,34 @@ public class JsonSearchWorkflowService {
     return Optional.ofNullable(currentSession);
   }
 
+  public Optional<JsonSearchSession> moveToPreviousMatch() {
+    if (currentSession == null || !currentSession.hasMatches()) {
+      return Optional.ofNullable(currentSession);
+    }
+    if (currentSession.totalMatches() == 1) {
+      return Optional.of(currentSession);
+    }
+
+    int previousIndex =
+        (currentSession.activeMatchIndex() - 1 + currentSession.totalMatches())
+            % currentSession.totalMatches();
+    currentSession = currentSession.withActiveMatchIndex(previousIndex);
+    return Optional.of(currentSession);
+  }
+
+  public Optional<JsonSearchSession> moveToNextMatch() {
+    if (currentSession == null || !currentSession.hasMatches()) {
+      return Optional.ofNullable(currentSession);
+    }
+    if (currentSession.totalMatches() == 1) {
+      return Optional.of(currentSession);
+    }
+
+    int nextIndex = (currentSession.activeMatchIndex() + 1) % currentSession.totalMatches();
+    currentSession = currentSession.withActiveMatchIndex(nextIndex);
+    return Optional.of(currentSession);
+  }
+
   public void clear() {
     currentSession = null;
   }

@@ -31,6 +31,7 @@ import java.util.Locale;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
+import javafx.geometry.Bounds;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -146,6 +147,10 @@ public class MainWindowController implements UiScreenController {
   @FXML private Button rawJsonButton;
 
   @FXML private Button searchButton;
+
+  @FXML private Button previousSearchButton;
+
+  @FXML private Button nextSearchButton;
 
   @FXML private VBox searchModalCard;
 
@@ -677,6 +682,7 @@ public class MainWindowController implements UiScreenController {
     syncActiveSearchStrip();
     hideSearchModal();
     refreshCurrentViewerContent();
+    scrollToActiveSearchHighlight();
   }
 
   @FXML
@@ -688,12 +694,20 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void showPreviousSearchResult() {
-    // Navigation wiring lands in the search workflow tickets.
+    searchWorkflowService.moveToPreviousMatch().ifPresent(unused -> {
+      syncActiveSearchStrip();
+      refreshCurrentViewerContent();
+      scrollToActiveSearchHighlight();
+    });
   }
 
   @FXML
   void showNextSearchResult() {
-    // Navigation wiring lands in the search workflow tickets.
+    searchWorkflowService.moveToNextMatch().ifPresent(unused -> {
+      syncActiveSearchStrip();
+      refreshCurrentViewerContent();
+      scrollToActiveSearchHighlight();
+    });
   }
 
   @FXML
@@ -738,12 +752,17 @@ public class MainWindowController implements UiScreenController {
               activeSearchOccurrenceLabel.setText(formatOccurrenceLabel(session));
               activeSearchStrip.setManaged(true);
               activeSearchStrip.setVisible(true);
+              boolean disableNavigation = session.totalMatches() <= 1;
+              previousSearchButton.setDisable(disableNavigation);
+              nextSearchButton.setDisable(disableNavigation);
             },
             () -> {
               activeSearchStrip.setManaged(false);
               activeSearchStrip.setVisible(false);
               activeSearchQueryLabel.setText("Search ready");
               activeSearchOccurrenceLabel.setText("Ready");
+              previousSearchButton.setDisable(true);
+              nextSearchButton.setDisable(true);
             });
   }
 
@@ -785,5 +804,44 @@ public class MainWindowController implements UiScreenController {
         .filter(JsonSearchSession::hasMatches)
         .map(searchMatchProjector::rawRanges)
         .orElse(List.of());
+  }
+
+  private void scrollToActiveSearchHighlight() {
+    searchWorkflowService
+        .currentSession()
+        .filter(JsonSearchSession::hasMatches)
+        .ifPresent(unused -> Platform.runLater(this::scrollActiveHighlightIntoView));
+  }
+
+  private void scrollActiveHighlightIntoView() {
+    TextFlow activeFlow = showingRawJson ? rawJsonContentFlow : treeContentFlow;
+    activeFlow.getChildren().stream()
+        .filter(Text.class::isInstance)
+        .map(Text.class::cast)
+        .filter(text -> text.getStyleClass().contains("search-match-active"))
+        .findFirst()
+        .ifPresent(this::scrollTextIntoView);
+  }
+
+  private void scrollTextIntoView(Text textNode) {
+    viewerContentBox.applyCss();
+    viewerContentBox.layout();
+
+    Bounds nodeBounds = viewerContentBox.sceneToLocal(textNode.localToScene(textNode.getBoundsInLocal()));
+    Bounds viewportBounds = viewerScrollPane.getViewportBounds();
+    Bounds contentBounds = viewerContentBox.getLayoutBounds();
+
+    double maxHorizontalOffset = Math.max(1.0, contentBounds.getWidth() - viewportBounds.getWidth());
+    double maxVerticalOffset = Math.max(1.0, contentBounds.getHeight() - viewportBounds.getHeight());
+
+    double targetX = Math.max(0.0, nodeBounds.getMinX() - (viewportBounds.getWidth() * 0.2));
+    double targetY = Math.max(0.0, nodeBounds.getMinY() - (viewportBounds.getHeight() * 0.2));
+
+    viewerScrollPane.setHvalue(clamp(targetX / maxHorizontalOffset));
+    viewerScrollPane.setVvalue(clamp(targetY / maxVerticalOffset));
+  }
+
+  private double clamp(double value) {
+    return Math.max(0.0, Math.min(1.0, value));
   }
 }
