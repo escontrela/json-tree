@@ -32,6 +32,9 @@ import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.geometry.Bounds;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
@@ -43,6 +46,7 @@ import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
@@ -163,6 +167,14 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private VBox outlineVBox;
 
+  @FXML private StackPane outlinePreviewShell;
+
+  @FXML private Canvas outlineCanvas;
+
+  @FXML private Region outlineViewportMarker;
+
+  @FXML private Label outlineStateLabel;
+
   private ViewerVisualState currentState;
   private Instant currentLoadedAt;
   private String currentViewIdentity;
@@ -192,6 +204,7 @@ public class MainWindowController implements UiScreenController {
               reopenHistoryEntry(newValue);
               historyListView.getSelectionModel().clearSelection();
             });
+    configureOutlineShell();
     showEmptyViewer();
     refreshInlineHistory();
   }
@@ -238,6 +251,87 @@ public class MainWindowController implements UiScreenController {
         window.getHeight());
   }
 
+  private void configureOutlineShell() {
+    ChangeListener<Number> resizeListener = (unused, oldValue, newValue) -> resizeOutlineCanvas();
+    outlinePreviewShell.widthProperty().addListener(resizeListener);
+    outlinePreviewShell.heightProperty().addListener(resizeListener);
+    resizeOutlineCanvas();
+  }
+
+  private void resizeOutlineCanvas() {
+    double width = Math.max(0.0, outlinePreviewShell.getWidth() - 2.0);
+    double height = Math.max(0.0, outlinePreviewShell.getHeight() - 2.0);
+    outlineCanvas.setWidth(width);
+    outlineCanvas.setHeight(height);
+    drawOutlineShellPlaceholder();
+  }
+
+  private void showOutlineEmptyShell() {
+    showOutlineShellState(
+        "Awaiting JSON",
+        "Load a valid JSON file to populate the outline minimap shell.",
+        "The right rail keeps a dedicated preview surface reserved for the minimap.",
+        null);
+  }
+
+  private void showOutlineValidShell(AsciiTreeDocument document) {
+    viewerAidTitleLabel.setText("Minimap shell ready");
+    viewerAidMetaLabel.setText(document.lineCount() + " viewer lines reserved for outline rendering.");
+    outlineStateLabel.setManaged(false);
+    outlineStateLabel.setVisible(false);
+    outlineViewportMarker.setManaged(false);
+    outlineViewportMarker.setVisible(false);
+    outlinePreviewShell
+        .getStyleClass()
+        .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
+    outlinePreviewShell.getStyleClass().add("outline-state-valid");
+    drawOutlineShellPlaceholder();
+  }
+
+  private void showOutlineShellState(
+      String title,
+      String stateMessage,
+      String metaMessage,
+      String previewStateClass) {
+    viewerAidTitleLabel.setText(title);
+    viewerAidMetaLabel.setText(metaMessage);
+    outlineStateLabel.setText(stateMessage);
+    outlineStateLabel.setManaged(true);
+    outlineStateLabel.setVisible(true);
+    outlineViewportMarker.setManaged(false);
+    outlineViewportMarker.setVisible(false);
+    outlinePreviewShell
+        .getStyleClass()
+        .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
+    if (previewStateClass != null) {
+      outlinePreviewShell.getStyleClass().add(previewStateClass);
+    }
+    drawOutlineShellPlaceholder();
+  }
+
+  private void drawOutlineShellPlaceholder() {
+    GraphicsContext graphics = outlineCanvas.getGraphicsContext2D();
+    double width = outlineCanvas.getWidth();
+    double height = outlineCanvas.getHeight();
+    graphics.clearRect(0, 0, width, height);
+    if (width <= 0.0 || height <= 0.0) {
+      return;
+    }
+
+    graphics.setFill(Color.web("#eef1f4"));
+    graphics.fillRect(0, 0, width, height);
+
+    double rowCount = 8.0;
+    double rowHeight = Math.max(6.0, (height - 36.0) / rowCount);
+    for (int index = 0; index < rowCount; index++) {
+      double x = 14.0 + ((index % 3) * 10.0);
+      double y = 18.0 + (index * rowHeight);
+      double barWidth = Math.max(20.0, width - x - (18.0 + ((index % 4) * 6.0)));
+      graphics.setFill(index % 2 == 0 ? Color.web("#d5dbe3") : Color.web("#c8d1dc"));
+      graphics.fillRect(x, y, barWidth, 3.0);
+    }
+  }
+
   @Override
   public void onShow() {
     refreshInlineHistory();
@@ -257,9 +351,7 @@ public class MainWindowController implements UiScreenController {
     rawJsonContentFlow.setVisible(false);
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    viewerAidTitleLabel.setText(document.rootLabel());
-    viewerAidMetaLabel.setText(
-        document.lineCount() + " rendered lines\nSource: " + fileSourceValueLabel.getText());
+    showOutlineValidShell(document);
     setValidationBadge("Valid", "status-valid");
     footerStatusLabel.setText("Rendered " + document.lineCount() + " lines");
     statusStateValueLabel.setText("VALID");
@@ -277,8 +369,7 @@ public class MainWindowController implements UiScreenController {
     fileMetaLabel.setText("Drop a JSON anywhere in the window");
     fileLoadedAtValueLabel.setText("Not loaded");
     fileSourceValueLabel.setText("Waiting for import");
-    viewerAidTitleLabel.setText("Awaiting JSON");
-    viewerAidMetaLabel.setText("Load a local JSON file to populate this secondary viewer aid.");
+    showOutlineEmptyShell();
     treeContentFlow.getChildren().clear();
     treeContentFlow.setManaged(false);
     treeContentFlow.setVisible(false);
@@ -300,8 +391,11 @@ public class MainWindowController implements UiScreenController {
 
   public void showDraggingState() {
     emptyStateLabel.setText("Release to inspect this JSON file");
-    viewerAidTitleLabel.setText("Drop ready");
-    viewerAidMetaLabel.setText("Release to load the first supported .json file in the payload.");
+    showOutlineShellState(
+        "Drop ready",
+        "Release to prepare the outline minimap shell for this JSON file.",
+        "The outline panel remains docked and ready for the incoming document.",
+        "outline-state-loading");
     setValidationBadge("Drop ready", "status-accent");
     footerStatusLabel.setText("Waiting for JSON drop");
     setStatusRailValues("DROP READY", "--", "--", "Drag payload");
@@ -315,9 +409,11 @@ public class MainWindowController implements UiScreenController {
     fileMetaLabel.setText("Preparing JSON preview");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
     fileSourceValueLabel.setText("Local file");
-    viewerAidTitleLabel.setText("Preparing outline");
-    viewerAidMetaLabel.setText(
-        "Workspace actions are in place while validation and rendering complete.");
+    showOutlineShellState(
+        "Preparing outline",
+        "Building the outline minimap shell for this JSON preview.",
+        "The panel keeps a reserved minimap surface while validation completes.",
+        "outline-state-loading");
     setValidationBadge("Loading", "status-muted");
     footerStatusLabel.setText("Parsing JSON");
     setStatusRailValues("LOADING", "--", "--", "Local file");
@@ -337,9 +433,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showInvalidState(String message) {
-    viewerAidTitleLabel.setText("Validation issue");
-    viewerAidMetaLabel.setText(
-        "The viewer contract remains active even when the payload cannot render.");
+    showOutlineShellState(
+        "Outline unavailable",
+        "The current JSON payload cannot produce an outline minimap.",
+        "Fix the document or reopen a valid snapshot to restore the minimap.",
+        "outline-state-invalid");
     setValidationBadge("Invalid", "status-error");
     footerStatusLabel.setText("JSON needs attention");
     if ("VALID".equals(statusStateValueLabel.getText())) {
@@ -365,6 +463,7 @@ public class MainWindowController implements UiScreenController {
     viewerAidTitleLabel.setText("Empty file");
     viewerAidMetaLabel.setText(
         "The selected file exists but does not contain any JSON content to render.");
+    outlineStateLabel.setText("The outline minimap cannot render because the file is empty.");
     footerStatusLabel.setText("The JSON file is empty");
   }
 

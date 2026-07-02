@@ -120,6 +120,12 @@
 - The active-search strip shows `current / total` when matches exist and disables navigation controls coherently for zero or one occurrence.
 - Moving between matches rerenders the current viewer and scrolls the active highlighted fragment into view; clearing the session hides the strip and restores the viewer to its unhighlighted state.
 
+## Outline Minimap Shell
+
+- The right rail outline panel now exposes a dedicated minimap preview shell instead of only a text placeholder.
+- Empty, dragging, loading, valid, invalid, and empty-file flows all update the outline panel coherently inside the existing screen.
+- The shell reserves a compact thumbnail surface and keeps the existing outline toggle behavior intact while the interactive minimap feature is layered in.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.

@@ -6,6 +6,7 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -149,7 +150,7 @@
 
     <!-- ═══ RIGHT: outline / aid panel ═══ -->
     <right>
-        <VBox fx:id="outlineVBox" prefWidth="176.0" spacing="12.0" styleClass="rail-card viewer-aid-card">
+        <VBox fx:id="outlineVBox" prefWidth="176.0" spacing="12.0" styleClass="rail-card viewer-aid-card outline-panel">
             <BorderPane.margin>
                 <Insets bottom="24.0" left="0.0" right="24.0" top="24.0" />
             </BorderPane.margin>
@@ -158,7 +159,12 @@
             </padding>
             <Label styleClass="eyebrow-label" text="Outline" />
             <Label fx:id="viewerAidTitleLabel" styleClass="viewer-aid-title" text="Awaiting JSON" />
-            <Label fx:id="viewerAidMetaLabel" styleClass="viewer-aid-meta" text="Load a local JSON file to populate this secondary viewer aid." wrapText="true" />
+            <StackPane fx:id="outlinePreviewShell" minHeight="260.0" prefHeight="360.0" styleClass="outline-preview-shell" VBox.vgrow="ALWAYS">
+                <Canvas fx:id="outlineCanvas" mouseTransparent="true" />
+                <Region fx:id="outlineViewportMarker" managed="false" mouseTransparent="true" styleClass="outline-viewport-marker" visible="false" />
+                <Label fx:id="outlineStateLabel" styleClass="outline-state-label" text="Load a local JSON file to prepare the outline minimap shell." wrapText="true" />
+            </StackPane>
+            <Label fx:id="viewerAidMetaLabel" styleClass="viewer-aid-meta" text="The panel keeps a dedicated minimap shell ready for the active document." wrapText="true" />
         </VBox>
     </right>
 

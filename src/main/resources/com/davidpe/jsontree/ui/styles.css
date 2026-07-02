@@ -454,6 +454,45 @@
     -fx-min-width: 176;
 }
 
+.outline-panel {
+    -fx-spacing: 12;
+}
+
+.outline-preview-shell {
+    -fx-background-color: #f7f8fa;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+}
+
+.outline-preview-shell.outline-state-loading {
+    -fx-background-color: #f8f9fb;
+    -fx-border-color: #bfc7d2;
+}
+
+.outline-preview-shell.outline-state-valid {
+    -fx-background-color: #fdfefe;
+    -fx-border-color: #d6e5f8;
+}
+
+.outline-preview-shell.outline-state-invalid {
+    -fx-background-color: #fff7f7;
+    -fx-border-color: #c23b32;
+}
+
+.outline-state-label {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 13px;
+    -fx-font-weight: 400;
+    -fx-max-width: 120px;
+    -fx-text-alignment: center;
+}
+
+.outline-viewport-marker {
+    -fx-border-color: #1c69d4;
+    -fx-border-width: 1;
+    -fx-background-color: rgba(28, 105, 212, 0.08);
+}
+
 .viewer-aid-title {
     -fx-text-fill: #1a2129;
     -fx-font-size: 18px;
