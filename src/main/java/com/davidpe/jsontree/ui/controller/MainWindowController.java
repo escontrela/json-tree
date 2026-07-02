@@ -1,9 +1,11 @@
 package com.davidpe.jsontree.ui.controller;
 
+import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
@@ -18,6 +20,7 @@ import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
+import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
@@ -48,8 +51,10 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputControl;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
@@ -76,6 +81,7 @@ public class MainWindowController implements UiScreenController {
           .withZone(ZoneId.systemDefault());
 
   private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
+  private final ImportClipboardJsonUseCase importClipboardJsonUseCase;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
   private final JsonOutlineModelService outlineModelService;
@@ -88,9 +94,11 @@ public class MainWindowController implements UiScreenController {
   private final DroppedJsonPathResolver droppedJsonPathResolver;
   private final SearchMatchProjector searchMatchProjector;
   private final SearchTextFlowHighlighter searchTextFlowHighlighter;
+  private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
+      ImportClipboardJsonUseCase importClipboardJsonUseCase,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
       JsonOutlineModelService outlineModelService,
@@ -102,8 +110,10 @@ public class MainWindowController implements UiScreenController {
       DroppedJsonPathResolver droppedJsonPathResolver,
       SearchMatchProjector searchMatchProjector,
       SearchTextFlowHighlighter searchTextFlowHighlighter,
+      ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
+    this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
     this.outlineModelService = outlineModelService;
@@ -115,6 +125,7 @@ public class MainWindowController implements UiScreenController {
     this.droppedJsonPathResolver = droppedJsonPathResolver;
     this.searchMatchProjector = searchMatchProjector;
     this.searchTextFlowHighlighter = searchTextFlowHighlighter;
+    this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -210,6 +221,7 @@ public class MainWindowController implements UiScreenController {
   public void initialize() {
     rootPane.getProperties().put("controller", this);
     configureWindowMetricsLogging();
+    rootPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleGlobalKeyPressed);
     rootPane.setOnDragOver(this::handleDragOver);
     rootPane.setOnDragExited(event -> restoreViewFromWorkflow());
     rootPane.setOnDragDropped(this::handleDragDropped);
@@ -691,6 +703,26 @@ public class MainWindowController implements UiScreenController {
       return java.util.Optional.empty();
     }
     return droppedJsonPathResolver.resolve(dragboard.getFiles());
+  }
+
+  private void handleGlobalKeyPressed(KeyEvent event) {
+    if (!clipboardImportShortcutSupport.shouldTrigger(
+        event.getCode(),
+        event.isShortcutDown(),
+        event.isAltDown(),
+        event.isShiftDown(),
+        event.getTarget() instanceof TextInputControl,
+        searchModalCard.isVisible())) {
+      return;
+    }
+
+    ClipboardJsonImportResult result = importClipboardJsonUseCase.importFromClipboard();
+    if (result.successful()) {
+      restoreViewFromWorkflow();
+    } else {
+      footerStatusLabel.setText(result.message());
+    }
+    event.consume();
   }
 
   private void restoreViewFromWorkflow() {
