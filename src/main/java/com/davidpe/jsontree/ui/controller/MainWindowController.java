@@ -24,6 +24,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -31,6 +32,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.TransferMode;
@@ -96,6 +98,10 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Label emptyHistoryInlineLabel;
 
+  @FXML private HBox activeSearchStrip;
+
+  @FXML private Label activeSearchQueryLabel;
+
   @FXML private Label emptyStateLabel;
 
   @FXML private Label footerStatusLabel;
@@ -127,6 +133,14 @@ public class MainWindowController implements UiScreenController {
   @FXML private TextFlow rawJsonContentFlow;
 
   @FXML private Button rawJsonButton;
+
+  @FXML private Button searchButton;
+
+  @FXML private VBox searchModalCard;
+
+  @FXML private TextField searchQueryField;
+
+  @FXML private Label searchModalErrorLabel;
 
   @FXML private ListView<ImportedJsonFile> historyListView;
 
@@ -230,6 +244,7 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setVvalue(0);
     applyState(ViewerVisualState.VALID);
     rawJsonButton.setDisable(false);
+    searchButton.setDisable(false);
   }
 
   public void showEmptyViewer() {
@@ -252,6 +267,8 @@ public class MainWindowController implements UiScreenController {
     setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
     viewerContentBox.autosize();
     rawJsonButton.setDisable(true);
+    searchButton.setDisable(true);
+    hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.EMPTY);
   }
@@ -286,6 +303,8 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     rawJsonButton.setDisable(true);
+    searchButton.setDisable(true);
+    hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.LOADING);
   }
@@ -306,6 +325,8 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     rawJsonButton.setDisable(true);
+    searchButton.setDisable(true);
+    hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.INVALID);
   }
@@ -619,6 +640,29 @@ public class MainWindowController implements UiScreenController {
   }
 
   @FXML
+  void openSearchModal() {
+    searchModalErrorLabel.setManaged(false);
+    searchModalErrorLabel.setVisible(false);
+    searchModalErrorLabel.setText("");
+    searchModalCard.setManaged(true);
+    searchModalCard.setVisible(true);
+    Platform.runLater(searchQueryField::requestFocus);
+  }
+
+  @FXML
+  void cancelSearchModal() {
+    hideSearchModal();
+  }
+
+  @FXML
+  void acceptSearchModal() {
+    activeSearchQueryLabel.setText(searchQueryField.getText().isBlank()
+        ? "Search ready"
+        : searchQueryField.getText());
+    hideSearchModal();
+  }
+
+  @FXML
   void copyTree() {
     workflowService.currentViewRawJson().ifPresent(clipboardPort::copy);
   }
@@ -628,5 +672,10 @@ public class MainWindowController implements UiScreenController {
     boolean nextVisible = !outlineVBox.isVisible();
     outlineVBox.setVisible(nextVisible);
     outlineVBox.setManaged(nextVisible);
+  }
+
+  private void hideSearchModal() {
+    searchModalCard.setManaged(false);
+    searchModalCard.setVisible(false);
   }
 }

@@ -90,6 +90,12 @@
 - A secondary viewer toolbar keeps room for display-mode utilities without pushing those stubs into the business workflow.
 - The right side also exposes a compact auxiliary viewer aid panel so the screenshot-inspired distribution can exist without copying its dark aesthetic.
 
+## Search Entry Shell
+
+- The main workspace now includes a compact search modal overlay that opens from the existing `Search` action instead of routing to a separate screen.
+- The entry panel lives inside the current JavaFX shell and includes a RegExp input plus accept and cancel actions.
+- The header layout now reserves a hidden compact strip area to the left of `Copy tree` so accepted searches can later promote into persistent controls without redistributing the top bar again.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.
