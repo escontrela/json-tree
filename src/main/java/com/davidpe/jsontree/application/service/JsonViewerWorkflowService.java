@@ -8,6 +8,7 @@ import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
@@ -72,7 +73,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         resolveSize(normalizedPath, exists, regularFile),
         exists,
         readable,
-        regularFile);
+        regularFile,
+        JsonDocumentSourceKind.LOCAL_FILE);
   }
 
   public JsonViewerLoadResult loadFile(Path jsonFilePath) {
@@ -128,7 +130,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
             historyEntry.get().sizeBytes(),
             true,
             true,
-            true);
+            true,
+            JsonDocumentSourceKind.HISTORY);
 
     JsonValidationResult validationResult =
         new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);

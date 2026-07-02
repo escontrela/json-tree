@@ -11,6 +11,7 @@ import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
@@ -78,7 +79,8 @@ class JsonViewerWorkflowServiceTest {
                 16L,
                 true,
                 true,
-                true
+                true,
+                JsonDocumentSourceKind.LOCAL_FILE
         ));
 
         assertTrue(result.validationResult().valid());

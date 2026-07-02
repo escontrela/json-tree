@@ -4,6 +4,7 @@ import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
 import com.davidpe.jsontree.application.model.ClipboardJsonImportStatus;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
+import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,7 +90,14 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
 
     Path materializedJson = materializeClipboardJson(rawJson);
     JsonImportResult importResult =
-        workflowService.importFile(materializedJson);
+        new JsonImportResult(
+            materializedJson.toAbsolutePath().normalize(),
+            materializedJson.getFileName().toString(),
+            resolveSize(materializedJson),
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.CLIPBOARD);
     return ClipboardJsonImportResult.success(workflowService.loadImportedFile(importResult));
   }
 
@@ -127,5 +135,13 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
         + ", column "
         + exception.getLocation().getColumnNr()
         + ").";
+  }
+
+  private long resolveSize(Path path) {
+    try {
+      return Files.size(path);
+    } catch (IOException exception) {
+      return 0L;
+    }
   }
 }

@@ -48,6 +48,12 @@
 - The controller delegates the dropped path through `ImportJsonUseCase#importFile(Path)` before the workflow continues with validation, rendering, and optional history persistence.
 - Unsupported payloads restore a safe viewer state without calling filesystem metadata or parsing APIs directly from the controller.
 
+## Clipboard JSON Import
+
+- `Command+P` on macOS and `Ctrl+P` on Windows or Linux now materialize valid clipboard JSON as a temporary local document and route it through the standard validation and rendering workflow.
+- Clipboard imports use deterministic temporary filenames, surface `Clipboard` as the active source in metadata and the status rail, and still follow the existing local history snapshot conventions after a successful render.
+- Empty, unreadable, or invalid clipboard contents fail without replacing the last valid selected document, while an empty workspace shows a readable clipboard-specific invalid state.
+
 ## BMW Theme Tokens
 
 - The shared JavaFX theme now uses a BMW-inspired token baseline: white canvas, dark navy structure, BMW blue primary actions, neutral hairlines, and restrained grayscale body copy.

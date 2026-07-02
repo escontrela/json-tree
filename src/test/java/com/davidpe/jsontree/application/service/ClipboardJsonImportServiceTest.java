@@ -13,6 +13,7 @@ import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,6 +48,7 @@ class ClipboardJsonImportServiceTest {
     assertEquals(ClipboardJsonImportStatus.VALID_JSON, result.status());
     assertNotNull(result.loadResult());
     assertEquals(expectedClipboardFileName(), result.loadResult().importResult().fileName());
+    assertEquals(JsonDocumentSourceKind.CLIPBOARD, result.loadResult().importResult().sourceKind());
     assertTrue(result.loadResult().hasRenderableTree());
     assertTrue(result.loadResult().importResult().path().startsWith(tempDir));
   }
@@ -97,6 +99,54 @@ class ClipboardJsonImportServiceTest {
     assertTrue(result.message().contains("Clipboard text is not valid JSON"));
   }
 
+  @Test
+  void repeatedImportsCreateDistinctClipboardMaterializedFiles() {
+    JsonViewerWorkflowService workflowService = viewerWorkflowService();
+    ClipboardJsonImportService service =
+        new ClipboardJsonImportService(
+            readableClipboard("{\"name\":\"json-tree\"}"),
+            workflowService,
+            new ObjectMapper(),
+            fixedClock(),
+            tempDir);
+
+    ClipboardJsonImportResult first = service.importFromClipboard();
+    ClipboardJsonImportResult second = service.importFromClipboard();
+
+    assertTrue(first.successful());
+    assertTrue(second.successful());
+    assertEquals(expectedClipboardFileName(), first.loadResult().importResult().fileName());
+    assertEquals(expectedClipboardCollisionFileName(), second.loadResult().importResult().fileName());
+  }
+
+  @Test
+  void invalidClipboardDoesNotReplacePreviouslyImportedDocument() {
+    JsonViewerWorkflowService workflowService = viewerWorkflowService();
+    ClipboardJsonImportService validService =
+        new ClipboardJsonImportService(
+            readableClipboard("{\"name\":\"json-tree\"}"),
+            workflowService,
+            new ObjectMapper(),
+            fixedClock(),
+            tempDir);
+    ClipboardJsonImportService invalidService =
+        new ClipboardJsonImportService(
+            readableClipboard("{invalid"),
+            workflowService,
+            new ObjectMapper(),
+            fixedClock(),
+            tempDir);
+
+    ClipboardJsonImportResult validResult = validService.importFromClipboard();
+    ClipboardJsonImportResult invalidResult = invalidService.importFromClipboard();
+
+    assertTrue(validResult.successful());
+    assertFalse(invalidResult.successful());
+    assertEquals(
+        expectedClipboardFileName(),
+        workflowService.currentView().orElseThrow().importResult().fileName());
+  }
+
   private JsonViewerWorkflowService viewerWorkflowService() {
     return new JsonViewerWorkflowService(
         validValidationPort(),
@@ -123,6 +173,10 @@ class ClipboardJsonImportServiceTest {
             .withZone(ZoneId.systemDefault())
             .format(fixedClock().instant())
         + ".json";
+  }
+
+  private String expectedClipboardCollisionFileName() {
+    return expectedClipboardFileName().replace(".json", "-2.json");
   }
 
   private ClipboardPort readableClipboard(String text) {

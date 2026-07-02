@@ -8,8 +8,15 @@ public record JsonImportResult(
         long sizeBytes,
         boolean exists,
         boolean readable,
-        boolean regularFile
+        boolean regularFile,
+        JsonDocumentSourceKind sourceKind
 ) {
+
+    public JsonImportResult {
+        if (sourceKind == null) {
+            throw new IllegalArgumentException("Import source kind is required.");
+        }
+    }
 
     public boolean available() {
         return exists && readable && regularFile;
