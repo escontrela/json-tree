@@ -1,8 +1,11 @@
 package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
+import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
+import com.davidpe.jsontree.application.service.JsonSearchWorkflowService;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
@@ -60,6 +63,7 @@ public class MainWindowController implements UiScreenController {
   private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
+  private final JsonSearchWorkflowService searchWorkflowService;
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
@@ -69,6 +73,7 @@ public class MainWindowController implements UiScreenController {
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
+      JsonSearchWorkflowService searchWorkflowService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
       ObjectMapper objectMapper,
@@ -76,6 +81,7 @@ public class MainWindowController implements UiScreenController {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
+    this.searchWorkflowService = searchWorkflowService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
     this.objectMapper = objectMapper;
@@ -226,6 +232,7 @@ public class MainWindowController implements UiScreenController {
   @Override
   public void onShow() {
     refreshInlineHistory();
+    syncActiveSearchStrip();
     restoreViewFromWorkflow();
   }
 
@@ -424,6 +431,8 @@ public class MainWindowController implements UiScreenController {
 
   private void presentLoadResult(JsonViewerLoadResult result) {
     updateFileSummary(result);
+    searchWorkflowService.clearIfSourceChanged(currentViewIdentity(result));
+    syncActiveSearchStrip();
     syncStatusRail(result);
     refreshInlineHistory();
 
@@ -646,12 +655,16 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void openSearchModal() {
+    searchQueryField.setText(searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(""));
     searchModalErrorLabel.setManaged(false);
     searchModalErrorLabel.setVisible(false);
     searchModalErrorLabel.setText("");
     searchModalCard.setManaged(true);
     searchModalCard.setVisible(true);
-    Platform.runLater(searchQueryField::requestFocus);
+    Platform.runLater(() -> {
+      searchQueryField.requestFocus();
+      searchQueryField.selectAll();
+    });
   }
 
   @FXML
@@ -661,23 +674,25 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void acceptSearchModal() {
-    String acceptedQuery = searchQueryField.getText().trim();
-    if (acceptedQuery.isBlank()) {
-      acceptedQuery = "Search ready";
+    JsonSearchExecutionResult result =
+        searchWorkflowService.activateSearch(
+            currentViewIdentity == null ? "current-view" : currentViewIdentity,
+            searchQueryField.getText());
+    if (!result.successful()) {
+      searchModalErrorLabel.setText(result.errorMessage());
+      searchModalErrorLabel.setManaged(true);
+      searchModalErrorLabel.setVisible(true);
+      return;
     }
-    activeSearchQueryLabel.setText(acceptedQuery);
-    activeSearchOccurrenceLabel.setText("Pending");
-    activeSearchStrip.setManaged(true);
-    activeSearchStrip.setVisible(true);
+
+    syncActiveSearchStrip();
     hideSearchModal();
   }
 
   @FXML
   void clearSearchSession() {
-    activeSearchStrip.setManaged(false);
-    activeSearchStrip.setVisible(false);
-    activeSearchQueryLabel.setText("Search ready");
-    activeSearchOccurrenceLabel.setText("Ready");
+    searchWorkflowService.clear();
+    syncActiveSearchStrip();
   }
 
   @FXML
@@ -705,5 +720,30 @@ public class MainWindowController implements UiScreenController {
   private void hideSearchModal() {
     searchModalCard.setManaged(false);
     searchModalCard.setVisible(false);
+  }
+
+  private void syncActiveSearchStrip() {
+    searchWorkflowService
+        .currentSession()
+        .ifPresentOrElse(
+            session -> {
+              activeSearchQueryLabel.setText(session.query());
+              activeSearchOccurrenceLabel.setText(formatOccurrenceLabel(session));
+              activeSearchStrip.setManaged(true);
+              activeSearchStrip.setVisible(true);
+            },
+            () -> {
+              activeSearchStrip.setManaged(false);
+              activeSearchStrip.setVisible(false);
+              activeSearchQueryLabel.setText("Search ready");
+              activeSearchOccurrenceLabel.setText("Ready");
+            });
+  }
+
+  private String formatOccurrenceLabel(JsonSearchSession session) {
+    if (!session.hasMatches()) {
+      return "0 matches";
+    }
+    return (session.activeMatchIndex() + 1) + " / " + session.totalMatches();
   }
 }

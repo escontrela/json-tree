@@ -102,6 +102,12 @@
 - The strip occupies the reserved region to the left of `Copy tree` and includes previous, next, occurrence-status, and clear controls as a separate UI state from the entry panel.
 - When no search session is active, the strip is fully hidden so the top bar returns to its default editorial layout.
 
+## Search Workflow
+
+- Search execution now lives in an application service that validates RegExp input and runs matches against the current raw JSON source rather than the ASCII-rendered view.
+- Invalid expressions surface concise modal errors and do not replace the active header strip state.
+- Valid searches create a session with ordered match metadata and active-occurrence state so later highlighting and navigation can build on the same workflow contract.
+
 ## Status Rail Synchronization
 
 - The bottom rail now exposes stable technical cues for state, size, rendered line count, and source using only metrics the workflow already knows about.
