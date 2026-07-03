@@ -48,6 +48,21 @@ class FileSystemJsonHistoryRepositoryTest {
     }
 
     @Test
+    void deletingFavoriteEntryLeavesRemainingHistoryConsistent() {
+        FileSystemJsonHistoryRepository repository = new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
+        ImportedJsonFile favorite = new ImportedJsonFile("2026-05-27_00-09-59_favorite.json", "favorite.json", Instant.parse("2026-05-27T00:09:59Z"), 10L, 2, true, true);
+        ImportedJsonFile regular = new ImportedJsonFile("2026-05-27_00-10-00_regular.json", "regular.json", Instant.parse("2026-05-27T00:10:00Z"), 20L, 4, true, false);
+
+        repository.save(favorite, "{\"favorite\":true}");
+        repository.save(regular, "{\"regular\":true}");
+        repository.deleteByStoredName(favorite.storedName());
+
+        assertEquals(List.of(regular), repository.findAll());
+        assertFalse(repository.readStoredJson(favorite.storedName()).isPresent());
+        assertFalse(repository.findByStoredName(favorite.storedName()).isPresent());
+    }
+
+    @Test
     void updatesFavoriteStateWithoutBreakingSnapshotStorage() {
         FileSystemJsonHistoryRepository repository = new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
         ImportedJsonFile entry = new ImportedJsonFile("2026-05-27_00-10-00_sample.json", "sample.json", Instant.parse("2026-05-27T00:10:00Z"), 20L, 4, true, false);
