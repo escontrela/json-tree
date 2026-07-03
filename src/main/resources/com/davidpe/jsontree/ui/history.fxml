@@ -6,7 +6,6 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
@@ -53,7 +52,9 @@
                             <Label styleClass="eyebrow-label" text="Timeline" />
                             <Label styleClass="viewer-card-title" text="Stored JSON inspections" />
                         </VBox>
-                        <Region fx:id="storedInspectionsRegion" HBox.hgrow="ALWAYS" />
+                        <HBox fx:id="storedInspectionsRegion" alignment="CENTER_RIGHT" spacing="8.0" HBox.hgrow="ALWAYS">
+                            <Button fx:id="favoritesFilterButton" mnemonicParsing="false" onAction="#toggleFavoritesOnly" styleClass="ghost-button history-filter-button" text="Favorites only" />
+                        </HBox>
                         <Label fx:id="historyFooterLabel" styleClass="viewer-card-meta" />
                     </HBox>
                     <Region styleClass="viewer-divider" />

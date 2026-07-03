@@ -8,6 +8,8 @@ import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
+import com.davidpe.jsontree.ui.support.HistoryFavoritesViewState;
+import com.davidpe.jsontree.ui.support.HistoryFavoritesViewStateResolver;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.time.ZoneId;
@@ -41,16 +43,20 @@ public class HistoryScreenController implements UiScreenController {
   private final JsonViewerWorkflowService workflowService;
   private final ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase;
   private final HistoryFavoritePresentationResolver historyFavoritePresentationResolver;
+  private final HistoryFavoritesViewStateResolver historyFavoritesViewStateResolver;
   private final UiFlowManager uiFlowManager;
+  private boolean favoritesOnly;
 
   public HistoryScreenController(
       JsonViewerWorkflowService workflowService,
       ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase,
       HistoryFavoritePresentationResolver historyFavoritePresentationResolver,
+      HistoryFavoritesViewStateResolver historyFavoritesViewStateResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.workflowService = workflowService;
     this.toggleHistoryFavoriteUseCase = toggleHistoryFavoriteUseCase;
     this.historyFavoritePresentationResolver = historyFavoritePresentationResolver;
+    this.historyFavoritesViewStateResolver = historyFavoritesViewStateResolver;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -64,7 +70,9 @@ public class HistoryScreenController implements UiScreenController {
 
   @FXML private ListView<ImportedJsonFile> historyListView;
 
-  @FXML private Region storedInspectionsRegion;
+  @FXML private HBox storedInspectionsRegion;
+
+  @FXML private Button favoritesFilterButton;
 
   @FXML
   public void initialize() {
@@ -75,19 +83,25 @@ public class HistoryScreenController implements UiScreenController {
   @Override
   public void onShow() {
     List<ImportedJsonFile> entries = workflowService.loadHistoryEntries();
-    historyMetaLabel.setText(
-        entries.size() + " stored snapshot" + (entries.size() == 1 ? "" : "s"));
-    historyFooterLabel.setText(
-        entries.isEmpty() ? "No snapshots stored yet" : "Browsing local JSON history");
+    HistoryFavoritesViewState viewState =
+        historyFavoritesViewStateResolver.resolve(entries, favoritesOnly);
+    historyMetaLabel.setText(viewState.summaryLabel());
+    historyFooterLabel.setText(viewState.footerLabel());
+    favoritesFilterButton.setText(viewState.toggleButtonText());
+    favoritesFilterButton
+        .getStyleClass()
+        .removeAll("history-filter-button-active", "primary-button");
+    if (viewState.favoritesOnly()) {
+      favoritesFilterButton.getStyleClass().addAll("primary-button", "history-filter-button-active");
+    }
 
-    if (entries.isEmpty()) {
+    if (viewState.visibleEntries().isEmpty()) {
       historyListView.getItems().clear();
       historyListView.setManaged(false);
       historyListView.setVisible(false);
       emptyHistoryLabel.setManaged(true);
       emptyHistoryLabel.setVisible(true);
-      emptyHistoryLabel.setText(
-          "No JSON snapshots yet.\nDrop a valid JSON in the main view to start building history.");
+      emptyHistoryLabel.setText(viewState.emptyMessage());
       return;
     }
 
@@ -95,12 +109,18 @@ public class HistoryScreenController implements UiScreenController {
     emptyHistoryLabel.setVisible(false);
     historyListView.setManaged(true);
     historyListView.setVisible(true);
-    historyListView.getItems().setAll(entries);
+    historyListView.getItems().setAll(viewState.visibleEntries());
   }
 
   @FXML
   void backToMain() {
     uiFlowManager.show(UiScreenId.MAIN);
+  }
+
+  @FXML
+  void toggleFavoritesOnly() {
+    favoritesOnly = !favoritesOnly;
+    onShow();
   }
 
   private void reopenEntry(ImportedJsonFile entry) {

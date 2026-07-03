@@ -363,6 +363,10 @@
     -fx-text-fill: #ffffff;
 }
 
+.history-filter-button.history-filter-button-active {
+    -fx-text-fill: #ffffff;
+}
+
 .empty-state {
     -fx-font-size: 16px;
     -fx-line-spacing: 4px;

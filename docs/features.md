@@ -191,3 +191,9 @@
 - Each stored history row now exposes a dedicated `Pin` or `Pinned` action alongside reopen and delete controls.
 - The favorite action delegates through the application-layer toggle use case and refreshes the list without interfering with row-click reopen behavior.
 - Pinned rows now surface a clearer visual cue through their button state and a starred title label in the history screen.
+
+## Favorites-Only History Filter
+
+- The history header now includes a toggle inside `storedInspectionsRegion` that switches the list between all stored snapshots and pinned favorites only.
+- The toggle state is visually explicit through its label and active styling, and it survives in-screen refreshes such as pinning or deleting entries without persisting across restarts.
+- When the favorites-only filter yields no entries, the history screen now shows a dedicated empty-state message instead of falling back to the generic no-history copy.
