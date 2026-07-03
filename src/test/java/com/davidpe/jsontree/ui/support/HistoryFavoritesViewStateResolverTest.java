@@ -14,16 +14,19 @@ class HistoryFavoritesViewStateResolverTest {
 
   @Test
   void resolvesAllEntriesViewWhenFavoritesFilterIsOff() {
-    HistoryFavoritesViewState state = resolver.resolve(List.of(sample(false), sample(true)), false);
+    HistoryFavoritesViewState state =
+        resolver.resolve(List.of(sample(false, "regular"), sample(true, "favorite")), false);
 
     assertEquals(2, state.visibleEntries().size());
     assertEquals("2 stored snapshots", state.summaryLabel());
     assertEquals("Favorites only", state.toggleButtonText());
+    assertTrue(state.visibleEntries().getFirst().favorite());
   }
 
   @Test
   void resolvesOnlyFavoriteEntriesWhenFilterIsOn() {
-    HistoryFavoritesViewState state = resolver.resolve(List.of(sample(false), sample(true)), true);
+    HistoryFavoritesViewState state =
+        resolver.resolve(List.of(sample(false, "regular"), sample(true, "favorite")), true);
 
     assertEquals(1, state.visibleEntries().size());
     assertTrue(state.visibleEntries().getFirst().favorite());
@@ -33,17 +36,36 @@ class HistoryFavoritesViewStateResolverTest {
 
   @Test
   void exposesFavoriteSpecificEmptyStateWhenNoPinnedEntriesExist() {
-    HistoryFavoritesViewState state = resolver.resolve(List.of(sample(false)), true);
+    HistoryFavoritesViewState state = resolver.resolve(List.of(sample(false, "regular")), true);
 
     assertTrue(state.visibleEntries().isEmpty());
     assertTrue(state.emptyMessage().contains("No pinned JSON snapshots yet."));
   }
 
-  private ImportedJsonFile sample(boolean favorite) {
+  @Test
+  void keepsChronologyInsideFavoriteAndRegularGroups() {
+    ImportedJsonFile favoriteOlder = sample(true, "favorite-older", Instant.parse("2026-07-03T00:10:00Z"));
+    ImportedJsonFile favoriteNewer = sample(true, "favorite-newer", Instant.parse("2026-07-03T00:20:00Z"));
+    ImportedJsonFile regularOlder = sample(false, "regular-older", Instant.parse("2026-07-03T00:05:00Z"));
+    ImportedJsonFile regularNewer = sample(false, "regular-newer", Instant.parse("2026-07-03T00:30:00Z"));
+
+    HistoryFavoritesViewState state =
+        resolver.resolve(List.of(regularNewer, favoriteNewer, regularOlder, favoriteOlder), false);
+
+    assertEquals(
+        List.of(favoriteOlder, favoriteNewer, regularOlder, regularNewer),
+        state.visibleEntries());
+  }
+
+  private ImportedJsonFile sample(boolean favorite, String name) {
+    return sample(favorite, name, Instant.parse("2026-07-03T00:30:00Z"));
+  }
+
+  private ImportedJsonFile sample(boolean favorite, String name, Instant importedAt) {
     return new ImportedJsonFile(
-        "2026-07-03_00-30-00_sample.json",
-        "sample.json",
-        Instant.parse("2026-07-03T00:30:00Z"),
+        "2026-07-03_00-30-00_" + name + ".json",
+        name + ".json",
+        importedAt,
         20L,
         4,
         true,

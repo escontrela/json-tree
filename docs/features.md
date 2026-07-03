@@ -197,3 +197,9 @@
 - The history header now includes a toggle inside `storedInspectionsRegion` that switches the list between all stored snapshots and pinned favorites only.
 - The toggle state is visually explicit through its label and active styling, and it survives in-screen refreshes such as pinning or deleting entries without persisting across restarts.
 - When the favorites-only filter yields no entries, the history screen now shows a dedicated empty-state message instead of falling back to the generic no-history copy.
+
+## Favorites Ordering And Coherence
+
+- The history screen now orders pinned favorites ahead of regular snapshots while preserving the existing chronological ordering inside each group.
+- Reopening, deleting, and repeatedly toggling favorites all refresh against the same file-based metadata so the history screen keeps a coherent view without special-case state.
+- Regression coverage now exercises favorite persistence, repeat toggles, favorites-only empty states, and the favorites-first ordering rule.

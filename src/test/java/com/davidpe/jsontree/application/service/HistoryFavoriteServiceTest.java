@@ -55,6 +55,22 @@ class HistoryFavoriteServiceTest {
     assertFalse(result.found());
   }
 
+  @Test
+  void repeatedTogglesFlipFavoriteStatePredictably() {
+    InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+    ImportedJsonFile entry = sampleEntry(false);
+    repository.save(entry, "{\"id\":1}");
+
+    HistoryFavoriteService service = new HistoryFavoriteService(repository);
+
+    var first = service.toggleFavorite(entry.storedName());
+    var second = service.toggleFavorite(entry.storedName());
+
+    assertEquals(HistoryFavoriteToggleStatus.FAVORITED, first.status());
+    assertEquals(HistoryFavoriteToggleStatus.UNFAVORITED, second.status());
+    assertFalse(repository.findByStoredName(entry.storedName()).orElseThrow().favorite());
+  }
+
   private ImportedJsonFile sampleEntry(boolean favorite) {
     return new ImportedJsonFile(
         "2026-07-03_00-10-00_sample.json",

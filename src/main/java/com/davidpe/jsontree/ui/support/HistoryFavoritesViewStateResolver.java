@@ -1,17 +1,28 @@
 package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import java.util.Comparator;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
 @Component
 public class HistoryFavoritesViewStateResolver {
 
+  private static final Comparator<ImportedJsonFile> FAVORITES_FIRST_CHRONOLOGICAL =
+      Comparator.comparing(ImportedJsonFile::favorite)
+          .reversed()
+          .thenComparing(ImportedJsonFile::importedAt);
+
   public HistoryFavoritesViewState resolve(List<ImportedJsonFile> allEntries, boolean favoritesOnly) {
     List<ImportedJsonFile> visibleEntries =
         favoritesOnly
-            ? allEntries.stream().filter(ImportedJsonFile::favorite).toList()
-            : List.copyOf(allEntries);
+            ? allEntries.stream()
+                .filter(ImportedJsonFile::favorite)
+                .sorted(FAVORITES_FIRST_CHRONOLOGICAL)
+                .toList()
+            : allEntries.stream()
+                .sorted(FAVORITES_FIRST_CHRONOLOGICAL)
+                .toList();
 
     String summaryLabel =
         favoritesOnly
