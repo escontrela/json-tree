@@ -54,6 +54,8 @@ public class HistoryScreenController implements UiScreenController {
 
   @FXML private ListView<ImportedJsonFile> historyListView;
 
+  @FXML private Region storedInspectionsRegion;
+
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
