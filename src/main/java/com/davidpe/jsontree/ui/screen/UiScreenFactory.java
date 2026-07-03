@@ -24,24 +24,24 @@ public class UiScreenFactory {
     Parent root = springFxmlLoader.load(uiScreenId.fxmlPath());
     UiScreenController controller = (UiScreenController) root.getProperties().get("controller");
 
-    Scene scene;
-    if (primaryStage.getScene() == null) {
+    Scene scene = primaryStage.getScene();
+    if (scene == null) {
       scene = new Scene(root, MIN_WIDTH, MIN_HEIGHT);
       primaryStage.setX(INITIAL_X);
       primaryStage.setY(INITIAL_Y);
       primaryStage.setWidth(MIN_WIDTH);
       primaryStage.setHeight(MIN_HEIGHT);
+      primaryStage.setScene(scene);
     } else {
-      scene = new Scene(root);
+      scene.setRoot(root);
     }
-    scene
-        .getStylesheets()
-        .add(
-            UiScreenFactory.class
-                .getResource("/com/davidpe/jsontree/ui/styles.css")
-                .toExternalForm());
 
-    primaryStage.setScene(scene);
+    String stylesheet =
+        UiScreenFactory.class.getResource("/com/davidpe/jsontree/ui/styles.css").toExternalForm();
+    if (!scene.getStylesheets().contains(stylesheet)) {
+      scene.getStylesheets().add(stylesheet);
+    }
+
     primaryStage.setMinWidth(MIN_WIDTH);
     primaryStage.setMinHeight(MIN_HEIGHT);
 
