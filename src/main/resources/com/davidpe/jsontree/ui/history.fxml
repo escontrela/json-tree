@@ -6,10 +6,11 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<BorderPane fx:id="rootPane" prefHeight="874.0" prefWidth="1114.0" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/23.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.HistoryScreenController">
+<BorderPane fx:id="rootPane" prefHeight="874.0" prefWidth="1114.0" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.HistoryScreenController">
     <top>
         <VBox spacing="0.0" styleClass="workspace-header">
             <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="header-bar">

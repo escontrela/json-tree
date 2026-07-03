@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -78,6 +79,7 @@ public class HistoryScreenController implements UiScreenController {
   public void initialize() {
     rootPane.getProperties().put("controller", this);
     historyListView.setCellFactory(unused -> new HistoryEntryListCell());
+    applyFavoritesFilterButtonStyle(false);
   }
 
   @Override
@@ -88,12 +90,7 @@ public class HistoryScreenController implements UiScreenController {
     historyMetaLabel.setText(viewState.summaryLabel());
     historyFooterLabel.setText(viewState.footerLabel());
     favoritesFilterButton.setText(viewState.toggleButtonText());
-    favoritesFilterButton
-        .getStyleClass()
-        .removeAll("history-filter-button-active", "primary-button");
-    if (viewState.favoritesOnly()) {
-      favoritesFilterButton.getStyleClass().addAll("primary-button", "history-filter-button-active");
-    }
+    applyFavoritesFilterButtonStyle(viewState.favoritesOnly());
 
     if (viewState.visibleEntries().isEmpty()) {
       historyListView.getItems().clear();
@@ -121,6 +118,20 @@ public class HistoryScreenController implements UiScreenController {
   void toggleFavoritesOnly() {
     favoritesOnly = !favoritesOnly;
     onShow();
+  }
+
+  private void applyFavoritesFilterButtonStyle(boolean active) {
+    ObservableList<String> styleClasses = favoritesFilterButton.getStyleClass();
+    if (!styleClasses.contains("ghost-button")) {
+      styleClasses.add("ghost-button");
+    }
+    if (!styleClasses.contains("history-filter-button")) {
+      styleClasses.add("history-filter-button");
+    }
+    styleClasses.removeAll("history-filter-button-active", "primary-button");
+    if (active) {
+      styleClasses.addAll("primary-button", "history-filter-button-active");
+    }
   }
 
   private void reopenEntry(ImportedJsonFile entry) {
@@ -223,9 +234,7 @@ public class HistoryScreenController implements UiScreenController {
           historyFavoritePresentationResolver.resolve(item);
       titleLabel.setText(favoritePresentation.title());
       favoriteButton.setText(favoritePresentation.buttonText());
-      favoriteButton
-          .getStyleClass()
-          .removeAll("history-favorite-button-active", "primary-button");
+      favoriteButton.getStyleClass().removeAll("history-favorite-button-active", "primary-button");
       titleLabel.getStyleClass().remove("history-entry-title-favorite");
       if (favoritePresentation.active()) {
         favoriteButton.getStyleClass().addAll("primary-button", "history-favorite-button-active");
