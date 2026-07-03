@@ -67,8 +67,6 @@ public class HistoryScreenController implements UiScreenController {
 
   @FXML private Label emptyHistoryLabel;
 
-  @FXML private Label historyFooterLabel;
-
   @FXML private ListView<ImportedJsonFile> historyListView;
 
   @FXML private HBox storedInspectionsRegion;
@@ -88,7 +86,6 @@ public class HistoryScreenController implements UiScreenController {
     HistoryFavoritesViewState viewState =
         historyFavoritesViewStateResolver.resolve(entries, favoritesOnly);
     historyMetaLabel.setText(viewState.summaryLabel());
-    historyFooterLabel.setText(viewState.footerLabel());
     favoritesFilterButton.setText(viewState.toggleButtonText());
     applyFavoritesFilterButtonStyle(viewState.favoritesOnly());
 
@@ -147,7 +144,6 @@ public class HistoryScreenController implements UiScreenController {
 
   private void toggleFavoriteEntry(ImportedJsonFile entry) {
     if (!toggleHistoryFavoriteUseCase.toggleFavorite(entry.storedName()).found()) {
-      historyFooterLabel.setText("Snapshot no longer exists");
       onShow();
       return;
     }

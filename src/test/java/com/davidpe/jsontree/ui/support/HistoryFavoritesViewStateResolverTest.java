@@ -10,7 +10,8 @@ import org.junit.jupiter.api.Test;
 
 class HistoryFavoritesViewStateResolverTest {
 
-  private final HistoryFavoritesViewStateResolver resolver = new HistoryFavoritesViewStateResolver();
+  private final HistoryFavoritesViewStateResolver resolver =
+      new HistoryFavoritesViewStateResolver();
 
   @Test
   void resolvesAllEntriesViewWhenFavoritesFilterIsOff() {
@@ -44,17 +45,20 @@ class HistoryFavoritesViewStateResolverTest {
 
   @Test
   void keepsChronologyInsideFavoriteAndRegularGroups() {
-    ImportedJsonFile favoriteOlder = sample(true, "favorite-older", Instant.parse("2026-07-03T00:10:00Z"));
-    ImportedJsonFile favoriteNewer = sample(true, "favorite-newer", Instant.parse("2026-07-03T00:20:00Z"));
-    ImportedJsonFile regularOlder = sample(false, "regular-older", Instant.parse("2026-07-03T00:05:00Z"));
-    ImportedJsonFile regularNewer = sample(false, "regular-newer", Instant.parse("2026-07-03T00:30:00Z"));
+    ImportedJsonFile favoriteOlder =
+        sample(true, "favorite-older", Instant.parse("2026-07-03T00:10:00Z"));
+    ImportedJsonFile favoriteNewer =
+        sample(true, "favorite-newer", Instant.parse("2026-07-03T00:20:00Z"));
+    ImportedJsonFile regularOlder =
+        sample(false, "regular-older", Instant.parse("2026-07-03T00:05:00Z"));
+    ImportedJsonFile regularNewer =
+        sample(false, "regular-newer", Instant.parse("2026-07-03T00:30:00Z"));
 
     HistoryFavoritesViewState state =
         resolver.resolve(List.of(regularNewer, favoriteNewer, regularOlder, favoriteOlder), false);
 
     assertEquals(
-        List.of(favoriteOlder, favoriteNewer, regularOlder, regularNewer),
-        state.visibleEntries());
+        List.of(favoriteOlder, favoriteNewer, regularOlder, regularNewer), state.visibleEntries());
   }
 
   @Test
@@ -62,19 +66,15 @@ class HistoryFavoritesViewStateResolverTest {
     ImportedJsonFile favorite = sample(true, "favorite");
     ImportedJsonFile regular = sample(false, "regular");
 
-    HistoryFavoritesViewState beforeDelete =
-        resolver.resolve(List.of(regular, favorite), true);
-    HistoryFavoritesViewState afterDelete =
-        resolver.resolve(List.of(regular), true);
-    HistoryFavoritesViewState restoredAllEntries =
-        resolver.resolve(List.of(regular), false);
+    HistoryFavoritesViewState beforeDelete = resolver.resolve(List.of(regular, favorite), true);
+    HistoryFavoritesViewState afterDelete = resolver.resolve(List.of(regular), true);
+    HistoryFavoritesViewState restoredAllEntries = resolver.resolve(List.of(regular), false);
 
     assertEquals(1, beforeDelete.visibleEntries().size());
     assertTrue(beforeDelete.visibleEntries().getFirst().favorite());
 
     assertTrue(afterDelete.visibleEntries().isEmpty());
     assertEquals("0 favorite snapshots", afterDelete.summaryLabel());
-    assertEquals("Browsing pinned JSON favorites", afterDelete.footerLabel());
     assertTrue(afterDelete.emptyMessage().contains("No pinned JSON snapshots yet."));
 
     assertEquals(List.of(regular), restoredAllEntries.visibleEntries());

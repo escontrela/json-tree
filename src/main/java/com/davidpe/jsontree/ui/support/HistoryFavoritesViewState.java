@@ -6,11 +6,9 @@ import java.util.List;
 public record HistoryFavoritesViewState(
     List<ImportedJsonFile> visibleEntries,
     String summaryLabel,
-    String footerLabel,
     String emptyMessage,
     String toggleButtonText,
-    boolean favoritesOnly
-) {
+    boolean favoritesOnly) {
 
   public HistoryFavoritesViewState {
     visibleEntries = List.copyOf(visibleEntries);
