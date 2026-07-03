@@ -338,6 +338,31 @@
     -fx-font-weight: 400;
 }
 
+.history-entry-title {
+    -fx-text-fill: #1a2129;
+    -fx-font-size: 15px;
+    -fx-font-weight: 700;
+}
+
+.history-entry-title.history-entry-title-favorite {
+    -fx-text-fill: #1c69d4;
+}
+
+.history-entry-meta {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.history-favorite-button,
+.history-delete-button {
+    -fx-padding: 8 12 8 12;
+}
+
+.history-favorite-button.history-favorite-button-active {
+    -fx-text-fill: #ffffff;
+}
+
 .empty-state {
     -fx-font-size: 16px;
     -fx-line-spacing: 4px;

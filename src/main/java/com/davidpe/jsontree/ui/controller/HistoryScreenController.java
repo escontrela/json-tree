@@ -1,10 +1,13 @@
 package com.davidpe.jsontree.ui.controller;
 
+import com.davidpe.jsontree.application.port.in.ToggleHistoryFavoriteUseCase;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
+import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.time.ZoneId;
@@ -36,11 +39,18 @@ public class HistoryScreenController implements UiScreenController {
           .withZone(ZoneId.systemDefault());
 
   private final JsonViewerWorkflowService workflowService;
+  private final ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase;
+  private final HistoryFavoritePresentationResolver historyFavoritePresentationResolver;
   private final UiFlowManager uiFlowManager;
 
   public HistoryScreenController(
-      JsonViewerWorkflowService workflowService, @Lazy UiFlowManager uiFlowManager) {
+      JsonViewerWorkflowService workflowService,
+      ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase,
+      HistoryFavoritePresentationResolver historyFavoritePresentationResolver,
+      @Lazy UiFlowManager uiFlowManager) {
     this.workflowService = workflowService;
+    this.toggleHistoryFavoriteUseCase = toggleHistoryFavoriteUseCase;
+    this.historyFavoritePresentationResolver = historyFavoritePresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -104,6 +114,15 @@ public class HistoryScreenController implements UiScreenController {
     onShow();
   }
 
+  private void toggleFavoriteEntry(ImportedJsonFile entry) {
+    if (!toggleHistoryFavoriteUseCase.toggleFavorite(entry.storedName()).found()) {
+      historyFooterLabel.setText("Snapshot no longer exists");
+      onShow();
+      return;
+    }
+    onShow();
+  }
+
   private String formatBytes(long bytes) {
     if (bytes < 1024) {
       return bytes + " B";
@@ -121,6 +140,7 @@ public class HistoryScreenController implements UiScreenController {
 
     private final Label titleLabel = new Label();
     private final Label metaLabel = new Label();
+    private final Button favoriteButton = new Button("Pin");
     private final Button deleteButton = new Button("Delete");
     private final VBox textBox = new VBox(4.0);
     private final Region spacer = new Region();
@@ -129,6 +149,15 @@ public class HistoryScreenController implements UiScreenController {
     private HistoryEntryListCell() {
       titleLabel.getStyleClass().add("history-entry-title");
       metaLabel.getStyleClass().add("history-entry-meta");
+      favoriteButton.getStyleClass().addAll("ghost-button", "history-favorite-button");
+      favoriteButton.setOnAction(
+          event -> {
+            ImportedJsonFile item = getItem();
+            if (item != null) {
+              toggleFavoriteEntry(item);
+            }
+            event.consume();
+          });
       deleteButton.getStyleClass().add("ghost-button");
       deleteButton.getStyleClass().add("history-delete-button");
       deleteButton.setOnAction(
@@ -143,7 +172,7 @@ public class HistoryScreenController implements UiScreenController {
       textBox.getChildren().addAll(titleLabel, metaLabel);
       HBox.setHgrow(spacer, Priority.ALWAYS);
       content.setAlignment(Pos.CENTER_LEFT);
-      content.getChildren().addAll(textBox, spacer, deleteButton);
+      content.getChildren().addAll(textBox, spacer, favoriteButton, deleteButton);
 
       setOnMouseClicked(
           event -> {
@@ -170,6 +199,18 @@ public class HistoryScreenController implements UiScreenController {
               + formatBytes(item.sizeBytes())
               + " • "
               + (item.valid() ? "VALID" : "INVALID"));
+      HistoryFavoritePresentation favoritePresentation =
+          historyFavoritePresentationResolver.resolve(item);
+      titleLabel.setText(favoritePresentation.title());
+      favoriteButton.setText(favoritePresentation.buttonText());
+      favoriteButton
+          .getStyleClass()
+          .removeAll("history-favorite-button-active", "primary-button");
+      titleLabel.getStyleClass().remove("history-entry-title-favorite");
+      if (favoritePresentation.active()) {
+        favoriteButton.getStyleClass().addAll("primary-button", "history-favorite-button-active");
+        titleLabel.getStyleClass().add("history-entry-title-favorite");
+      }
       setText(null);
       setGraphic(content);
     }
@@ -180,7 +221,7 @@ public class HistoryScreenController implements UiScreenController {
       }
       Node current = node;
       while (current != null) {
-        if (current == deleteButton) {
+        if (current == deleteButton || current == favoriteButton) {
           return true;
         }
         current = current.getParent();

@@ -185,3 +185,9 @@
 - Toggling favorite state now goes through a dedicated application use case rather than mutating repository state directly from JavaFX cells.
 - The workflow exposes explicit outcomes for `favorited`, `unfavorited`, and `missing` entries so UI refresh logic can stay simple and safe.
 - Updated favorite state is immediately visible to subsequent history-list reloads through the existing repository abstraction.
+
+## History Row Favorites
+
+- Each stored history row now exposes a dedicated `Pin` or `Pinned` action alongside reopen and delete controls.
+- The favorite action delegates through the application-layer toggle use case and refreshes the list without interfering with row-click reopen behavior.
+- Pinned rows now surface a clearer visual cue through their button state and a starred title label in the history screen.
