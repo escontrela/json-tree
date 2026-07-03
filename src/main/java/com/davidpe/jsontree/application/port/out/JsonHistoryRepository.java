@@ -14,5 +14,7 @@ public interface JsonHistoryRepository {
 
     void save(ImportedJsonFile importedJsonFile, String jsonContent);
 
+    Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite);
+
     void deleteByStoredName(String storedName);
 }

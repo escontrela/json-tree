@@ -173,3 +173,9 @@
 - Clicking a stored history entry reopens it in the main viewer flow.
 - Each history row exposes inline deletion without a confirmation modal.
 - If the currently open snapshot is deleted from history, the main viewer falls back to a safe empty state on return.
+
+## History Favorites Persistence
+
+- Stored JSON snapshots now support a persisted favorite flag inside the existing file-based history metadata.
+- Favorite state is saved and loaded through `metadata.json` without introducing a database and remains safe for older metadata files that do not yet include the new field.
+- Updating favorite state preserves the stored snapshot payload and deletion flow so favorites stay coherent with the filesystem-backed history model.

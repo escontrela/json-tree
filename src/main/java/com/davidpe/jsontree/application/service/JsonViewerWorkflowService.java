@@ -203,7 +203,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         importedAt,
         importResult.sizeBytes(),
         asciiTreeDocument.lineCount(),
-        true);
+        true,
+        false);
   }
 
   private String buildStoredName(Instant importedAt, String originalName) {

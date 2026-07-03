@@ -118,6 +118,11 @@ class JsonViewerWorkflowServiceTest {
         }
 
         @Override
+        public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
+            return Optional.empty();
+        }
+
+        @Override
         public void deleteByStoredName(String storedName) {
         }
     }

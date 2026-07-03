@@ -80,6 +80,26 @@ public class FileSystemJsonHistoryRepository implements JsonHistoryRepository {
     }
 
     @Override
+    public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
+        try {
+            List<ImportedJsonFile> entries = findAll().stream()
+                    .map(entry -> entry.storedName().equals(storedName) ? entry.withFavorite(favorite) : entry)
+                    .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+            Optional<ImportedJsonFile> updated = entries.stream()
+                    .filter(entry -> entry.storedName().equals(storedName))
+                    .findFirst();
+            if (updated.isEmpty()) {
+                return Optional.empty();
+            }
+            ensureDirectories();
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
+            return updated;
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to update JSON history favorite state: " + storedName, exception);
+        }
+    }
+
+    @Override
     public void deleteByStoredName(String storedName) {
         try {
             Files.deleteIfExists(historyDirectory().resolve(storedName));

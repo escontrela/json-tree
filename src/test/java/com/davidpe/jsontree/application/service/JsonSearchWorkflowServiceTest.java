@@ -153,6 +153,17 @@ class JsonSearchWorkflowServiceTest {
     }
 
     @Override
+    public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
+      ImportedJsonFile existing = entries.get(storedName);
+      if (existing == null) {
+        return Optional.empty();
+      }
+      ImportedJsonFile updated = existing.withFavorite(favorite);
+      entries.put(storedName, updated);
+      return Optional.of(updated);
+    }
+
+    @Override
     public void deleteByStoredName(String storedName) {
       entries.remove(storedName);
       storedJsonByName.remove(storedName);
