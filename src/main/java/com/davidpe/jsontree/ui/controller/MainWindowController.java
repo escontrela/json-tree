@@ -75,6 +75,8 @@ public class MainWindowController implements UiScreenController {
 
   private static final double INLINE_HISTORY_CELL_SIZE = 72.0;
   private static final int INLINE_HISTORY_MIN_VISIBLE_ROWS = 3;
+  private static final int FILE_NAME_COMPACT_LENGTH_THRESHOLD = 22;
+  private static final String FILE_NAME_COMPACT_STYLE = "-fx-font-size: 12px;";
 
   private static final DateTimeFormatter FILE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm:ss")
@@ -528,7 +530,7 @@ public class MainWindowController implements UiScreenController {
     resetOutlineModel();
     currentLoadedAt = null;
     currentViewIdentity = null;
-    fileNameLabel.setText("No file loaded");
+    updateFileNameLabel("No file loaded");
     fileMetaLabel.setText("Drop a JSON anywhere in the window");
     fileLoadedAtValueLabel.setText("Not loaded");
     fileSourceValueLabel.setText("Waiting for import");
@@ -569,7 +571,7 @@ public class MainWindowController implements UiScreenController {
     resetOutlineModel();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
-    fileNameLabel.setText(fileName);
+    updateFileNameLabel(fileName);
     fileMetaLabel.setText("Preparing JSON preview");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
     fileSourceValueLabel.setText("Local file");
@@ -760,14 +762,16 @@ public class MainWindowController implements UiScreenController {
     resetOutlineModel();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "clipboard-error:" + currentLoadedAt.toEpochMilli();
-    fileNameLabel.setText("Clipboard JSON");
-    fileMetaLabel.setText("Paste valid JSON using Command+P on macOS or Ctrl+P elsewhere.");
+    updateFileNameLabel("Clipboard JSON");
+    fileMetaLabel.setText(
+        "Paste valid JSON using Command+P or Command+V on macOS, Ctrl+P or Ctrl+V elsewhere.");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
     fileSourceValueLabel.setText("Clipboard");
     showInvalidState(result.message());
     viewerAidTitleLabel.setText("Clipboard import failed");
     viewerAidMetaLabel.setText(
-        "The clipboard stays external until it contains valid JSON that can become a temporary local document.");
+        "The clipboard stays external until it contains valid JSON that can become a temporary"
+            + " local document.");
     outlineStateLabel.setText("Clipboard content did not produce a valid JSON outline.");
     footerStatusLabel.setText(result.message());
     setStatusRailValues("INVALID", "--", "--", "Clipboard");
@@ -807,9 +811,19 @@ public class MainWindowController implements UiScreenController {
         + ")";
   }
 
+  private void updateFileNameLabel(String fileName) {
+    fileNameLabel.setText(fileName);
+    if (fileName != null && fileName.length() > FILE_NAME_COMPACT_LENGTH_THRESHOLD) {
+      fileNameLabel.setStyle(FILE_NAME_COMPACT_STYLE);
+      return;
+    }
+    fileNameLabel.setStyle("");
+  }
+
   private void updateFileSummary(JsonViewerLoadResult result) {
-    fileNameLabel.setText(result.importResult().fileName());
-    fileMetaLabel.setText(formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind()));
+    updateFileNameLabel(result.importResult().fileName());
+    fileMetaLabel.setText(
+        formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind()));
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(resolveLoadedAt(result)));
     fileSourceValueLabel.setText(sourceLabel(result.importResult().sourceKind()));
   }
@@ -818,7 +832,8 @@ public class MainWindowController implements UiScreenController {
     String identity = currentViewIdentity(result);
     if (!identity.equals(currentViewIdentity)) {
       currentLoadedAt =
-          result.importResult().sourceKind() == JsonDocumentSourceKind.HISTORY && result.historyEntry() != null
+          result.importResult().sourceKind() == JsonDocumentSourceKind.HISTORY
+                  && result.historyEntry() != null
               ? result.historyEntry().importedAt()
               : Instant.now();
       currentViewIdentity = identity;
@@ -827,7 +842,8 @@ public class MainWindowController implements UiScreenController {
   }
 
   private String currentViewIdentity(JsonViewerLoadResult result) {
-    if (result.importResult().sourceKind() == JsonDocumentSourceKind.HISTORY && result.historyEntry() != null) {
+    if (result.importResult().sourceKind() == JsonDocumentSourceKind.HISTORY
+        && result.historyEntry() != null) {
       return "history:" + result.historyEntry().storedName();
     }
     String prefix =

@@ -17,6 +17,9 @@ public class ClipboardImportShortcutSupport {
     if (modalVisible || textInputTarget) {
       return false;
     }
-    return keyCode == KeyCode.P && shortcutDown && !altDown && !shiftDown;
+    return (keyCode == KeyCode.P || keyCode == KeyCode.V)
+        && shortcutDown
+        && !altDown
+        && !shiftDown;
   }
 }
