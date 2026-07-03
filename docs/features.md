@@ -179,3 +179,9 @@
 - Stored JSON snapshots now support a persisted favorite flag inside the existing file-based history metadata.
 - Favorite state is saved and loaded through `metadata.json` without introducing a database and remains safe for older metadata files that do not yet include the new field.
 - Updating favorite state preserves the stored snapshot payload and deletion flow so favorites stay coherent with the filesystem-backed history model.
+
+## History Favorite Toggle Workflow
+
+- Toggling favorite state now goes through a dedicated application use case rather than mutating repository state directly from JavaFX cells.
+- The workflow exposes explicit outcomes for `favorited`, `unfavorited`, and `missing` entries so UI refresh logic can stay simple and safe.
+- Updated favorite state is immediately visible to subsequent history-list reloads through the existing repository abstraction.
