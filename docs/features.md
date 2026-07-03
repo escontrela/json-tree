@@ -86,7 +86,7 @@
 
 ## Inline Rail History
 
-- The main window now exposes up to five recent local snapshots directly inside the left rail for fast reopen.
+- The main window now exposes up to ten most recent local snapshots directly inside the left rail for fast reopen.
 - Selecting an inline history entry replays the standard reopen flow inside the main viewer, while a `View all` action still routes to the dedicated history screen.
 - The import utility block in the rail remains informational only; the whole window is still the true drag-and-drop target.
 

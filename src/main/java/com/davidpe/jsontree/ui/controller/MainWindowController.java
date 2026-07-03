@@ -23,6 +23,8 @@ import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
+import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
+import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
@@ -75,6 +77,7 @@ public class MainWindowController implements UiScreenController {
 
   private static final double INLINE_HISTORY_CELL_SIZE = 72.0;
   private static final int INLINE_HISTORY_MIN_VISIBLE_ROWS = 3;
+  private static final int INLINE_HISTORY_MAX_VISIBLE_ENTRIES = 10;
   private static final int FILE_NAME_COMPACT_LENGTH_THRESHOLD = 22;
   private static final String FILE_NAME_COMPACT_STYLE = "-fx-font-size: 12px;";
 
@@ -98,6 +101,7 @@ public class MainWindowController implements UiScreenController {
   private final SearchMatchProjector searchMatchProjector;
   private final SearchTextFlowHighlighter searchTextFlowHighlighter;
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
+  private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
@@ -114,6 +118,7 @@ public class MainWindowController implements UiScreenController {
       SearchMatchProjector searchMatchProjector,
       SearchTextFlowHighlighter searchTextFlowHighlighter,
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
+      InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
@@ -129,6 +134,7 @@ public class MainWindowController implements UiScreenController {
     this.searchMatchProjector = searchMatchProjector;
     this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
+    this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -890,13 +896,11 @@ public class MainWindowController implements UiScreenController {
 
   private void refreshInlineHistory() {
     List<ImportedJsonFile> entries = workflowService.loadHistoryEntries();
-    int visibleCount = Math.min(entries.size(), 5);
-    historyInlineMetaLabel.setText(
-        visibleCount == 0
-            ? "No recent snapshots"
-            : visibleCount + " recent snapshot" + (visibleCount == 1 ? "" : "s"));
+    InlineHistoryPreviewState previewState =
+        inlineHistoryPreviewStateResolver.resolve(entries, INLINE_HISTORY_MAX_VISIBLE_ENTRIES);
+    historyInlineMetaLabel.setText(previewState.summaryLabel());
 
-    if (entries.isEmpty()) {
+    if (previewState.visibleEntries().isEmpty()) {
       historyListView.getItems().clear();
       historyListView.setDisable(true);
       historyListView.setManaged(false);
@@ -911,7 +915,7 @@ public class MainWindowController implements UiScreenController {
     historyListView.setDisable(false);
     historyListView.setManaged(true);
     historyListView.setVisible(true);
-    historyListView.getItems().setAll(entries.stream().limit(5).toList());
+    historyListView.getItems().setAll(previewState.visibleEntries());
   }
 
   private void reopenHistoryEntry(ImportedJsonFile entry) {
