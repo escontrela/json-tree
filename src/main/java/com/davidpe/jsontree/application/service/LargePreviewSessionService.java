@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.application.service;
 
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
@@ -82,6 +83,16 @@ public class LargePreviewSessionService {
     }
     synchronized (runtimeSession.monitor) {
       return Optional.of(runtimeSession.session);
+    }
+  }
+
+  public Optional<LargePreviewOutlineDigest> outlineDigest(String sessionId) {
+    RuntimeSession runtimeSession = sessions.get(sessionId);
+    if (runtimeSession == null) {
+      return Optional.empty();
+    }
+    synchronized (runtimeSession.monitor) {
+      return Optional.ofNullable(runtimeSession.outlineDigest);
     }
   }
 
@@ -176,10 +187,13 @@ public class LargePreviewSessionService {
               descriptor -> onPageMaterialized(runtimeSession, descriptor));
       synchronized (runtimeSession.monitor) {
         runtimeSession.snapshot = snapshot;
+        runtimeSession.outlineDigest = snapshot.outlineDigest();
         runtimeSession.materializationFinished = true;
         runtimeSession.sessionStoragePath = snapshot.sessionStoragePath();
         runtimeSession.session =
-            runtimeSession.session.withKnownTotals(snapshot.totalPages(), snapshot.totalLogicalLines());
+            runtimeSession.session
+                .withKnownTotals(snapshot.totalPages(), snapshot.totalLogicalLines())
+                .withOutlineDigestReady(!snapshot.outlineDigest().emptyDigest());
         refreshPageStates(runtimeSession);
         runtimeSession.monitor.notifyAll();
       }
@@ -271,6 +285,7 @@ public class LargePreviewSessionService {
     private final Map<Integer, LargePreviewPageContent> warmPages = new LinkedHashMap<>();
     private LargePreviewPagedSession session;
     private LargePreviewMaterializationSnapshot snapshot;
+    private LargePreviewOutlineDigest outlineDigest;
     private RuntimeException failure;
     private java.util.concurrent.Future<?> materializationTask;
     private boolean materializationFinished;

@@ -5,6 +5,7 @@ import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
 import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
@@ -354,6 +355,13 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
               return new LargePreviewViewerPageResult(
                   nextView, pageLoadResult.cacheHit(), pageLoadResult.waitedForAvailability());
             });
+  }
+
+  public Optional<LargePreviewOutlineDigest> currentLargePreviewOutlineDigest() {
+    if (currentView == null || !currentView.hasLargePreviewSession()) {
+      return Optional.empty();
+    }
+    return largePreviewSessionService.outlineDigest(currentView.largePreviewSession().sessionId());
   }
 
   /** Opens history through the input port contract. */

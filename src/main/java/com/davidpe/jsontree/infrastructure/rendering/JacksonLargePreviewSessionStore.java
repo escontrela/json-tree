@@ -1,6 +1,10 @@
 package com.davidpe.jsontree.infrastructure.rendering;
 
+import com.davidpe.jsontree.application.model.JsonOutlineEntry;
+import com.davidpe.jsontree.application.model.JsonOutlineEntryKind;
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigestEntry;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
@@ -188,6 +192,7 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
     private final Consumer<LargePreviewPageDescriptor> onPageAvailable;
     private final List<String> pendingLines = new ArrayList<>();
     private final List<LargePreviewPageDescriptor> pages = new ArrayList<>();
+    private final OutlineDigestBuilder outlineDigestBuilder = new OutlineDigestBuilder();
     private int pageIndex;
     private long totalLogicalLines;
 
@@ -201,6 +206,7 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
     }
 
     private void appendLine(String line) throws IOException {
+      outlineDigestBuilder.appendLine(line, pageIndex);
       pendingLines.add(line);
       totalLogicalLines++;
       if (pendingLines.size() >= pageLineCount) {
@@ -213,7 +219,11 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
         flushPage();
       }
       return new LargePreviewMaterializationSnapshot(
-          sessionId, sessionStoragePath, List.copyOf(pages), totalLogicalLines);
+          sessionId,
+          sessionStoragePath,
+          List.copyOf(pages),
+          totalLogicalLines,
+          outlineDigestBuilder.build());
     }
 
     private void flushPage() throws IOException {
@@ -229,6 +239,103 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
       pendingLines.clear();
       pageIndex++;
       onPageAvailable.accept(descriptor);
+    }
+  }
+
+  private static final class OutlineDigestBuilder {
+
+    private final List<LargePreviewOutlineDigestEntry> entries = new ArrayList<>();
+    private int maxDepth;
+
+    private void appendLine(String line, int pageIndex) {
+      if (line == null || line.isBlank()) {
+        return;
+      }
+      int depth = previewDepth(line);
+      String payload = previewPayload(line);
+      JsonOutlineEntryKind kind = previewKind(payload);
+      int childCount = previewChildCount(payload, kind);
+      int visualWeight = computePreviewVisualWeight(payload, kind, childCount);
+      entries.add(
+          new LargePreviewOutlineDigestEntry(
+              pageIndex, new JsonOutlineEntry(depth, visualWeight, kind, childCount)));
+      maxDepth = Math.max(maxDepth, depth);
+    }
+
+    private LargePreviewOutlineDigest build() {
+      return entries.isEmpty()
+          ? LargePreviewOutlineDigest.empty()
+          : new LargePreviewOutlineDigest(List.copyOf(entries), maxDepth);
+    }
+
+    private int previewDepth(String line) {
+      int branchIndex = Math.max(line.lastIndexOf("├─ "), line.lastIndexOf("└─ "));
+      if (branchIndex < 0) {
+        return 0;
+      }
+      int depth = 1;
+      for (int index = 0; index < branchIndex; index++) {
+        if (line.charAt(index) == '│') {
+          depth++;
+        }
+      }
+      return depth;
+    }
+
+    private String previewPayload(String line) {
+      int branchIndex = Math.max(line.lastIndexOf("├─ "), line.lastIndexOf("└─ "));
+      return branchIndex < 0 ? line.trim() : line.substring(branchIndex + 3).trim();
+    }
+
+    private JsonOutlineEntryKind previewKind(String payload) {
+      if (payload.startsWith("... ")) {
+        return JsonOutlineEntryKind.VALUE;
+      }
+      int separatorIndex = payload.indexOf(": ");
+      if (separatorIndex >= 0) {
+        String value = payload.substring(separatorIndex + 2);
+        if (value.startsWith("{")) {
+          return JsonOutlineEntryKind.OBJECT;
+        }
+        if (value.startsWith("[")) {
+          return JsonOutlineEntryKind.ARRAY;
+        }
+        return JsonOutlineEntryKind.VALUE;
+      }
+      if (payload.matches("^.+\\s\\[.+]$")) {
+        return JsonOutlineEntryKind.ARRAY;
+      }
+      return JsonOutlineEntryKind.OBJECT;
+    }
+
+    private int previewChildCount(String payload, JsonOutlineEntryKind kind) {
+      int countStart = payload.lastIndexOf('[');
+      int countEnd = payload.lastIndexOf(']');
+      if (countStart >= 0 && countEnd > countStart) {
+        String digits = payload.substring(countStart + 1, countEnd).replaceAll("[^0-9]", "");
+        if (!digits.isBlank()) {
+          return Integer.parseInt(digits);
+        }
+      }
+      if (kind == JsonOutlineEntryKind.ARRAY && payload.contains("[")) {
+        return 1;
+      }
+      if (kind == JsonOutlineEntryKind.OBJECT && payload.contains("{")) {
+        return 1;
+      }
+      return 0;
+    }
+
+    private int computePreviewVisualWeight(
+        String payload, JsonOutlineEntryKind kind, int childCount) {
+      int baseWeight =
+          switch (kind) {
+            case OBJECT -> 18;
+            case ARRAY -> 16;
+            case VALUE -> 10;
+          };
+      int signal = Math.min(Math.max(payload.length(), childCount), 10);
+      return Math.max(6, Math.min(30, Math.max(baseWeight, signal + 8)));
     }
   }
 }

@@ -238,3 +238,9 @@
 - Large-preview sessions now build remaining pages in background after page zero is available, instead of forcing the caller to wait for the full oversized document.
 - The application layer keeps a bounded warm cache window of `current - 2` to `current + 2`, marks resident pages in session state, and releases more distant pages from memory while leaving them recoverable from temp storage.
 - Page access now reports whether a navigation was an in-memory hit or required waiting for materialization, which prepares the existing viewer shell for later scroll swapping and loader affordances.
+
+## Large Preview Outline Digest
+
+- The paged large-preview materializer now emits a dedicated compact outline digest for the entire oversized document during the same streaming pass that writes ASCII pages to temp storage.
+- Each digest row preserves both its outline shape metadata and the page index that owns that region, so the existing minimap can represent the whole document without loading every rendered page at once.
+- When the digest is available, the outline service adapts it into the existing `JsonOutlineModel` instead of deriving the minimap only from the currently visible page preview.

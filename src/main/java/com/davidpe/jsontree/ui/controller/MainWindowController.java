@@ -1169,27 +1169,43 @@ public class MainWindowController implements UiScreenController {
       resetOutlineModel();
       return;
     }
-    if (currentViewIdentity.equals(currentOutlineSourceIdentity)) {
-      return;
-    }
-
-    currentOutlineModel =
-        workflowService
-            .currentView()
-            .filter(result -> result.capabilities().outlineAvailable())
-            .map(this::outlineModelForCurrentView)
-            .orElse(JsonOutlineModel.empty());
-    currentOutlineSourceIdentity = currentViewIdentity;
+    workflowService
+        .currentView()
+        .filter(result -> result.capabilities().outlineAvailable())
+        .ifPresentOrElse(
+            result -> {
+              String outlineIdentity = outlineIdentity(result);
+              if (outlineIdentity.equals(currentOutlineSourceIdentity)) {
+                return;
+              }
+              currentOutlineModel = outlineModelForCurrentView(result);
+              currentOutlineSourceIdentity = outlineIdentity;
+            },
+            this::resetOutlineModel);
   }
 
   private JsonOutlineModel outlineModelForCurrentView(JsonViewerLoadResult result) {
     if (result.usesLargePreview()) {
-      return outlineModelService.buildFromAsciiPreview(result.asciiTreeDocument());
+      return workflowService
+          .currentLargePreviewOutlineDigest()
+          .map(outlineModelService::buildFromLargePreviewDigest)
+          .orElseGet(() -> outlineModelService.buildFromAsciiPreview(result.asciiTreeDocument()));
     }
     return workflowService
         .currentViewRawJson()
         .map(outlineModelService::buildFromRawJson)
         .orElse(JsonOutlineModel.empty());
+  }
+
+  private String outlineIdentity(JsonViewerLoadResult result) {
+    if (result.usesLargePreview() && result.hasLargePreviewSession()) {
+      return result.largePreviewSession().sessionId()
+          + ":page:"
+          + result.largePreviewSession().currentPageIndex()
+          + ":digest:"
+          + result.largePreviewSession().outlineDigestReady();
+    }
+    return currentViewIdentity;
   }
 
   private void resetOutlineModel() {

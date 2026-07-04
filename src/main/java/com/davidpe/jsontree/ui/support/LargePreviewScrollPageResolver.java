@@ -4,6 +4,10 @@ import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import java.util.OptionalInt;
 import org.springframework.stereotype.Component;
 
+/**
+ * Pure UI helper that decides whether the large-preview viewer should request the previous or next
+ * page based on the current scroll position.
+ */
 @Component
 public class LargePreviewScrollPageResolver {
 

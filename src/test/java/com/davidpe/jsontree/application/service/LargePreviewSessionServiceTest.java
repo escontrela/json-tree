@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
@@ -209,7 +210,11 @@ class LargePreviewSessionServiceTest {
           pageHook.afterPagePersisted(pageIndex);
         }
         return new LargePreviewMaterializationSnapshot(
-            sessionId, sessionDir, List.copyOf(descriptors.values()), logicalLineStart);
+            sessionId,
+            sessionDir,
+            List.copyOf(descriptors.values()),
+            logicalLineStart,
+            LargePreviewOutlineDigest.empty());
       } catch (Exception exception) {
         throw new IllegalStateException(exception);
       }

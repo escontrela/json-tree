@@ -66,6 +66,8 @@ class JacksonLargePreviewSessionStoreTest {
     assertEquals(
         List.of(0L, 5L, 10L),
         snapshot.pages().stream().map(LargePreviewPageDescriptor::startingLogicalLine).toList());
+    assertEquals(15, snapshot.outlineDigest().entries().size());
+    assertEquals(2, snapshot.outlineDigest().entries().getLast().pageIndex());
     assertEquals(
         List.of(
             """
@@ -152,6 +154,7 @@ class JacksonLargePreviewSessionStoreTest {
       releaseFirstPage.countDown();
       LargePreviewMaterializationSnapshot snapshot = future.get(2, TimeUnit.SECONDS);
       assertTrue(snapshot.totalPages() >= 2);
+      assertFalse(snapshot.outlineDigest().emptyDigest());
     }
   }
 

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
@@ -381,7 +382,7 @@ class JsonViewerWorkflowServiceTest {
             new LargePreviewPageDescriptor(0, pagePath, 0L, 2);
         onPageAvailable.accept(descriptor);
         return new LargePreviewMaterializationSnapshot(
-            sessionId, sessionDirectory, List.of(descriptor), 2L);
+            sessionId, sessionDirectory, List.of(descriptor), 2L, LargePreviewOutlineDigest.empty());
       } catch (IOException exception) {
         throw new IllegalStateException(exception);
       }
