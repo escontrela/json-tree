@@ -244,3 +244,9 @@
 - The paged large-preview materializer now emits a dedicated compact outline digest for the entire oversized document during the same streaming pass that writes ASCII pages to temp storage.
 - Each digest row preserves both its outline shape metadata and the page index that owns that region, so the existing minimap can represent the whole document without loading every rendered page at once.
 - When the digest is available, the outline service adapts it into the existing `JsonOutlineModel` instead of deriving the minimap only from the currently visible page preview.
+
+## Large Preview Outline Navigation
+
+- The right-side outline rail now resolves pointer interactions into paged large-preview targets using the existing minimap layout buckets plus the full-document digest page mapping.
+- When an outline region belongs to another page, the controller reuses the same paged viewer workflow as scroll-based swaps, so warm pages jump immediately and cold pages follow the existing asynchronous page-load path.
+- If the clicked outline region maps to the page that is already visible, the interaction falls back to the previous in-page scroll behavior instead of forcing a redundant page reload.

@@ -29,6 +29,7 @@ import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewOutlineNavigationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewScrollPageResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
@@ -115,6 +116,7 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
+  private final LargePreviewOutlineNavigationResolver largePreviewOutlineNavigationResolver;
   private final LargePreviewScrollPageResolver largePreviewScrollPageResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
@@ -136,6 +138,7 @@ public class MainWindowController implements UiScreenController {
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
+      LargePreviewOutlineNavigationResolver largePreviewOutlineNavigationResolver,
       LargePreviewScrollPageResolver largePreviewScrollPageResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
@@ -156,6 +159,7 @@ public class MainWindowController implements UiScreenController {
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
+    this.largePreviewOutlineNavigationResolver = largePreviewOutlineNavigationResolver;
     this.largePreviewScrollPageResolver = largePreviewScrollPageResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
@@ -465,6 +469,25 @@ public class MainWindowController implements UiScreenController {
   private void handleOutlineInteraction(MouseEvent event) {
     if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
       return;
+    }
+    OptionalInt largePreviewTargetPage = OptionalInt.empty();
+    java.util.Optional<JsonViewerLoadResult> currentView = workflowService.currentView();
+    if (currentView.isPresent() && currentView.get().hasLargePreviewSession()) {
+      largePreviewTargetPage =
+          workflowService
+              .currentLargePreviewOutlineDigest()
+              .map(
+                  digest ->
+                      largePreviewOutlineNavigationResolver.targetPage(
+                          currentOutlineLayout, digest, event.getY()))
+              .orElse(OptionalInt.empty());
+      if (largePreviewTargetPage.isPresent()
+          && currentView.get().largePreviewSession().currentPageIndex()
+              != largePreviewTargetPage.getAsInt()) {
+        requestLargePreviewPage(largePreviewTargetPage.getAsInt());
+        event.consume();
+        return;
+      }
     }
 
     double contentHeight = viewerContentBox.getLayoutBounds().getHeight();

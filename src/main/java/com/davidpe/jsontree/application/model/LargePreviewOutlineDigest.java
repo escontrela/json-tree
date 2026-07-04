@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.application.model;
 
 import java.util.List;
+import java.util.OptionalInt;
 
 /**
  * Compact full-document outline for a paged large-preview session.
@@ -23,5 +24,12 @@ public record LargePreviewOutlineDigest(List<LargePreviewOutlineDigestEntry> ent
 
   public boolean emptyDigest() {
     return entries.isEmpty();
+  }
+
+  public OptionalInt pageIndexForEntry(int entryIndex) {
+    if (entryIndex < 0 || entryIndex >= entries.size()) {
+      return OptionalInt.empty();
+    }
+    return OptionalInt.of(entries.get(entryIndex).pageIndex());
   }
 }
