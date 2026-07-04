@@ -220,3 +220,9 @@
 - `Raw JSON` and regex search are intentionally disabled in `LARGE_PREVIEW`, while the outline panel stays available through a bounded minimap derived from the visible ASCII preview rather than the full raw JSON payload.
 - Even inside allowed modes, the viewer enforces `text-node-budget` guardrails in the syntax-highlighting path. If highlighting would create too many JavaFX text nodes, rendering degrades to simplified plain text instead of risking UI freezes or heap exhaustion.
 - The operational goal is resilience, not unlimited rendering. Large-preview support exists to keep oversized JSON inspectable without crashing the app, while ordinary small files keep the richer full-feature path.
+
+## Paged Large Preview Sessions
+
+- A dedicated application-level paged-session contract now exists for the next evolution of `LARGE_PREVIEW`, separate from the ordinary `FULL` `AsciiTreeDocument` result path.
+- The session model tracks stable session identity, normalized source identity, current page, optional total pages, optional logical line totals, and page readiness state without leaking JavaFX concerns into `application` or `domain`.
+- The contract also leaves room for background materialization, bounded warm-page caching, and compact outline metadata so later tickets can wire paginated oversized inspection without redesigning the existing small-file workflow.
