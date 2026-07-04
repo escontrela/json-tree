@@ -8,6 +8,7 @@ public class LargePreviewProperties {
   private long fullRenderMaxBytes = 1_048_576L;
   private int previewMaxLines = 400;
   private int pageLineCount = 400;
+  private int warmPageRadius = 2;
   private int previewMaxDepth = 8;
   private int previewMaxChildrenPerContainer = 64;
   private int textNodeBudget = 12000;
@@ -34,6 +35,14 @@ public class LargePreviewProperties {
 
   public void setPageLineCount(int pageLineCount) {
     this.pageLineCount = pageLineCount;
+  }
+
+  public int getWarmPageRadius() {
+    return warmPageRadius;
+  }
+
+  public void setWarmPageRadius(int warmPageRadius) {
+    this.warmPageRadius = warmPageRadius;
   }
 
   public int getPreviewMaxDepth() {

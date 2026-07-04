@@ -17,6 +17,8 @@ json-tree:
     preview-max-lines: 400
     # Oversized files are materialized into deterministic ASCII pages on disk.
     page-line-count: 400
+    # Keep only the current page plus two pages on either side in the warm in-memory window.
+    warm-page-radius: 2
     preview-max-depth: 8
     preview-max-children-per-container: 64
     # Hard-stop JavaFX text-node growth well before the viewer can freeze or exhaust heap.

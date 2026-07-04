@@ -232,3 +232,9 @@
 - Oversized JSON rendering now has a streaming materialization path that writes ordered ASCII pages into temporary session storage instead of assuming a single bounded preview buffer.
 - Each materialized page carries deterministic access metadata, including page index, starting logical line, logical line count, and persisted page path for later reads.
 - The first page is emitted as soon as it fills, which enables the workflow layer to show page zero before the whole oversized document finishes materializing.
+
+## Large Preview Background Coordination
+
+- Large-preview sessions now build remaining pages in background after page zero is available, instead of forcing the caller to wait for the full oversized document.
+- The application layer keeps a bounded warm cache window of `current - 2` to `current + 2`, marks resident pages in session state, and releases more distant pages from memory while leaving them recoverable from temp storage.
+- Page access now reports whether a navigation was an in-memory hit or required waiting for materialization, which prepares the existing viewer shell for later scroll swapping and loader affordances.
