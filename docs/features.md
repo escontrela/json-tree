@@ -203,3 +203,11 @@
 - The history screen now orders pinned favorites ahead of regular snapshots while preserving the existing chronological ordering inside each group.
 - Reopening, deleting, and repeatedly toggling favorites all refresh against the same file-based metadata so the history screen keeps a coherent view without special-case state.
 - Regression coverage now exercises favorite persistence, repeat toggles, favorites-only empty states, and the favorites-first ordering rule.
+
+## History Archive Search
+
+- The history screen now exposes a compact text search plus `Search` action inside `storedInspectionsRegion`, alongside the existing import and favorites controls.
+- Archive search runs through a dedicated application input port and service that scans stored JSON snapshot content without moving file traversal logic into the JavaFX controller.
+- The feature is available only in the all-history mode; when favorites-only mode is active, the history search controls are hidden and archive search does not execute.
+- Blank or whitespace-only search input automatically clears the active history filter and restores the standard archive summary and list state.
+- Search-specific empty states now distinguish `no stored history yet` from `no stored JSON matches this query`, while reopen, delete, import, and favorite-toggle interactions continue to refresh coherently after filtering.

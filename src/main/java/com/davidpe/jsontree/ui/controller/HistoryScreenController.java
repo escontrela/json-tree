@@ -2,17 +2,19 @@ package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.HistoryJsonImportResult;
 import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
+import com.davidpe.jsontree.application.model.HistoryJsonSearchResult;
 import com.davidpe.jsontree.application.port.in.ImportHistoryJsonUseCase;
+import com.davidpe.jsontree.application.port.in.SearchHistoryJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ToggleHistoryFavoriteUseCase;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import com.davidpe.jsontree.ui.support.HistoryArchiveViewState;
+import com.davidpe.jsontree.ui.support.HistoryArchiveViewStateResolver;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
-import com.davidpe.jsontree.ui.support.HistoryFavoritesViewState;
-import com.davidpe.jsontree.ui.support.HistoryFavoritesViewStateResolver;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.time.ZoneId;
@@ -27,6 +29,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.TextField;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -46,24 +49,28 @@ public class HistoryScreenController implements UiScreenController {
 
   private final JsonViewerWorkflowService workflowService;
   private final ImportHistoryJsonUseCase importHistoryJsonUseCase;
+  private final SearchHistoryJsonUseCase searchHistoryJsonUseCase;
   private final ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase;
   private final HistoryFavoritePresentationResolver historyFavoritePresentationResolver;
-  private final HistoryFavoritesViewStateResolver historyFavoritesViewStateResolver;
+  private final HistoryArchiveViewStateResolver historyArchiveViewStateResolver;
   private final UiFlowManager uiFlowManager;
   private boolean favoritesOnly;
+  private String activeSearchQuery = "";
 
   public HistoryScreenController(
       JsonViewerWorkflowService workflowService,
       ImportHistoryJsonUseCase importHistoryJsonUseCase,
+      SearchHistoryJsonUseCase searchHistoryJsonUseCase,
       ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase,
       HistoryFavoritePresentationResolver historyFavoritePresentationResolver,
-      HistoryFavoritesViewStateResolver historyFavoritesViewStateResolver,
+      HistoryArchiveViewStateResolver historyArchiveViewStateResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.workflowService = workflowService;
     this.importHistoryJsonUseCase = importHistoryJsonUseCase;
+    this.searchHistoryJsonUseCase = searchHistoryJsonUseCase;
     this.toggleHistoryFavoriteUseCase = toggleHistoryFavoriteUseCase;
     this.historyFavoritePresentationResolver = historyFavoritePresentationResolver;
-    this.historyFavoritesViewStateResolver = historyFavoritesViewStateResolver;
+    this.historyArchiveViewStateResolver = historyArchiveViewStateResolver;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -77,6 +84,12 @@ public class HistoryScreenController implements UiScreenController {
 
   @FXML private HBox storedInspectionsRegion;
 
+  @FXML private HBox historySearchControlsBox;
+
+  @FXML private TextField historySearchField;
+
+  @FXML private Button historySearchButton;
+
   @FXML private Button favoritesFilterButton;
 
   @FXML private Button importJsonButton;
@@ -89,17 +102,37 @@ public class HistoryScreenController implements UiScreenController {
     historyListView.setCellFactory(unused -> new HistoryEntryListCell());
     applyFavoritesFilterButtonStyle(false);
     hideImportFeedback();
+    historySearchField
+        .textProperty()
+        .addListener(
+            (unused, oldValue, newValue) -> {
+              if (favoritesOnly || activeSearchQuery.isBlank()) {
+                return;
+              }
+              if (newValue == null || newValue.isBlank()) {
+                activeSearchQuery = "";
+                onShow();
+              }
+            });
   }
 
   @Override
   public void onShow() {
     List<ImportedJsonFile> entries = workflowService.loadHistoryEntries();
-    HistoryFavoritesViewState viewState =
-        historyFavoritesViewStateResolver.resolve(entries, favoritesOnly);
+    if (favoritesOnly) {
+      activeSearchQuery = "";
+    }
+    HistoryJsonSearchResult searchResult =
+        activeSearchQuery.isBlank()
+            ? HistoryJsonSearchResult.cleared(entries)
+            : searchHistoryJsonUseCase.search(activeSearchQuery, true);
+    HistoryArchiveViewState viewState =
+        historyArchiveViewStateResolver.resolve(entries, favoritesOnly, searchResult);
     historyMetaLabel.setText(viewState.summaryLabel());
     favoritesFilterButton.setText(viewState.toggleButtonText());
     applyFavoritesFilterButtonStyle(viewState.favoritesOnly());
     syncImportButtonVisibility(viewState.favoritesOnly());
+    syncSearchControls(viewState.favoritesOnly());
 
     if (viewState.visibleEntries().isEmpty()) {
       historyListView.getItems().clear();
@@ -126,6 +159,17 @@ public class HistoryScreenController implements UiScreenController {
   @FXML
   void toggleFavoritesOnly() {
     favoritesOnly = !favoritesOnly;
+    onShow();
+  }
+
+  @FXML
+  void executeHistorySearch() {
+    HistoryJsonSearchResult result =
+        searchHistoryJsonUseCase.search(historySearchField.getText(), !favoritesOnly);
+    if (result.blocked()) {
+      return;
+    }
+    activeSearchQuery = result.searchActive() ? result.query() : "";
     onShow();
   }
 
@@ -167,6 +211,19 @@ public class HistoryScreenController implements UiScreenController {
   private void syncImportButtonVisibility(boolean favoritesOnlyActive) {
     importJsonButton.setManaged(!favoritesOnlyActive);
     importJsonButton.setVisible(!favoritesOnlyActive);
+  }
+
+  private void syncSearchControls(boolean favoritesOnlyActive) {
+    historySearchControlsBox.setManaged(!favoritesOnlyActive);
+    historySearchControlsBox.setVisible(!favoritesOnlyActive);
+    historySearchButton.setDisable(favoritesOnlyActive);
+    if (favoritesOnlyActive) {
+      historySearchField.clear();
+      return;
+    }
+    if (!historySearchField.getText().equals(activeSearchQuery)) {
+      historySearchField.setText(activeSearchQuery);
+    }
   }
 
   private void showImportFeedback(String message, boolean error) {

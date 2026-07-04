@@ -346,6 +346,14 @@
     -fx-text-fill: #9e281f;
 }
 
+.history-search-field {
+    -fx-pref-width: 220px;
+}
+
+.history-search-button {
+    -fx-padding: 10 16 10 16;
+}
+
 .history-entry-title {
     -fx-text-fill: #1a2129;
     -fx-font-size: 15px;
