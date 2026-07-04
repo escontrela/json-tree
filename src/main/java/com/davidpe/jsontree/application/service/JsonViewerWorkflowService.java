@@ -29,6 +29,17 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Orchestration layer for the JSON viewer workflow use case.
+ *
+ * <p>This service coordinates the end-to-end flow for opening/importing JSON sources and preparing
+ * data for the UI layer. It delegates persistence concerns to {@link JsonHistoryRepository},
+ * inspection-mode decisions to {@link JsonInspectionModeResolver}, validation to {@link
+ * JsonValidationPort}, and rendering to {@link AsciiTreeRendererPort}.
+ *
+ * <p>It is the workflow director: it does not replace repositories or pure decision components, but
+ * composes them to execute viewer actions from the input layer.
+ */
 @Service
 public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistoryUseCase {
 
@@ -46,6 +57,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   private JsonViewerLoadResult currentView;
 
   @Autowired
+  /** Creates the workflow service with the default system clock. */
   public JsonViewerWorkflowService(
       JsonValidationPort validationPort,
       JsonHistoryRepository jsonHistoryRepository,
@@ -72,6 +84,12 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     this.clock = clock;
   }
 
+  /**
+   * Inspects a JSON file path and returns import state metadata.
+   *
+   * @param jsonFilePath candidate JSON source path.
+   * @return import/read state used by subsequent workflow steps.
+   */
   @Override
   public JsonImportResult importFile(Path jsonFilePath) {
     Path normalizedPath = jsonFilePath.toAbsolutePath().normalize();
@@ -89,24 +107,34 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         JsonDocumentSourceKind.LOCAL_FILE);
   }
 
+  /**
+   * Imports and loads a JSON file in a single workflow entry point.
+   *
+   * @param jsonFilePath JSON source path.
+   * @return viewer load result ready for the UI/controller.
+   */
   public JsonViewerLoadResult loadFile(Path jsonFilePath) {
     JsonImportResult importResult = importFile(jsonFilePath);
     return loadImportedFile(importResult);
   }
 
+  /**
+   * Persists a validated import into history and returns operation status.
+   *
+   * @param importResult import/read state to process.
+   * @return history import result with success or failure status.
+   */
   public HistoryJsonImportResult importIntoHistory(JsonImportResult importResult) {
     JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(importResult);
     if (!importResult.available()) {
       return HistoryJsonImportResult.failure(
-          HistoryJsonImportStatus.UNREADABLE_FILE,
-          "Selected JSON file is not available.");
+          HistoryJsonImportStatus.UNREADABLE_FILE, "Selected JSON file is not available.");
     }
 
     JsonValidationResult validationResult = validationPort.validate(importResult.path());
     if (validationResult.status() == JsonValidationStatus.EMPTY) {
       return HistoryJsonImportResult.failure(
-          HistoryJsonImportStatus.EMPTY_JSON,
-          "Selected JSON file is empty.");
+          HistoryJsonImportStatus.EMPTY_JSON, "Selected JSON file is empty.");
     }
     if (!validationResult.valid()) {
       return HistoryJsonImportResult.failure(
@@ -122,6 +150,12 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return HistoryJsonImportResult.imported(historyEntry);
   }
 
+  /**
+   * Completes the load workflow for a previously inspected JSON source.
+   *
+   * @param importResult import/read state to load.
+   * @return full viewer state, including validation and rendered data when available.
+   */
   public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult) {
     JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(importResult);
     if (!importResult.available()) {
@@ -160,10 +194,21 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return loadResult;
   }
 
+  /**
+   * Retrieves the persisted JSON history list.
+   *
+   * @return all registered history entries.
+   */
   public List<ImportedJsonFile> loadHistoryEntries() {
     return jsonHistoryRepository.findAll();
   }
 
+  /**
+   * Reopens a stored history entry and rebuilds the viewer state.
+   *
+   * @param storedName persisted history file name.
+   * @return viewer state for the history entry when it exists.
+   */
   public Optional<JsonViewerLoadResult> reopenHistoryEntry(String storedName) {
     Optional<ImportedJsonFile> historyEntry = jsonHistoryRepository.findByStoredName(storedName);
     Optional<Path> storedJsonPath = jsonHistoryRepository.resolveStoredJsonPath(storedName);
@@ -197,6 +242,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return Optional.of(loadResult);
   }
 
+  /**
+   * Deletes a history entry and clears current view if it points to that entry.
+   *
+   * @param storedName persisted history file name.
+   */
   public void deleteHistoryEntry(String storedName) {
     jsonHistoryRepository.deleteByStoredName(storedName);
     if (currentView != null
@@ -206,10 +256,20 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
   }
 
+  /**
+   * Returns the current viewer state when one is loaded.
+   *
+   * @return current viewer state if available.
+   */
   public Optional<JsonViewerLoadResult> currentView() {
     return Optional.ofNullable(currentView);
   }
 
+  /**
+   * Returns raw JSON for the current view from history storage or source path.
+   *
+   * @return raw JSON content for the current view when it can be read.
+   */
   public Optional<String> currentViewRawJson() {
     if (currentView == null) {
       return Optional.empty();
@@ -231,6 +291,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
   }
 
+  /** Opens history through the input port contract. */
   @Override
   public void openHistory() {
     throw new UnsupportedOperationException("Pending implementation.");
@@ -309,5 +370,4 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         ? JsonViewerCapabilities.largePreview()
         : JsonViewerCapabilities.full();
   }
-
 }
