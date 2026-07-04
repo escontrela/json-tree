@@ -36,6 +36,7 @@ import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
+import com.davidpe.jsontree.ui.support.TextFlowRenderOutcome;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
@@ -528,7 +529,8 @@ public class MainWindowController implements UiScreenController {
     AsciiTreeDocument document = result.asciiTreeDocument();
     applyCapabilityPresentation(result);
     resetViewModeIfNeeded();
-    syntaxHighlighter.appendHighlightedContent(
+    TextFlowRenderOutcome renderOutcome =
+        syntaxHighlighter.appendHighlightedContent(
         treeContentFlow, document, currentAsciiHighlightRanges(document));
     treeContentFlow.setManaged(true);
     treeContentFlow.setVisible(true);
@@ -541,6 +543,9 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setVvalue(0);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
+    if (renderOutcome.guardrailApplied()) {
+      footerStatusLabel.setText("Render budget guard active • showing simplified tree");
+    }
   }
 
   public void showEmptyViewer() {
@@ -1234,7 +1239,8 @@ public class MainWindowController implements UiScreenController {
 
   private void renderRawJsonContent(String rawJson) {
     currentRawJsonPresentation = rawJsonPresentationService.present(rawJson);
-    searchTextFlowHighlighter.appendHighlightedText(
+    TextFlowRenderOutcome renderOutcome =
+        searchTextFlowHighlighter.appendHighlightedText(
         rawJsonContentFlow,
         currentRawJsonPresentation.content(),
         currentRawHighlightRanges(),
@@ -1249,6 +1255,9 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
+    if (renderOutcome.guardrailApplied()) {
+      footerStatusLabel.setText("Render budget guard active • showing simplified raw JSON");
+    }
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {

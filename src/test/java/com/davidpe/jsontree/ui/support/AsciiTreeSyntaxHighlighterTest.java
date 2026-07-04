@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -42,6 +43,20 @@ class AsciiTreeSyntaxHighlighterTest {
         assertEquals("#1d8f5f", findSegment(segments, "\"David\"").colorHex());
         assertEquals("#1d8f5f", findSegment(segments, "true").colorHex());
         assertEquals("#8fd3ff", findSegment(segments, "[2]").colorHex());
+    }
+
+    @Test
+    void fallsBackToSinglePlainTextNodeWhenBudgetWouldBeExceeded() {
+        LargePreviewProperties properties = new LargePreviewProperties();
+        properties.setTextNodeBudget(2);
+        AsciiTreeSyntaxHighlighter guardedHighlighter = new AsciiTreeSyntaxHighlighter(properties);
+        AsciiTreeDocument document = new AsciiTreeDocument("root", "root\n├─ a: 1\n└─ b: 2", 3);
+
+        TextFlowRenderPlan renderPlan = guardedHighlighter.buildRenderPlan(document, List.of());
+
+        assertTrue(renderPlan.guardrailApplied());
+        assertEquals(1, renderPlan.fragments().size());
+        assertEquals(document.content(), renderPlan.fragments().getFirst().text());
     }
 
     private AsciiTreeSyntaxHighlighter.StyledSegment findSegment(
