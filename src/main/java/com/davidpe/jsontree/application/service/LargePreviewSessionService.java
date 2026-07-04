@@ -10,6 +10,7 @@ import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
 import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
+import jakarta.annotation.PreDestroy;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -117,6 +118,12 @@ public class LargePreviewSessionService {
 
   public void closeAllSessions() {
     new ArrayList<>(sessions.keySet()).forEach(this::closeSession);
+  }
+
+  @PreDestroy
+  void shutdown() {
+    closeAllSessions();
+    executorService.shutdownNow();
   }
 
   private Optional<LargePreviewPageLoadResult> loadPageInternal(

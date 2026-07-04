@@ -256,3 +256,10 @@
 - The main viewer now keeps a compact four-square loading affordance reserved for paged large-preview transitions that outlive a short reveal delay, so warm in-memory swaps stay visually silent.
 - Once revealed, the affordance runs a discreet CLI-like cadence inside the existing viewer shell until the requested page has been loaded and rendered through the paged workflow.
 - Ordinary `FULL` rendering and large-mode transitions that complete before the reveal delay do not activate the overlay, which keeps the baseline viewer path unchanged for small files and fast warm-page jumps.
+
+## Large Preview Operational Defaults
+
+- The paged large-preview workflow keeps `FULL` untouched for small files and applies the oversized path with a default page budget of `400` logical lines per stored ASCII page.
+- The hot cache window remains bounded to `current - 2` through `current + 2`, which keeps at most five large-preview pages resident in memory while older pages stay recoverable from temporary session storage.
+- Temporary paged-session storage is cleaned when the active oversized file is replaced, when the session is discarded, and when the application tears down the paged workflow at shutdown.
+- Large mode remains intentionally stream-safe rather than a byte-for-byte clone of the small-file renderer, and `Raw JSON` plus regex search stay disabled there until a dedicated follow-up ticket changes that contract.

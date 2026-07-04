@@ -29,6 +29,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -239,6 +240,57 @@ class JsonViewerWorkflowServiceTest {
   }
 
   @Test
+  void navigatesPagedLargePreviewForwardAndBackwardBeforeReturningToFullMode() throws IOException {
+    TrackingRendererPort renderer = new TrackingRendererPort();
+    TrackingLargePreviewSessionStore largePreviewStore =
+        new TrackingLargePreviewSessionStore(
+            List.of(
+                "root\n├─ page: 0",
+                "root\n├─ page: 1",
+                "root\n├─ page: 2"),
+            outlineDigestForPageIndexes(0, 1, 2));
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            new InMemoryHistoryRepository(),
+            renderer,
+            inspectionModeResolver(32L),
+            largePreviewSessionService(largePreviewStore));
+    Path largeFile =
+        Files.writeString(
+            tempDir.resolve("large.json"),
+            "{\"id\":1,\"payload\":\"0123456789012345678901234567890123456789\"}");
+    Path smallFile = Files.writeString(tempDir.resolve("small.json"), "{\"small\":true}");
+
+    JsonViewerLoadResult firstPage = workflowService.loadFile(largeFile);
+    String sessionId = firstPage.largePreviewSession().sessionId();
+    JsonViewerLoadResult thirdPage =
+        workflowService.loadLargePreviewPage(sessionId, 2).orElseThrow().loadResult();
+    JsonViewerLoadResult backToFirstPage =
+        workflowService.loadLargePreviewPage(sessionId, 0).orElseThrow().loadResult();
+    LargePreviewOutlineDigest outlineDigest =
+        workflowService.currentLargePreviewOutlineDigest().orElseThrow();
+    JsonViewerLoadResult smallResult = workflowService.loadFile(smallFile);
+
+    assertEquals(
+        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        firstPage.inspectionMode());
+    assertEquals(0, firstPage.largePreviewSession().currentPageIndex());
+    assertTrue(firstPage.asciiTreeDocument().content().contains("page: 0"));
+    assertEquals(2, thirdPage.largePreviewSession().currentPageIndex());
+    assertTrue(thirdPage.asciiTreeDocument().content().contains("page: 2"));
+    assertEquals(0, backToFirstPage.largePreviewSession().currentPageIndex());
+    assertEquals(OptionalInt.of(2), outlineDigest.pageIndexForEntry(2));
+    assertEquals(
+        com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
+        smallResult.inspectionMode());
+    assertTrue(smallResult.capabilities().rawJsonAvailable());
+    assertTrue(smallResult.capabilities().searchAvailable());
+    assertEquals(1, largePreviewStore.deletedSessionPaths.size());
+    assertEquals(1, renderer.fullRenderCount);
+  }
+
+  @Test
   void returnsEmptyWhenHistorySnapshotPathIsMissing() {
     InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
     repository.entry =
@@ -359,8 +411,20 @@ class JsonViewerWorkflowServiceTest {
       implements LargePreviewSessionStorePort {
 
     private final List<Path> deletedSessionPaths = new ArrayList<>();
+    private final List<String> pages;
+    private final LargePreviewOutlineDigest outlineDigest;
     private SessionSourceHook sessionSourceHook = source -> {};
     private int materializeCalls;
+
+    private TrackingLargePreviewSessionStore() {
+      this(List.of("root\n├─ preview: true"), LargePreviewOutlineDigest.empty());
+    }
+
+    private TrackingLargePreviewSessionStore(
+        List<String> pages, LargePreviewOutlineDigest outlineDigest) {
+      this.pages = List.copyOf(pages);
+      this.outlineDigest = outlineDigest;
+    }
 
     private TrackingLargePreviewSessionStore withHook(SessionSourceHook sessionSourceHook) {
       this.sessionSourceHook = sessionSourceHook;
@@ -376,13 +440,26 @@ class JsonViewerWorkflowServiceTest {
       sessionSourceHook.accept(source);
       try {
         Path sessionDirectory = Files.createTempDirectory("json-tree-workflow-preview-");
-        Path pagePath = sessionDirectory.resolve("page-00000.txt");
-        Files.writeString(pagePath, "root\n├─ preview: true");
-        LargePreviewPageDescriptor descriptor =
-            new LargePreviewPageDescriptor(0, pagePath, 0L, 2);
-        onPageAvailable.accept(descriptor);
+        List<LargePreviewPageDescriptor> descriptors = new ArrayList<>();
+        long logicalLineStart = 0L;
+        for (int pageIndex = 0; pageIndex < pages.size(); pageIndex++) {
+          String content = pages.get(pageIndex);
+          Path pagePath = sessionDirectory.resolve("page-%05d.txt".formatted(pageIndex));
+          Files.writeString(pagePath, content);
+          int logicalLineCount = Math.max(1, content.split("\\R", -1).length);
+          LargePreviewPageDescriptor descriptor =
+              new LargePreviewPageDescriptor(
+                  pageIndex, pagePath, logicalLineStart, logicalLineCount);
+          descriptors.add(descriptor);
+          logicalLineStart += logicalLineCount;
+          onPageAvailable.accept(descriptor);
+        }
         return new LargePreviewMaterializationSnapshot(
-            sessionId, sessionDirectory, List.of(descriptor), 2L, LargePreviewOutlineDigest.empty());
+            sessionId,
+            sessionDirectory,
+            List.copyOf(descriptors),
+            logicalLineStart,
+            outlineDigest);
       } catch (IOException exception) {
         throw new IllegalStateException(exception);
       }
@@ -438,5 +515,21 @@ class JsonViewerWorkflowServiceTest {
     public void execute(Runnable command) {
       command.run();
     }
+  }
+
+  private LargePreviewOutlineDigest outlineDigestForPageIndexes(int... pageIndexes) {
+    List<com.davidpe.jsontree.application.model.LargePreviewOutlineDigestEntry> entries =
+        new ArrayList<>();
+    for (int pageIndex : pageIndexes) {
+      entries.add(
+          new com.davidpe.jsontree.application.model.LargePreviewOutlineDigestEntry(
+              pageIndex,
+              new com.davidpe.jsontree.application.model.JsonOutlineEntry(
+                  0,
+                  24,
+                  com.davidpe.jsontree.application.model.JsonOutlineEntryKind.OBJECT,
+                  0)));
+    }
+    return new LargePreviewOutlineDigest(entries, 0);
   }
 }

@@ -131,6 +131,37 @@ class LargePreviewSessionServiceTest {
     }
   }
 
+  @Test
+  void closesAllOpenSessionsAndDeletesTheirTemporaryStorage() throws Exception {
+    TestLargePreviewSessionStore store =
+        new TestLargePreviewSessionStore(tempDir, List.of("page-0", "page-1"), pageIndex -> {});
+    try (ExecutorService executor = Executors.newCachedThreadPool()) {
+      LargePreviewSessionService service = new LargePreviewSessionService(store, 2, executor);
+
+      LargePreviewPageLoadResult firstSession = service.openSession(localSource());
+      LargePreviewPageLoadResult secondSession = service.openSession(localSource());
+
+      awaitCondition(
+          () ->
+              service
+                  .session(firstSession.session().sessionId())
+                  .map(LargePreviewPagedSession::totalPagesKnown)
+                  .orElse(false));
+      awaitCondition(
+          () ->
+              service
+                  .session(secondSession.session().sessionId())
+                  .map(LargePreviewPagedSession::totalPagesKnown)
+                  .orElse(false));
+
+      service.closeAllSessions();
+
+      assertTrue(service.session(firstSession.session().sessionId()).isEmpty());
+      assertTrue(service.session(secondSession.session().sessionId()).isEmpty());
+      assertEquals(2, store.deletedSessionPaths().size());
+    }
+  }
+
   private LargePreviewSessionSource localSource() throws IOException {
     Path jsonPath = Files.writeString(tempDir.resolve("source.json"), "{\"ok\":true}");
     return new LargePreviewSessionSource(jsonPath, JsonDocumentSourceKind.LOCAL_FILE, null);
