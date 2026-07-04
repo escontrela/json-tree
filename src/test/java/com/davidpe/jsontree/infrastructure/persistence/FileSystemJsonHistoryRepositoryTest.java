@@ -76,6 +76,25 @@ class FileSystemJsonHistoryRepositoryTest {
     }
 
     @Test
+    void resolvesStoredSnapshotPathWithoutReadingWholeSnapshotContent() {
+        FileSystemJsonHistoryRepository repository = new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
+        ImportedJsonFile entry = new ImportedJsonFile("2026-05-27_00-10-00_sample.json", "sample.json", Instant.parse("2026-05-27T00:10:00Z"), 20L, 4, true, false);
+
+        repository.save(entry, "{\"b\":2}");
+
+        assertEquals(
+                tempDir.resolve("history").resolve(entry.storedName()),
+                repository.resolveStoredJsonPath(entry.storedName()).orElseThrow());
+    }
+
+    @Test
+    void returnsEmptyWhenStoredSnapshotPathDoesNotExist() {
+        FileSystemJsonHistoryRepository repository = new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
+
+        assertTrue(repository.resolveStoredJsonPath("missing.json").isEmpty());
+    }
+
+    @Test
     void loadsExistingMetadataThatPredatesFavoriteField() throws Exception {
         FileSystemJsonHistoryRepository repository = new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
         java.nio.file.Files.createDirectories(tempDir);

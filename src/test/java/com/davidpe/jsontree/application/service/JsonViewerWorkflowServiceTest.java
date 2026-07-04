@@ -141,6 +141,8 @@ class JsonViewerWorkflowServiceTest {
         );
         repository.entry = historyEntry;
         repository.storedJson = "{\"id\":1}";
+        repository.storedJsonPath =
+                Files.writeString(tempDir.resolve(historyEntry.storedName()), repository.storedJson);
         JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
                 unusedValidationPort(),
                 repository,
@@ -151,6 +153,28 @@ class JsonViewerWorkflowServiceTest {
         JsonViewerLoadResult result = workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
 
         assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
+    }
+
+    @Test
+    void returnsEmptyWhenHistorySnapshotPathIsMissing() {
+        InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+        repository.entry = new ImportedJsonFile(
+                "2026-07-04_10-00-00_missing.json",
+                "missing.json",
+                Instant.parse("2026-07-04T10:00:00Z"),
+                24L,
+                3,
+                true,
+                false
+        );
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                unusedValidationPort(),
+                repository,
+                path -> new AsciiTreeDocument("root", "root", 1),
+                inspectionModeResolver(16L)
+        );
+
+        assertTrue(workflowService.reopenHistoryEntry(repository.entry.storedName()).isEmpty());
     }
 
     private JsonValidationPort unusedValidationPort() {
@@ -176,6 +200,7 @@ class JsonViewerWorkflowServiceTest {
 
         private ImportedJsonFile entry;
         private String storedJson;
+        private Path storedJsonPath;
 
         @Override
         public List<ImportedJsonFile> findAll() {
@@ -185,6 +210,13 @@ class JsonViewerWorkflowServiceTest {
         @Override
         public Optional<ImportedJsonFile> findByStoredName(String storedName) {
             return Optional.ofNullable(entry).filter(existing -> existing.storedName().equals(storedName));
+        }
+
+        @Override
+        public Optional<Path> resolveStoredJsonPath(String storedName) {
+            return entry != null && entry.storedName().equals(storedName)
+                    ? Optional.ofNullable(storedJsonPath)
+                    : Optional.empty();
         }
 
         @Override

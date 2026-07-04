@@ -237,6 +237,11 @@ class ClipboardJsonImportServiceTest {
     }
 
     @Override
+    public Optional<Path> resolveStoredJsonPath(String storedName) {
+      return Optional.empty();
+    }
+
+    @Override
     public Optional<String> readStoredJson(String storedName) {
       return Optional.empty();
     }

@@ -16,7 +16,6 @@ import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import java.io.IOException;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -159,16 +158,15 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
   public Optional<JsonViewerLoadResult> reopenHistoryEntry(String storedName) {
     Optional<ImportedJsonFile> historyEntry = jsonHistoryRepository.findByStoredName(storedName);
-    Optional<String> storedJson = jsonHistoryRepository.readStoredJson(storedName);
-    if (historyEntry.isEmpty() || storedJson.isEmpty()) {
+    Optional<Path> storedJsonPath = jsonHistoryRepository.resolveStoredJsonPath(storedName);
+    if (historyEntry.isEmpty() || storedJsonPath.isEmpty()) {
       return Optional.empty();
     }
     JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(historyEntry.get());
 
-    Path virtualPath = Path.of(historyEntry.get().storedName());
     JsonImportResult importResult =
         new JsonImportResult(
-            virtualPath,
+            storedJsonPath.get(),
             historyEntry.get().originalName(),
             historyEntry.get().sizeBytes(),
             true,
@@ -178,8 +176,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
     JsonValidationResult validationResult =
         new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);
-    AsciiTreeDocument asciiTreeDocument =
-        asciiTreeRendererPort.render(writeTempSnapshot(storedJson.get(), storedName));
+    AsciiTreeDocument asciiTreeDocument = asciiTreeRendererPort.render(storedJsonPath.get());
     JsonViewerLoadResult loadResult =
         new JsonViewerLoadResult(
             importResult,
@@ -292,20 +289,4 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         + ")";
   }
 
-  private Path writeTempSnapshot(String content, String storedName) {
-    try {
-      String suffix = storedName.endsWith(".json") ? ".json" : ".tmp";
-      Path tempFile =
-          Files.createTempFile(
-              FileSystems.getDefault().getPath(System.getProperty("java.io.tmpdir")),
-              "json-tree-history-",
-              suffix);
-      Files.writeString(tempFile, content);
-      tempFile.toFile().deleteOnExit();
-      return tempFile;
-    } catch (IOException exception) {
-      throw new IllegalStateException(
-          "Unable to prepare stored JSON snapshot: " + storedName, exception);
-    }
-  }
 }
