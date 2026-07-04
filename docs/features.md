@@ -226,3 +226,9 @@
 - A dedicated application-level paged-session contract now exists for the next evolution of `LARGE_PREVIEW`, separate from the ordinary `FULL` `AsciiTreeDocument` result path.
 - The session model tracks stable session identity, normalized source identity, current page, optional total pages, optional logical line totals, and page readiness state without leaking JavaFX concerns into `application` or `domain`.
 - The contract also leaves room for background materialization, bounded warm-page caching, and compact outline metadata so later tickets can wire paginated oversized inspection without redesigning the existing small-file workflow.
+
+## Large Preview Page Materialization
+
+- Oversized JSON rendering now has a streaming materialization path that writes ordered ASCII pages into temporary session storage instead of assuming a single bounded preview buffer.
+- Each materialized page carries deterministic access metadata, including page index, starting logical line, logical line count, and persisted page path for later reads.
+- The first page is emitted as soon as it fills, which enables the workflow layer to show page zero before the whole oversized document finishes materializing.

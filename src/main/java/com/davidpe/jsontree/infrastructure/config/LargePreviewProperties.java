@@ -7,6 +7,7 @@ public class LargePreviewProperties {
 
   private long fullRenderMaxBytes = 1_048_576L;
   private int previewMaxLines = 400;
+  private int pageLineCount = 400;
   private int previewMaxDepth = 8;
   private int previewMaxChildrenPerContainer = 64;
   private int textNodeBudget = 12000;
@@ -25,6 +26,14 @@ public class LargePreviewProperties {
 
   public void setPreviewMaxLines(int previewMaxLines) {
     this.previewMaxLines = previewMaxLines;
+  }
+
+  public int getPageLineCount() {
+    return pageLineCount;
+  }
+
+  public void setPageLineCount(int pageLineCount) {
+    this.pageLineCount = pageLineCount;
   }
 
   public int getPreviewMaxDepth() {

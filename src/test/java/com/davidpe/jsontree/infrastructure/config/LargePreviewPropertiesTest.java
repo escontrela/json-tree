@@ -12,6 +12,7 @@ class LargePreviewPropertiesTest {
 
     assertEquals(1_048_576L, properties.getFullRenderMaxBytes());
     assertEquals(400, properties.getPreviewMaxLines());
+    assertEquals(400, properties.getPageLineCount());
     assertEquals(8, properties.getPreviewMaxDepth());
     assertEquals(64, properties.getPreviewMaxChildrenPerContainer());
     assertEquals(12000, properties.getTextNodeBudget());
