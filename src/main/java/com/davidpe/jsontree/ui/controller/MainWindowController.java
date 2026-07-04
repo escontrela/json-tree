@@ -1160,10 +1160,19 @@ public class MainWindowController implements UiScreenController {
         workflowService
             .currentView()
             .filter(result -> result.capabilities().outlineAvailable())
-            .flatMap(unused -> workflowService.currentViewRawJson())
-            .map(outlineModelService::buildFromRawJson)
+            .map(this::outlineModelForCurrentView)
             .orElse(JsonOutlineModel.empty());
     currentOutlineSourceIdentity = currentViewIdentity;
+  }
+
+  private JsonOutlineModel outlineModelForCurrentView(JsonViewerLoadResult result) {
+    if (result.usesLargePreview()) {
+      return outlineModelService.buildFromAsciiPreview(result.asciiTreeDocument());
+    }
+    return workflowService
+        .currentViewRawJson()
+        .map(outlineModelService::buildFromRawJson)
+        .orElse(JsonOutlineModel.empty());
   }
 
   private void resetOutlineModel() {

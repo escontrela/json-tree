@@ -158,7 +158,7 @@ class JsonViewerWorkflowServiceTest {
         JsonViewerLoadResult result = workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
 
         assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
-        assertFalse(result.capabilities().outlineAvailable());
+        assertTrue(result.capabilities().outlineAvailable());
         assertEquals(0, renderer.fullRenderCount);
         assertEquals(1, renderer.largePreviewRenderCount);
     }

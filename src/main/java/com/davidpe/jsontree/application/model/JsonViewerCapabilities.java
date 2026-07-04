@@ -10,6 +10,6 @@ public record JsonViewerCapabilities(
   }
 
   public static JsonViewerCapabilities largePreview() {
-    return new JsonViewerCapabilities(false, false, false);
+    return new JsonViewerCapabilities(false, false, true);
   }
 }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonOutlineEntryKind;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
+import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
@@ -64,5 +65,30 @@ class JsonOutlineModelServiceTest {
   @Test
   void rejectsInvalidJsonPayloads() {
     assertThrows(IllegalStateException.class, () -> service.buildFromRawJson("{invalid"));
+  }
+
+  @Test
+  void buildsOutlineFromBoundedAsciiPreview() {
+    JsonOutlineModel model =
+        service.buildFromAsciiPreview(
+            new AsciiTreeDocument(
+                "root",
+                """
+                root { 3 keys
+                ├─ app { 2 keys
+                │  ├─ name : "json-tree"
+                │  └─ items [3]
+                ├─ ... object entries truncated after 64 fields
+                └─ user : {... depth limit}
+                """,
+                6));
+
+    assertFalse(model.emptyModel());
+    assertEquals(6, model.totalEntries());
+    assertEquals(2, model.maxDepth());
+    assertEquals(JsonOutlineEntryKind.OBJECT, model.entries().getFirst().kind());
+    assertEquals(JsonOutlineEntryKind.ARRAY, model.entries().get(3).kind());
+    assertEquals(JsonOutlineEntryKind.VALUE, model.entries().get(4).kind());
+    assertEquals(JsonOutlineEntryKind.OBJECT, model.entries().get(5).kind());
   }
 }

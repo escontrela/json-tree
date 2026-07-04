@@ -41,13 +41,13 @@ class ViewerCapabilityPresentationResolverTest {
 
     assertFalse(presentation.rawJsonEnabled());
     assertFalse(presentation.searchEnabled());
-    assertFalse(presentation.outlineEnabled());
+    assertTrue(presentation.outlineEnabled());
     assertEquals("Copy preview", presentation.copyButtonText());
     assertEquals("Preview", presentation.validationBadgeText());
     assertEquals("status-accent", presentation.validationBadgeStyleClass());
     assertEquals(" • bounded large preview", presentation.fileMetaSuffix());
     assertEquals("PREVIEW", presentation.statusState());
-    assertTrue(presentation.outlineStateMessage().contains("Large preview mode"));
+    assertTrue(presentation.outlineStateMessage().contains("bounded outline minimap"));
   }
 
   @Test
