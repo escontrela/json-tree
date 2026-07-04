@@ -85,7 +85,8 @@ class ViewerCapabilityPresentationResolverTest {
         new AsciiTreeDocument("root", "root\n└─ name: \"small\"", 12),
         null,
         JsonInspectionMode.FULL,
-        JsonViewerCapabilities.full());
+        JsonViewerCapabilities.full(),
+        null);
   }
 
   private JsonViewerLoadResult largePreviewResult() {
@@ -102,7 +103,8 @@ class ViewerCapabilityPresentationResolverTest {
         new AsciiTreeDocument("root", "root\n... preview truncated after 400 lines", 400),
         null,
         JsonInspectionMode.LARGE_PREVIEW,
-        JsonViewerCapabilities.largePreview());
+        JsonViewerCapabilities.largePreview(),
+        null);
   }
 
   private JsonViewerLoadResult unreadableFullResult() {
@@ -120,6 +122,7 @@ class ViewerCapabilityPresentationResolverTest {
         null,
         null,
         JsonInspectionMode.FULL,
-        JsonViewerCapabilities.full());
+        JsonViewerCapabilities.full(),
+        null);
   }
 }

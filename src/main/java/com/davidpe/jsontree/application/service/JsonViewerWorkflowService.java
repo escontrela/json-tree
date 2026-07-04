@@ -5,6 +5,9 @@ import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
+import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
+import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.in.OpenHistoryUseCase;
 import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
@@ -52,6 +55,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   private final JsonHistoryRepository jsonHistoryRepository;
   private final AsciiTreeRendererPort asciiTreeRendererPort;
   private final JsonInspectionModeResolver inspectionModeResolver;
+  private final LargePreviewSessionService largePreviewSessionService;
   private final Clock clock;
 
   private JsonViewerLoadResult currentView;
@@ -62,12 +66,14 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       JsonValidationPort validationPort,
       JsonHistoryRepository jsonHistoryRepository,
       AsciiTreeRendererPort asciiTreeRendererPort,
-      JsonInspectionModeResolver inspectionModeResolver) {
+      JsonInspectionModeResolver inspectionModeResolver,
+      LargePreviewSessionService largePreviewSessionService) {
     this(
         validationPort,
         jsonHistoryRepository,
         asciiTreeRendererPort,
         inspectionModeResolver,
+        largePreviewSessionService,
         Clock.systemDefaultZone());
   }
 
@@ -76,11 +82,13 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       JsonHistoryRepository jsonHistoryRepository,
       AsciiTreeRendererPort asciiTreeRendererPort,
       JsonInspectionModeResolver inspectionModeResolver,
+      LargePreviewSessionService largePreviewSessionService,
       Clock clock) {
     this.validationPort = validationPort;
     this.jsonHistoryRepository = jsonHistoryRepository;
     this.asciiTreeRendererPort = asciiTreeRendererPort;
     this.inspectionModeResolver = inspectionModeResolver;
+    this.largePreviewSessionService = largePreviewSessionService;
     this.clock = clock;
   }
 
@@ -167,17 +175,26 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
               null,
               null,
               inspectionMode,
-              capabilitiesFor(inspectionMode));
-      currentView = unavailableResult;
+              capabilitiesFor(inspectionMode),
+              null);
+      replaceCurrentView(unavailableResult);
       return unavailableResult;
     }
 
     JsonValidationResult validationResult = validationPort.validate(importResult.path());
     AsciiTreeDocument asciiTreeDocument = null;
     ImportedJsonFile historyEntry = null;
+    LargePreviewPagedSession largePreviewSession = null;
 
     if (validationResult.valid()) {
-      asciiTreeDocument = renderDocument(importResult.path(), inspectionMode);
+      if (inspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
+        LargePreviewPageLoadResult pageLoadResult =
+            largePreviewSessionService.openSession(sourceFor(importResult, null));
+        asciiTreeDocument = toAsciiTreeDocument(pageLoadResult);
+        largePreviewSession = pageLoadResult.session();
+      } else {
+        asciiTreeDocument = renderDocument(importResult.path(), inspectionMode);
+      }
       historyEntry = createHistoryEntry(importResult, asciiTreeDocument);
       jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
     }
@@ -189,8 +206,9 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
             asciiTreeDocument,
             historyEntry,
             inspectionMode,
-            capabilitiesFor(inspectionMode));
-    currentView = loadResult;
+            capabilitiesFor(inspectionMode),
+            largePreviewSession);
+    replaceCurrentView(loadResult);
     return loadResult;
   }
 
@@ -229,7 +247,17 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
     JsonValidationResult validationResult =
         new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);
-    AsciiTreeDocument asciiTreeDocument = renderDocument(storedJsonPath.get(), inspectionMode);
+    AsciiTreeDocument asciiTreeDocument;
+    LargePreviewPagedSession largePreviewSession = null;
+    if (inspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
+      LargePreviewPageLoadResult pageLoadResult =
+          largePreviewSessionService.openSession(
+              LargePreviewSessionSource.history(storedJsonPath.get(), storedName));
+      asciiTreeDocument = toAsciiTreeDocument(pageLoadResult);
+      largePreviewSession = pageLoadResult.session();
+    } else {
+      asciiTreeDocument = renderDocument(storedJsonPath.get(), inspectionMode);
+    }
     JsonViewerLoadResult loadResult =
         new JsonViewerLoadResult(
             importResult,
@@ -237,8 +265,9 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
             asciiTreeDocument,
             historyEntry.get(),
             inspectionMode,
-            capabilitiesFor(inspectionMode));
-    currentView = loadResult;
+            capabilitiesFor(inspectionMode),
+            largePreviewSession);
+    replaceCurrentView(loadResult);
     return Optional.of(loadResult);
   }
 
@@ -252,7 +281,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     if (currentView != null
         && currentView.historyEntry() != null
         && storedName.equals(currentView.historyEntry().storedName())) {
-      currentView = null;
+      replaceCurrentView(null);
     }
   }
 
@@ -262,7 +291,15 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
    * @return current viewer state if available.
    */
   public Optional<JsonViewerLoadResult> currentView() {
-    return Optional.ofNullable(currentView);
+    if (currentView == null || !currentView.hasLargePreviewSession()) {
+      return Optional.ofNullable(currentView);
+    }
+    LargePreviewPagedSession refreshedSession =
+        largePreviewSessionService
+            .session(currentView.largePreviewSession().sessionId())
+            .orElse(currentView.largePreviewSession());
+    currentView = currentView.withLargePreviewSession(refreshedSession);
+    return Optional.of(currentView);
   }
 
   /**
@@ -363,6 +400,38 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return inspectionMode == JsonInspectionMode.LARGE_PREVIEW
         ? asciiTreeRendererPort.renderLargePreview(path)
         : asciiTreeRendererPort.render(path);
+  }
+
+  private AsciiTreeDocument toAsciiTreeDocument(LargePreviewPageLoadResult pageLoadResult) {
+    return new AsciiTreeDocument(
+        "root",
+        pageLoadResult.page().content(),
+        pageLoadResult.page().descriptor().logicalLineCount());
+  }
+
+  private LargePreviewSessionSource sourceFor(
+      JsonImportResult importResult, ImportedJsonFile historyEntry) {
+    return switch (importResult.sourceKind()) {
+      case LOCAL_FILE -> LargePreviewSessionSource.local(importResult.path());
+      case CLIPBOARD -> LargePreviewSessionSource.clipboard(importResult.path());
+      case HISTORY ->
+          LargePreviewSessionSource.history(importResult.path(), historyEntry.storedName());
+    };
+  }
+
+  private void replaceCurrentView(JsonViewerLoadResult nextView) {
+    String previousSessionId =
+        currentView != null && currentView.largePreviewSession() != null
+            ? currentView.largePreviewSession().sessionId()
+            : null;
+    String nextSessionId =
+        nextView != null && nextView.largePreviewSession() != null
+            ? nextView.largePreviewSession().sessionId()
+            : null;
+    if (previousSessionId != null && !previousSessionId.equals(nextSessionId)) {
+      largePreviewSessionService.closeSession(previousSessionId);
+    }
+    currentView = nextView;
   }
 
   private JsonViewerCapabilities capabilitiesFor(JsonInspectionMode inspectionMode) {
