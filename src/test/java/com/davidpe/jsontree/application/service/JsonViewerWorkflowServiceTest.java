@@ -134,6 +134,7 @@ class JsonViewerWorkflowServiceTest {
     @Test
     void classifiesHistoryReopenUsingStoredMetadataSize() throws IOException {
         InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+        TrackingRendererPort renderer = new TrackingRendererPort();
         ImportedJsonFile historyEntry = new ImportedJsonFile(
                 "2026-07-04_10-00-00_large.json",
                 "large.json",
@@ -150,7 +151,7 @@ class JsonViewerWorkflowServiceTest {
         JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
                 unusedValidationPort(),
                 repository,
-                new TrackingRendererPort(),
+                renderer,
                 inspectionModeResolver(16L)
         );
 
@@ -158,6 +159,39 @@ class JsonViewerWorkflowServiceTest {
 
         assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
         assertFalse(result.capabilities().outlineAvailable());
+        assertEquals(0, renderer.fullRenderCount);
+        assertEquals(1, renderer.largePreviewRenderCount);
+    }
+
+    @Test
+    void switchesRepeatedlyBetweenFullAndLargePreviewModes() throws IOException {
+        TrackingRendererPort renderer = new TrackingRendererPort();
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                unusedValidationPort(),
+                new InMemoryHistoryRepository(),
+                renderer,
+                inspectionModeResolver(32L)
+        );
+        Path smallFile = Files.writeString(tempDir.resolve("small.json"), "{\"id\":1}");
+        Path largeFile = Files.writeString(
+                tempDir.resolve("large.json"),
+                "{\"id\":1,\"payload\":\"0123456789012345678901234567890123456789\"}");
+
+        JsonViewerLoadResult smallResult = workflowService.loadFile(smallFile);
+        JsonViewerLoadResult largeResult = workflowService.loadFile(largeFile);
+        JsonViewerLoadResult smallAgainResult = workflowService.loadFile(smallFile);
+
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, smallResult.inspectionMode());
+        assertTrue(smallResult.capabilities().rawJsonAvailable());
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, largeResult.inspectionMode());
+        assertFalse(largeResult.capabilities().searchAvailable());
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, smallAgainResult.inspectionMode());
+        assertTrue(smallAgainResult.capabilities().outlineAvailable());
+        assertEquals(2, renderer.fullRenderCount);
+        assertEquals(1, renderer.largePreviewRenderCount);
+        assertEquals(
+                com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
+                workflowService.currentView().orElseThrow().inspectionMode());
     }
 
     @Test
@@ -247,13 +281,18 @@ class JsonViewerWorkflowServiceTest {
 
     private static final class TrackingRendererPort implements AsciiTreeRendererPort {
 
+        private int fullRenderCount;
+        private int largePreviewRenderCount;
+
         @Override
         public AsciiTreeDocument render(Path jsonFilePath) {
-            throw new AssertionError("Large-preview history reopen must not use full render path.");
+            fullRenderCount++;
+            return new AsciiTreeDocument("root", "root\n├─ full: true", 2);
         }
 
         @Override
         public AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
+            largePreviewRenderCount++;
             return new AsciiTreeDocument("root", "root\n├─ preview: true", 2);
         }
     }

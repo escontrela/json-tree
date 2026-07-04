@@ -10,8 +10,13 @@ json-tree:
     history-directory-name: history
     metadata-file-name: metadata.json
   large-preview:
+    # Prefer the bounded preview path before multi-megabyte payloads can push the full
+    # tree renderer and JavaFX scene graph into unstable territory.
     full-render-max-bytes: 1048576
+    # Keep oversized files inspectable with a deterministic preview instead of pretending to
+    # support an unlimited full tree.
     preview-max-lines: 400
     preview-max-depth: 8
     preview-max-children-per-container: 64
+    # Hard-stop JavaFX text-node growth well before the viewer can freeze or exhaust heap.
     text-node-budget: 12000
