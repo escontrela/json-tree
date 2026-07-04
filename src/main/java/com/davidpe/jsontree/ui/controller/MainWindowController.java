@@ -5,6 +5,7 @@ import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.LargePreviewViewerPageResult;
 import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
@@ -28,6 +29,7 @@ import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewScrollPageResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
@@ -49,6 +51,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.OptionalInt;
+import java.util.concurrent.CompletableFuture;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
@@ -111,6 +115,7 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
+  private final LargePreviewScrollPageResolver largePreviewScrollPageResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
   public MainWindowController(
@@ -131,6 +136,7 @@ public class MainWindowController implements UiScreenController {
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
+      LargePreviewScrollPageResolver largePreviewScrollPageResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
@@ -150,6 +156,7 @@ public class MainWindowController implements UiScreenController {
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
+    this.largePreviewScrollPageResolver = largePreviewScrollPageResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
@@ -248,6 +255,9 @@ public class MainWindowController implements UiScreenController {
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentOutlineSourceIdentity;
   private boolean outlineViewportRefreshPending;
+  private boolean suppressLargePreviewScrollHandling;
+  private boolean largePreviewPageLoadInFlight;
+  private int requestedLargePreviewPageIndex = -1;
 
   @FXML
   public void initialize() {
@@ -340,7 +350,11 @@ public class MainWindowController implements UiScreenController {
     outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
     viewerScrollPane
         .vvalueProperty()
-        .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
+        .addListener(
+            (unused, oldValue, newValue) -> {
+              scheduleOutlineViewportRefresh();
+              handleViewerScrollValueChanged(newValue.doubleValue());
+            });
     viewerScrollPane
         .viewportBoundsProperty()
         .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
@@ -534,6 +548,10 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void renderAsciiTree(JsonViewerLoadResult result) {
+    renderAsciiTree(result, 0.0);
+  }
+
+  private void renderAsciiTree(JsonViewerLoadResult result, double targetVerticalScrollValue) {
     AsciiTreeDocument document = result.asciiTreeDocument();
     applyCapabilityPresentation(result);
     resetViewModeIfNeeded();
@@ -547,8 +565,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     updateOutlineShell(result, document);
-    viewerScrollPane.setHvalue(0);
-    viewerScrollPane.setVvalue(0);
+    setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
     if (renderOutcome.guardrailApplied()) {
@@ -1199,6 +1216,80 @@ public class MainWindowController implements UiScreenController {
                 return;
               }
             });
+  }
+
+  private void handleViewerScrollValueChanged(double verticalScrollValue) {
+    if (suppressLargePreviewScrollHandling || showingRawJson || largePreviewPageLoadInFlight) {
+      return;
+    }
+    workflowService
+        .currentView()
+        .ifPresent(
+            result -> {
+              OptionalInt targetPage =
+                  largePreviewScrollPageResolver.targetPage(result, verticalScrollValue);
+              if (targetPage.isPresent()
+                  && targetPage.getAsInt() != requestedLargePreviewPageIndex) {
+                requestLargePreviewPage(targetPage.getAsInt());
+              }
+            });
+  }
+
+  private void requestLargePreviewPage(int targetPageIndex) {
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasLargePreviewSession)
+        .ifPresent(
+            result -> {
+              requestedLargePreviewPageIndex = targetPageIndex;
+              largePreviewPageLoadInFlight = true;
+              String sessionId = result.largePreviewSession().sessionId();
+              boolean scrollingForward =
+                  targetPageIndex > result.largePreviewSession().currentPageIndex();
+              CompletableFuture
+                  .supplyAsync(() -> workflowService.loadLargePreviewPage(sessionId, targetPageIndex))
+                  .whenComplete(
+                      (pageResult, throwable) ->
+                          Platform.runLater(
+                              () ->
+                                  handleLargePreviewPageResult(
+                                      sessionId,
+                                      pageResult,
+                                      throwable,
+                                      scrollingForward)));
+            });
+  }
+
+  private void handleLargePreviewPageResult(
+      String expectedSessionId,
+      java.util.Optional<LargePreviewViewerPageResult> pageResult,
+      Throwable throwable,
+      boolean scrollingForward) {
+    largePreviewPageLoadInFlight = false;
+    requestedLargePreviewPageIndex = -1;
+    if (throwable != null || pageResult == null || pageResult.isEmpty()) {
+      return;
+    }
+
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasLargePreviewSession)
+        .filter(result -> result.largePreviewSession().sessionId().equals(expectedSessionId))
+        .ifPresent(unused -> presentLargePreviewPage(pageResult.get(), scrollingForward));
+  }
+
+  private void presentLargePreviewPage(
+      LargePreviewViewerPageResult pageResult, boolean scrollingForward) {
+    updateFileSummary(pageResult.loadResult());
+    syncStatusRail(pageResult.loadResult());
+    renderAsciiTree(pageResult.loadResult(), scrollingForward ? 0.0 : 1.0);
+  }
+
+  private void setViewerScrollPosition(double horizontalScrollValue, double verticalScrollValue) {
+    suppressLargePreviewScrollHandling = true;
+    viewerScrollPane.setHvalue(clamp(horizontalScrollValue));
+    viewerScrollPane.setVvalue(clamp(verticalScrollValue));
+    Platform.runLater(() -> suppressLargePreviewScrollHandling = false);
   }
 
   private void applyCapabilityPresentation(JsonViewerLoadResult result) {

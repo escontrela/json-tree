@@ -8,6 +8,7 @@ import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
 import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
+import com.davidpe.jsontree.application.model.LargePreviewViewerPageResult;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.in.OpenHistoryUseCase;
 import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
@@ -326,6 +327,33 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       throw new IllegalStateException(
           "Unable to read current JSON source: " + sourcePath, exception);
     }
+  }
+
+  public Optional<LargePreviewViewerPageResult> loadLargePreviewPage(
+      String sessionId, int targetPageIndex) {
+    if (currentView == null
+        || !currentView.hasLargePreviewSession()
+        || !currentView.largePreviewSession().sessionId().equals(sessionId)) {
+      return Optional.empty();
+    }
+
+    return largePreviewSessionService
+        .loadPage(sessionId, targetPageIndex)
+        .map(
+            pageLoadResult -> {
+              JsonViewerLoadResult nextView =
+                  new JsonViewerLoadResult(
+                      currentView.importResult(),
+                      currentView.validationResult(),
+                      toAsciiTreeDocument(pageLoadResult),
+                      currentView.historyEntry(),
+                      currentView.inspectionMode(),
+                      currentView.capabilities(),
+                      pageLoadResult.session());
+              replaceCurrentView(nextView);
+              return new LargePreviewViewerPageResult(
+                  nextView, pageLoadResult.cacheHit(), pageLoadResult.waitedForAvailability());
+            });
   }
 
   /** Opens history through the input port contract. */
