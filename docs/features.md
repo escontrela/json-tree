@@ -250,3 +250,9 @@
 - The right-side outline rail now resolves pointer interactions into paged large-preview targets using the existing minimap layout buckets plus the full-document digest page mapping.
 - When an outline region belongs to another page, the controller reuses the same paged viewer workflow as scroll-based swaps, so warm pages jump immediately and cold pages follow the existing asynchronous page-load path.
 - If the clicked outline region maps to the page that is already visible, the interaction falls back to the previous in-page scroll behavior instead of forcing a redundant page reload.
+
+## Large Preview Loading Affordance
+
+- The main viewer now keeps a compact four-square loading affordance reserved for paged large-preview transitions that outlive a short reveal delay, so warm in-memory swaps stay visually silent.
+- Once revealed, the affordance runs a discreet CLI-like cadence inside the existing viewer shell until the requested page has been loaded and rendered through the paged workflow.
+- Ordinary `FULL` rendering and large-mode transitions that complete before the reveal delay do not activate the overlay, which keeps the baseline viewer path unchanged for small files and fast warm-page jumps.

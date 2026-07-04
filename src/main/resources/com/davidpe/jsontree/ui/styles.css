@@ -95,6 +95,10 @@
     -fx-border-color: #d6e5f8;
 }
 
+.viewer-shell.viewer-large-preview-waiting {
+    -fx-border-color: #a9c7ef;
+}
+
 .viewer-shell.viewer-invalid {
     -fx-background-color: #fff7f7;
     -fx-border-color: #c23b32;
@@ -124,6 +128,33 @@
     -fx-border-color: transparent;
     -fx-border-width: 0;
     -fx-spacing: 20;
+}
+
+.large-preview-loader-overlay {
+    -fx-background-color: transparent;
+}
+
+.large-preview-loader {
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-border-color: #d6e5f8;
+    -fx-border-width: 1;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-padding: 8 12 8 12;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.10), 12, 0.16, 0, 4);
+}
+
+.large-preview-loader-square {
+    -fx-min-width: 8;
+    -fx-pref-width: 8;
+    -fx-max-width: 8;
+    -fx-min-height: 8;
+    -fx-pref-height: 8;
+    -fx-max-height: 8;
+    -fx-background-color: #1c69d4;
+    -fx-background-radius: 2;
+    -fx-opacity: 0.24;
 }
 
 .scroll-pane,

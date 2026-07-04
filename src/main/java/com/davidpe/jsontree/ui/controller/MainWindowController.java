@@ -29,6 +29,7 @@ import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
 import com.davidpe.jsontree.ui.support.LargePreviewOutlineNavigationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewScrollPageResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
@@ -48,12 +49,17 @@ import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.time.Instant;
+import java.time.Duration;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
@@ -92,6 +98,8 @@ public class MainWindowController implements UiScreenController {
   private static final int INLINE_HISTORY_MAX_VISIBLE_ENTRIES = 10;
   private static final int FILE_NAME_COMPACT_LENGTH_THRESHOLD = 22;
   private static final String FILE_NAME_COMPACT_STYLE = "-fx-font-size: 12px;";
+  private static final Duration LARGE_PREVIEW_LOADER_REVEAL_DELAY = Duration.ofMillis(120);
+  private static final Duration LARGE_PREVIEW_LOADER_FRAME_INTERVAL = Duration.ofMillis(110);
 
   private static final DateTimeFormatter FILE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm:ss")
@@ -219,6 +227,16 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private TextFlow rawJsonContentFlow;
 
+  @FXML private StackPane largePreviewLoaderOverlay;
+
+  @FXML private Region largePreviewLoaderSquareOne;
+
+  @FXML private Region largePreviewLoaderSquareTwo;
+
+  @FXML private Region largePreviewLoaderSquareThree;
+
+  @FXML private Region largePreviewLoaderSquareFour;
+
   @FXML private Button rawJsonButton;
 
   @FXML private Button searchButton;
@@ -262,6 +280,11 @@ public class MainWindowController implements UiScreenController {
   private boolean suppressLargePreviewScrollHandling;
   private boolean largePreviewPageLoadInFlight;
   private int requestedLargePreviewPageIndex = -1;
+  private List<Region> largePreviewLoaderSquares = List.of();
+  private LargePreviewLoadingAffordance largePreviewLoadingAffordance;
+  private PauseTransition largePreviewLoaderRevealTransition;
+  private Timeline largePreviewLoaderAnimationTimeline;
+  private long currentLargePreviewLoaderRequestSequence;
 
   @FXML
   public void initialize() {
@@ -299,9 +322,25 @@ public class MainWindowController implements UiScreenController {
                     historyListView.getSelectionModel().clearSelection();
                   });
             });
+    configureLargePreviewLoadingAffordance();
     configureOutlineShell();
     showEmptyViewer();
     refreshInlineHistory();
+  }
+
+  private void configureLargePreviewLoadingAffordance() {
+    largePreviewLoaderSquares =
+        List.of(
+            largePreviewLoaderSquareOne,
+            largePreviewLoaderSquareTwo,
+            largePreviewLoaderSquareThree,
+            largePreviewLoaderSquareFour);
+    largePreviewLoadingAffordance =
+        new LargePreviewLoadingAffordance(
+            this::showLargePreviewLoaderOverlay,
+            this::hideLargePreviewLoaderOverlay,
+            this::applyLargePreviewLoaderFrame);
+    hideLargePreviewLoaderOverlay();
   }
 
   private void configureWindowMetricsLogging() {
@@ -597,6 +636,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showEmptyViewer() {
+    cancelLargePreviewLoadingAffordance();
     resetOutlineModel();
     currentLoadedAt = null;
     currentViewIdentity = null;
@@ -625,6 +665,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showDraggingState() {
+    cancelLargePreviewLoadingAffordance();
     showFileWarningIcon(false);
     emptyStateLabel.setText("Release to inspect this JSON file");
     showOutlineShellState(
@@ -639,6 +680,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showLoadingState(String fileName) {
+    cancelLargePreviewLoadingAffordance();
     resetOutlineModel();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
@@ -670,6 +712,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showInvalidState(String message) {
+    cancelLargePreviewLoadingAffordance();
     resetOutlineModel();
     resetToolbarForNonRenderableState();
     showOutlineShellState(
@@ -1282,6 +1325,7 @@ public class MainWindowController implements UiScreenController {
             result -> {
               requestedLargePreviewPageIndex = targetPageIndex;
               largePreviewPageLoadInFlight = true;
+              beginLargePreviewLoadingAffordance();
               String sessionId = result.largePreviewSession().sessionId();
               boolean scrollingForward =
                   targetPageIndex > result.largePreviewSession().currentPageIndex();
@@ -1304,6 +1348,7 @@ public class MainWindowController implements UiScreenController {
       java.util.Optional<LargePreviewViewerPageResult> pageResult,
       Throwable throwable,
       boolean scrollingForward) {
+    cancelLargePreviewLoadingAffordance();
     largePreviewPageLoadInFlight = false;
     requestedLargePreviewPageIndex = -1;
     if (throwable != null || pageResult == null || pageResult.isEmpty()) {
@@ -1322,6 +1367,85 @@ public class MainWindowController implements UiScreenController {
     updateFileSummary(pageResult.loadResult());
     syncStatusRail(pageResult.loadResult());
     renderAsciiTree(pageResult.loadResult(), scrollingForward ? 0.0 : 1.0);
+  }
+
+  private void showLargePreviewLoaderOverlay() {
+    largePreviewLoaderOverlay.setManaged(true);
+    largePreviewLoaderOverlay.setVisible(true);
+    if (!viewerShell.getStyleClass().contains("viewer-large-preview-waiting")) {
+      viewerShell.getStyleClass().add("viewer-large-preview-waiting");
+    }
+  }
+
+  private void hideLargePreviewLoaderOverlay() {
+    largePreviewLoaderOverlay.setManaged(false);
+    largePreviewLoaderOverlay.setVisible(false);
+    viewerShell.getStyleClass().remove("viewer-large-preview-waiting");
+    applyLargePreviewLoaderFrame(-1);
+  }
+
+  private void applyLargePreviewLoaderFrame(int activeFrameIndex) {
+    for (int index = 0; index < largePreviewLoaderSquares.size(); index++) {
+      Region square = largePreviewLoaderSquares.get(index);
+      int distance = activeFrameIndex < 0 ? -1 : Math.floorMod(index - activeFrameIndex, 4);
+      double opacity =
+          switch (distance) {
+            case 0 -> 1.0;
+            case 1 -> 0.68;
+            case 2 -> 0.42;
+            case 3 -> 0.24;
+            default -> 0.24;
+          };
+      double scale =
+          switch (distance) {
+            case 0 -> 1.0;
+            case 1 -> 0.96;
+            case 2 -> 0.92;
+            case 3 -> 0.88;
+            default -> 0.88;
+          };
+      square.setOpacity(opacity);
+      square.setScaleX(scale);
+      square.setScaleY(scale);
+    }
+  }
+
+  private void cancelLargePreviewLoadingAffordance() {
+    if (largePreviewLoaderRevealTransition != null) {
+      largePreviewLoaderRevealTransition.stop();
+    }
+    if (largePreviewLoaderAnimationTimeline != null) {
+      largePreviewLoaderAnimationTimeline.stop();
+    }
+    if (largePreviewLoadingAffordance != null) {
+      largePreviewLoadingAffordance.completeRequest();
+    }
+  }
+
+  private void beginLargePreviewLoadingAffordance() {
+    cancelLargePreviewLoadingAffordance();
+    currentLargePreviewLoaderRequestSequence = largePreviewLoadingAffordance.beginRequest();
+    largePreviewLoaderRevealTransition =
+        new PauseTransition(
+            javafx.util.Duration.millis(LARGE_PREVIEW_LOADER_REVEAL_DELAY.toMillis()));
+    largePreviewLoaderRevealTransition.setOnFinished(
+        unused -> {
+          largePreviewLoadingAffordance.revealIfPending(currentLargePreviewLoaderRequestSequence);
+          if (!largePreviewLoadingAffordance.visible()) {
+            return;
+          }
+          largePreviewLoaderAnimationTimeline =
+              new Timeline(
+                  new KeyFrame(
+                      javafx.util.Duration.millis(
+                          LARGE_PREVIEW_LOADER_FRAME_INTERVAL.toMillis()),
+                      event ->
+                          largePreviewLoadingAffordance.advanceFrame(
+                              currentLargePreviewLoaderRequestSequence)));
+          largePreviewLoaderAnimationTimeline.setCycleCount(Animation.INDEFINITE);
+          largePreviewLoaderAnimationTimeline.playFromStart();
+        });
+    largePreviewLoaderRevealTransition.playFromStart();
   }
 
   private void setViewerScrollPosition(double horizontalScrollValue, double verticalScrollValue) {
