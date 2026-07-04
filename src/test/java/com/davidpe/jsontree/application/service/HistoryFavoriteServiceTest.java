@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.davidpe.jsontree.application.model.HistoryFavoriteToggleStatus;
 import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import java.nio.file.Path;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,6 +96,11 @@ class HistoryFavoriteServiceTest {
     @Override
     public Optional<ImportedJsonFile> findByStoredName(String storedName) {
       return Optional.ofNullable(entries.get(storedName));
+    }
+
+    @Override
+    public Optional<Path> resolveStoredJsonPath(String storedName) {
+      return Optional.empty();
     }
 
     @Override

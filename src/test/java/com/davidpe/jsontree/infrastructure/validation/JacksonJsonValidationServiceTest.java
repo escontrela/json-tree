@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -78,5 +79,49 @@ class JacksonJsonValidationServiceTest {
         assertEquals(JsonValidationStatus.PARSING_ERROR, result.status());
         assertFalse(result.valid());
         assertTrue(result.message().startsWith("Unable to read JSON file:"));
+    }
+
+    @Test
+    void validatesLargeJsonThroughStreamingPath() throws IOException {
+        Path jsonFile = Files.writeString(
+                tempDir.resolve("large-valid.json"),
+                "{\"payload\":\"0123456789abcdef0123456789abcdef\",\"active\":true}");
+
+        JsonValidationResult result = serviceWithThreshold(8L).validate(jsonFile);
+
+        assertEquals(JsonValidationStatus.VALID, result.status());
+        assertTrue(result.valid());
+    }
+
+    @Test
+    void reportsInvalidLargeJsonWithStreamingLocation() throws IOException {
+        Path jsonFile = Files.writeString(
+                tempDir.resolve("large-invalid.json"),
+                "{\n  \"payload\": [1, 2,\n}\n0123456789");
+
+        JsonValidationResult result = serviceWithThreshold(8L).validate(jsonFile);
+
+        assertEquals(JsonValidationStatus.INVALID, result.status());
+        assertFalse(result.valid());
+        assertTrue(result.message().startsWith("Invalid JSON:"));
+        assertEquals(3, result.line());
+        assertNotNull(result.column());
+    }
+
+    @Test
+    void reportsWhitespaceOnlyLargeFilesAsEmpty() throws IOException {
+        Path jsonFile = Files.writeString(tempDir.resolve("large-empty.json"), "                  ");
+
+        JsonValidationResult result = serviceWithThreshold(8L).validate(jsonFile);
+
+        assertEquals(JsonValidationStatus.EMPTY, result.status());
+        assertFalse(result.valid());
+        assertEquals("File is empty.", result.message());
+    }
+
+    private JacksonJsonValidationService serviceWithThreshold(long fullRenderMaxBytes) {
+        LargePreviewProperties properties = new LargePreviewProperties();
+        properties.setFullRenderMaxBytes(fullRenderMaxBytes);
+        return new JacksonJsonValidationService(new ObjectMapper(), properties);
     }
 }

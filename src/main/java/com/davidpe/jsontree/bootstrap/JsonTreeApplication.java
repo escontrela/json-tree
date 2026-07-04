@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.bootstrap;
 
 import com.davidpe.jsontree.infrastructure.config.AppDataProperties;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import javafx.application.Application;
@@ -19,7 +20,7 @@ import org.springframework.context.ConfigurableApplicationContext;
                 FlywayAutoConfiguration.class
         }
 )
-@EnableConfigurationProperties(AppDataProperties.class)
+@EnableConfigurationProperties({AppDataProperties.class, LargePreviewProperties.class})
 public class JsonTreeApplication extends Application {
 
     private ConfigurableApplicationContext applicationContext;

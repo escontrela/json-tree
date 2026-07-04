@@ -50,13 +50,19 @@ public class FileSystemJsonHistoryRepository implements JsonHistoryRepository {
     }
 
     @Override
-    public Optional<String> readStoredJson(String storedName) {
+    public Optional<Path> resolveStoredJsonPath(String storedName) {
         Path snapshotPath = historyDirectory().resolve(storedName);
-        if (!Files.exists(snapshotPath)) {
+        return Files.exists(snapshotPath) ? Optional.of(snapshotPath) : Optional.empty();
+    }
+
+    @Override
+    public Optional<String> readStoredJson(String storedName) {
+        Optional<Path> snapshotPath = resolveStoredJsonPath(storedName);
+        if (snapshotPath.isEmpty()) {
             return Optional.empty();
         }
         try {
-            return Optional.of(Files.readString(snapshotPath));
+            return Optional.of(Files.readString(snapshotPath.get()));
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to read stored JSON snapshot: " + storedName, exception);
         }

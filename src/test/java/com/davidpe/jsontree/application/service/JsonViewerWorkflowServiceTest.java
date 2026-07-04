@@ -18,8 +18,10 @@ import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,7 +30,8 @@ class JsonViewerWorkflowServiceTest {
     private final JsonViewerWorkflowService service = new JsonViewerWorkflowService(
             unusedValidationPort(),
             new InMemoryHistoryRepository(),
-            unusedRendererPort()
+            unusedRendererPort(),
+            inspectionModeResolver(1024L)
     );
 
     @TempDir
@@ -69,7 +72,8 @@ class JsonViewerWorkflowServiceTest {
         JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
                 path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
                 new InMemoryHistoryRepository(),
-                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2)
+                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2),
+                inspectionModeResolver(1024L)
         );
         Path importedFile = Files.writeString(tempDir.resolve("imported.json"), "{\"id\":1}");
 
@@ -86,6 +90,130 @@ class JsonViewerWorkflowServiceTest {
         assertTrue(result.validationResult().valid());
         assertTrue(result.hasRenderableTree());
         assertEquals("imported.json", result.importResult().fileName());
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, result.inspectionMode());
+        assertTrue(result.capabilities().rawJsonAvailable());
+        assertTrue(result.capabilities().searchAvailable());
+    }
+
+    @Test
+    void classifiesLargeFilesBeforeRendering() throws IOException {
+        AtomicBoolean classifiedBeforeRender = new AtomicBoolean(false);
+        JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(properties(16L)) {
+            @Override
+            public com.davidpe.jsontree.application.model.JsonInspectionMode resolve(JsonImportResult importResult) {
+                classifiedBeforeRender.set(true);
+                return super.resolve(importResult);
+            }
+        };
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
+                new InMemoryHistoryRepository(),
+                path -> {
+                    assertTrue(classifiedBeforeRender.get());
+                    return new AsciiTreeDocument("root", "root\n└─ id: 1", 2);
+                },
+                resolver
+        );
+        Path importedFile = Files.writeString(tempDir.resolve("large.json"), "{\"id\":1,\"payload\":\"01234567890123456789\"}");
+
+        JsonViewerLoadResult result = workflowService.loadImportedFile(new JsonImportResult(
+                importedFile,
+                "large.json",
+                128L,
+                true,
+                true,
+                true,
+                JsonDocumentSourceKind.LOCAL_FILE
+        ));
+
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
+        assertFalse(result.capabilities().rawJsonAvailable());
+        assertFalse(result.capabilities().searchAvailable());
+    }
+
+    @Test
+    void classifiesHistoryReopenUsingStoredMetadataSize() throws IOException {
+        InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+        TrackingRendererPort renderer = new TrackingRendererPort();
+        ImportedJsonFile historyEntry = new ImportedJsonFile(
+                "2026-07-04_10-00-00_large.json",
+                "large.json",
+                Instant.parse("2026-07-04T10:00:00Z"),
+                128L,
+                3,
+                true,
+                false
+        );
+        repository.entry = historyEntry;
+        repository.storedJson = "{\"id\":1}";
+        repository.storedJsonPath =
+                Files.writeString(tempDir.resolve(historyEntry.storedName()), repository.storedJson);
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                unusedValidationPort(),
+                repository,
+                renderer,
+                inspectionModeResolver(16L)
+        );
+
+        JsonViewerLoadResult result = workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
+
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
+        assertTrue(result.capabilities().outlineAvailable());
+        assertEquals(0, renderer.fullRenderCount);
+        assertEquals(1, renderer.largePreviewRenderCount);
+    }
+
+    @Test
+    void switchesRepeatedlyBetweenFullAndLargePreviewModes() throws IOException {
+        TrackingRendererPort renderer = new TrackingRendererPort();
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                unusedValidationPort(),
+                new InMemoryHistoryRepository(),
+                renderer,
+                inspectionModeResolver(32L)
+        );
+        Path smallFile = Files.writeString(tempDir.resolve("small.json"), "{\"id\":1}");
+        Path largeFile = Files.writeString(
+                tempDir.resolve("large.json"),
+                "{\"id\":1,\"payload\":\"0123456789012345678901234567890123456789\"}");
+
+        JsonViewerLoadResult smallResult = workflowService.loadFile(smallFile);
+        JsonViewerLoadResult largeResult = workflowService.loadFile(largeFile);
+        JsonViewerLoadResult smallAgainResult = workflowService.loadFile(smallFile);
+
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, smallResult.inspectionMode());
+        assertTrue(smallResult.capabilities().rawJsonAvailable());
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, largeResult.inspectionMode());
+        assertFalse(largeResult.capabilities().searchAvailable());
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, smallAgainResult.inspectionMode());
+        assertTrue(smallAgainResult.capabilities().outlineAvailable());
+        assertEquals(2, renderer.fullRenderCount);
+        assertEquals(1, renderer.largePreviewRenderCount);
+        assertEquals(
+                com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
+                workflowService.currentView().orElseThrow().inspectionMode());
+    }
+
+    @Test
+    void returnsEmptyWhenHistorySnapshotPathIsMissing() {
+        InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+        repository.entry = new ImportedJsonFile(
+                "2026-07-04_10-00-00_missing.json",
+                "missing.json",
+                Instant.parse("2026-07-04T10:00:00Z"),
+                24L,
+                3,
+                true,
+                false
+        );
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                unusedValidationPort(),
+                repository,
+                path -> new AsciiTreeDocument("root", "root", 1),
+                inspectionModeResolver(16L)
+        );
+
+        assertTrue(workflowService.reopenHistoryEntry(repository.entry.storedName()).isEmpty());
     }
 
     private JsonValidationPort unusedValidationPort() {
@@ -96,7 +224,22 @@ class JsonViewerWorkflowServiceTest {
         return path -> null;
     }
 
+    private JsonInspectionModeResolver inspectionModeResolver(long fullRenderMaxBytes) {
+        return new JsonInspectionModeResolver(properties(fullRenderMaxBytes));
+    }
+
+    private com.davidpe.jsontree.infrastructure.config.LargePreviewProperties properties(long fullRenderMaxBytes) {
+        com.davidpe.jsontree.infrastructure.config.LargePreviewProperties properties =
+                new com.davidpe.jsontree.infrastructure.config.LargePreviewProperties();
+        properties.setFullRenderMaxBytes(fullRenderMaxBytes);
+        return properties;
+    }
+
     private static final class InMemoryHistoryRepository implements JsonHistoryRepository {
+
+        private ImportedJsonFile entry;
+        private String storedJson;
+        private Path storedJsonPath;
 
         @Override
         public List<ImportedJsonFile> findAll() {
@@ -105,12 +248,21 @@ class JsonViewerWorkflowServiceTest {
 
         @Override
         public Optional<ImportedJsonFile> findByStoredName(String storedName) {
-            return Optional.empty();
+            return Optional.ofNullable(entry).filter(existing -> existing.storedName().equals(storedName));
+        }
+
+        @Override
+        public Optional<Path> resolveStoredJsonPath(String storedName) {
+            return entry != null && entry.storedName().equals(storedName)
+                    ? Optional.ofNullable(storedJsonPath)
+                    : Optional.empty();
         }
 
         @Override
         public Optional<String> readStoredJson(String storedName) {
-            return Optional.empty();
+            return entry != null && entry.storedName().equals(storedName)
+                    ? Optional.ofNullable(storedJson)
+                    : Optional.empty();
         }
 
         @Override
@@ -124,6 +276,24 @@ class JsonViewerWorkflowServiceTest {
 
         @Override
         public void deleteByStoredName(String storedName) {
+        }
+    }
+
+    private static final class TrackingRendererPort implements AsciiTreeRendererPort {
+
+        private int fullRenderCount;
+        private int largePreviewRenderCount;
+
+        @Override
+        public AsciiTreeDocument render(Path jsonFilePath) {
+            fullRenderCount++;
+            return new AsciiTreeDocument("root", "root\n├─ full: true", 2);
+        }
+
+        @Override
+        public AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
+            largePreviewRenderCount++;
+            return new AsciiTreeDocument("root", "root\n├─ preview: true", 2);
         }
     }
 }

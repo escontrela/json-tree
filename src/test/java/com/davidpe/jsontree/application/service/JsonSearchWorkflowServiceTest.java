@@ -13,6 +13,7 @@ import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -113,7 +114,11 @@ class JsonSearchWorkflowServiceTest {
         path -> new AsciiTreeDocument("root", "root\n└─ roles [1]\n   └─ 0: \"admin\"", 3);
 
     JsonViewerWorkflowService workflowService =
-        new JsonViewerWorkflowService(validationPort, new InMemoryHistoryRepository(), rendererPort);
+        new JsonViewerWorkflowService(
+            validationPort,
+            new InMemoryHistoryRepository(),
+            rendererPort,
+            new JsonInspectionModeResolver(new LargePreviewProperties()));
     try {
       Path jsonFile =
           Files.writeString(
@@ -139,6 +144,11 @@ class JsonSearchWorkflowServiceTest {
     @Override
     public Optional<ImportedJsonFile> findByStoredName(String storedName) {
       return Optional.ofNullable(entries.get(storedName));
+    }
+
+    @Override
+    public Optional<Path> resolveStoredJsonPath(String storedName) {
+      return Optional.empty();
     }
 
     @Override

@@ -9,10 +9,16 @@ public record JsonViewerLoadResult(
         JsonImportResult importResult,
         JsonValidationResult validationResult,
         AsciiTreeDocument asciiTreeDocument,
-        ImportedJsonFile historyEntry
+        ImportedJsonFile historyEntry,
+        JsonInspectionMode inspectionMode,
+        JsonViewerCapabilities capabilities
 ) {
 
     public boolean hasRenderableTree() {
         return asciiTreeDocument != null && validationResult.valid();
+    }
+
+    public boolean usesLargePreview() {
+        return inspectionMode == JsonInspectionMode.LARGE_PREVIEW;
     }
 }

@@ -6,4 +6,8 @@ import java.nio.file.Path;
 public interface AsciiTreeRendererPort {
 
     AsciiTreeDocument render(Path jsonFilePath);
+
+    default AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
+        return render(jsonFilePath);
+    }
 }

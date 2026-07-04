@@ -16,7 +16,9 @@ import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -152,7 +154,12 @@ class ClipboardJsonImportServiceTest {
         validValidationPort(),
         new InMemoryHistoryRepository(),
         renderSimpleAsciiTree(),
+        inspectionModeResolver(),
         fixedClock());
+  }
+
+  private JsonInspectionModeResolver inspectionModeResolver() {
+    return new JsonInspectionModeResolver(new LargePreviewProperties());
   }
 
   private JsonValidationPort validValidationPort() {
@@ -227,6 +234,11 @@ class ClipboardJsonImportServiceTest {
 
     @Override
     public Optional<ImportedJsonFile> findByStoredName(String storedName) {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Path> resolveStoredJsonPath(String storedName) {
       return Optional.empty();
     }
 

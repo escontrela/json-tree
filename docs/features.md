@@ -211,3 +211,12 @@
 - The feature is available only in the all-history mode; when favorites-only mode is active, the history search controls are hidden and archive search does not execute.
 - Blank or whitespace-only search input automatically clears the active history filter and restores the standard archive summary and list state.
 - Search-specific empty states now distinguish `no stored history yet` from `no stored JSON matches this query`, while reopen, delete, import, and favorite-toggle interactions continue to refresh coherently after filtering.
+
+## Large Preview Mode
+
+- The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating JavaFX `TextFlow`, using `json-tree.large-preview.full-render-max-bytes` as the primary gate.
+- Oversized files stay on a streaming-safe path: large history reopen flows use stored snapshot paths directly, oversized validation uses streaming Jackson parsing, and the viewer renders a bounded ASCII preview instead of materializing an unlimited tree.
+- The bounded preview is explicitly limited by `preview-max-lines`, `preview-max-depth`, and `preview-max-children-per-container`, so huge payloads remain inspectable without pretending to be fully expanded.
+- `Raw JSON` and regex search are intentionally disabled in `LARGE_PREVIEW`, while the outline panel stays available through a bounded minimap derived from the visible ASCII preview rather than the full raw JSON payload.
+- Even inside allowed modes, the viewer enforces `text-node-budget` guardrails in the syntax-highlighting path. If highlighting would create too many JavaFX text nodes, rendering degrades to simplified plain text instead of risking UI freezes or heap exhaustion.
+- The operational goal is resilience, not unlimited rendering. Large-preview support exists to keep oversized JSON inspectable without crashing the app, while ordinary small files keep the richer full-feature path.
