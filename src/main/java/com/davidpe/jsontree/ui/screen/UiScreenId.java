@@ -1,7 +1,8 @@
 package com.davidpe.jsontree.ui.screen;
 
 public enum UiScreenId {
-    MAIN("/com/davidpe/jsontree/ui/main.fxml", 980, 680);
+    MAIN("/com/davidpe/jsontree/ui/main.fxml", 980, 680),
+    HISTORY("/com/davidpe/jsontree/ui/history.fxml", 980, 680);
 
     private final String fxmlPath;
     private final double width;

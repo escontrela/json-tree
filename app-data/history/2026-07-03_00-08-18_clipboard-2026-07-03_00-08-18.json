@@ -1,0 +1,14 @@
+{
+  "participants": [
+    {
+      "name": "David",
+      "surname": "Pereira",
+      "age": 50
+    },
+    {
+      "name": "Abraham",
+      "surname": "Pereira",
+      "age": 11
+    }
+  ]
+}

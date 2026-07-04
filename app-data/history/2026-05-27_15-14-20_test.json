@@ -1,0 +1,89 @@
+{
+  "app": {
+    "name": "json-tree",
+    "version": "1.0.0",
+    "theme": "dark",
+    "window": {
+      "width": 1280,
+      "height": 720,
+      "transparent": false,
+      "alwaysOnTop": false
+    }
+  },
+  "user": {
+    "id": 1842,
+    "name": "David Pereira",
+    "roles": [
+      "developer",
+      "designer",
+      "admin"
+    ],
+    "preferences": {
+      "fontSize": 14,
+      "fontFamily": "JetBrains Mono",
+      "syntaxHighlight": true,
+      "animations": {
+        "enabled": true,
+        "durationMs": 120
+      }
+    }
+  },
+  "history": [
+    {
+      "file": "bookmarks.json",
+      "sizeKb": 248,
+      "valid": true,
+      "createdAt": "2025-05-27T21:14:11Z"
+    },
+    {
+      "file": "github-stars.json",
+      "sizeKb": 512,
+      "valid": true,
+      "createdAt": "2025-05-27T21:18:42Z"
+    },
+    {
+      "file": "broken.json",
+      "sizeKb": 12,
+      "valid": false,
+      "createdAt": "2025-05-27T21:22:03Z"
+    }
+  ],
+  "features": {
+    "dragAndDrop": true,
+    "asciiTree": true,
+    "virtualScroll": false,
+    "localPersistence": true,
+    "historyView": true
+  },
+  "performance": {
+    "maxRecommendedFileMb": 25,
+    "lazyRender": true,
+    "virtualization": {
+      "enabled": false,
+      "threshold": 5000
+    }
+  },
+  "shortcuts": [
+    {
+      "action": "copyTree",
+      "keys": [
+        "CMD",
+        "C"
+      ]
+    },
+    {
+      "action": "clearViewer",
+      "keys": [
+        "CMD",
+        "BACKSPACE"
+      ]
+    },
+    {
+      "action": "openHistory",
+      "keys": [
+        "CMD",
+        "H"
+      ]
+    }
+  ]
+}

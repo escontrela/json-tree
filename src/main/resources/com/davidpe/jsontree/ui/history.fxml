@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane" prefHeight="874.0" prefWidth="1114.0" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.HistoryScreenController">
+    <top>
+        <VBox spacing="0.0" styleClass="workspace-header">
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="header-bar">
+                <VBox spacing="8.0">
+                    <Label styleClass="eyebrow-label" text="Local archive" />
+                    <Label styleClass="app-title" text="JSON History" />
+                    <Label styleClass="hero-support" text="Review previous inspections, reopen stored trees, and manage local snapshots." wrapText="true" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <VBox alignment="CENTER_RIGHT" spacing="12.0">
+                    <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="&lt;&lt; Back" />
+                    <Label styleClass="hero-meta" text="Filesystem-backed timeline" />
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="24.0" styleClass="file-bar">
+                <VBox spacing="6.0">
+                    <Label styleClass="eyebrow-label" text="Stored inspections" />
+                    <Label fx:id="historyMetaLabel" styleClass="file-name" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <VBox alignment="CENTER_RIGHT" spacing="6.0" />
+            </HBox>
+        </VBox>
+    </top>
+    <center>
+        <VBox spacing="0.0" styleClass="main-content-shell">
+            <padding>
+                <Insets bottom="0.0" left="24.0" right="24.0" top="0.0" />
+            </padding>
+            <StackPane styleClass="workspace-overlay-shell">
+                <padding>
+                    <Insets bottom="24.0" left="0.0" right="0.0" top="24.0" />
+                </padding>
+                <VBox spacing="20.0" styleClass="viewer-content">
+                    <padding>
+                        <Insets bottom="32.0" left="32.0" right="32.0" top="32.0" />
+                    </padding>
+                    <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-card-header">
+                        <VBox spacing="6.0">
+                            <Label styleClass="eyebrow-label" text="Timeline" />
+                            <Label styleClass="viewer-card-title" text="Stored JSON inspections" />
+                        </VBox>
+                        <HBox fx:id="storedInspectionsRegion" alignment="CENTER_RIGHT" spacing="8.0" HBox.hgrow="ALWAYS">
+                            <HBox fx:id="historySearchControlsBox" alignment="CENTER_RIGHT" spacing="8.0">
+                                <TextField fx:id="historySearchField" onAction="#executeHistorySearch" prefWidth="220.0" promptText="Search stored JSON" styleClass="history-search-field" />
+                                <Button fx:id="historySearchButton" mnemonicParsing="false" onAction="#executeHistorySearch" styleClass="ghost-button history-search-button" text="Search" />
+                            </HBox>
+                            <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="history-import-button" text="Import JSON" />
+                            <Button fx:id="favoritesFilterButton" mnemonicParsing="false" onAction="#toggleFavoritesOnly" styleClass="ghost-button history-filter-button" text="Favorites only" />
+                        </HBox>
+                    </HBox>
+                    <Region styleClass="viewer-divider" />
+                    <Label fx:id="historyImportFeedbackLabel" managed="false" styleClass="viewer-card-meta history-import-feedback" visible="false" wrapText="true" />
+                    <Label fx:id="emptyHistoryLabel" styleClass="empty-state" wrapText="true" />
+                    <ListView fx:id="historyListView" prefHeight="520.0" visible="false" />
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+</BorderPane>
