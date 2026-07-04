@@ -54,7 +54,7 @@
                             <Label styleClass="viewer-card-title" text="Stored JSON inspections" />
                         </VBox>
                         <HBox fx:id="storedInspectionsRegion" alignment="CENTER_RIGHT" spacing="8.0" HBox.hgrow="ALWAYS">
-                            <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="ghost-button" text="Import JSON" />
+                            <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="history-import-button" text="Import JSON" />
                             <Button fx:id="favoritesFilterButton" mnemonicParsing="false" onAction="#toggleFavoritesOnly" styleClass="ghost-button history-filter-button" text="Favorites only" />
                         </HBox>
                     </HBox>

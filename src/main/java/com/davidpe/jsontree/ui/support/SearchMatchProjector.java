@@ -10,10 +10,19 @@ import org.springframework.stereotype.Component;
 public class SearchMatchProjector {
 
   public List<SearchHighlightRange> rawRanges(JsonSearchSession session) {
+    return rawRanges(session, null);
+  }
+
+  public List<SearchHighlightRange> rawRanges(
+      JsonSearchSession session,
+      int[] sourceToDisplayBoundaries
+  ) {
     List<SearchHighlightRange> ranges = new ArrayList<>();
     for (int index = 0; index < session.matches().size(); index++) {
       JsonSearchMatch match = session.matches().get(index);
-      ranges.add(new SearchHighlightRange(match.startIndex(), match.endIndex(), index == session.activeMatchIndex()));
+      int projectedStart = projectBoundary(match.startIndex(), sourceToDisplayBoundaries);
+      int projectedEnd = projectBoundary(match.endIndex(), sourceToDisplayBoundaries);
+      ranges.add(new SearchHighlightRange(projectedStart, projectedEnd, index == session.activeMatchIndex()));
     }
     return ranges;
   }
@@ -37,5 +46,12 @@ public class SearchMatchProjector {
       searchFrom = projectedEnd;
     }
     return ranges;
+  }
+
+  private int projectBoundary(int sourceIndex, int[] sourceToDisplayBoundaries) {
+    if (sourceToDisplayBoundaries == null || sourceIndex < 0 || sourceIndex >= sourceToDisplayBoundaries.length) {
+      return sourceIndex;
+    }
+    return sourceToDisplayBoundaries[sourceIndex];
   }
 }

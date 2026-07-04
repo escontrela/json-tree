@@ -5,12 +5,14 @@ import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.JsonSearchWorkflowService;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
+import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
@@ -95,6 +97,7 @@ public class MainWindowController implements UiScreenController {
   private final OutlineMinimapScrollMapper outlineScrollMapper;
   private final OutlineViewportProjector outlineViewportProjector;
   private final JsonSearchWorkflowService searchWorkflowService;
+  private final RawJsonPresentationService rawJsonPresentationService;
   private final ClipboardPort clipboardPort;
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
@@ -113,6 +116,7 @@ public class MainWindowController implements UiScreenController {
       OutlineMinimapScrollMapper outlineScrollMapper,
       OutlineViewportProjector outlineViewportProjector,
       JsonSearchWorkflowService searchWorkflowService,
+      RawJsonPresentationService rawJsonPresentationService,
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
       SearchMatchProjector searchMatchProjector,
@@ -129,6 +133,7 @@ public class MainWindowController implements UiScreenController {
     this.outlineScrollMapper = outlineScrollMapper;
     this.outlineViewportProjector = outlineViewportProjector;
     this.searchWorkflowService = searchWorkflowService;
+    this.rawJsonPresentationService = rawJsonPresentationService;
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
     this.searchMatchProjector = searchMatchProjector;
@@ -221,6 +226,7 @@ public class MainWindowController implements UiScreenController {
   private String currentViewIdentity;
   private boolean windowMetricsLoggingAttached;
   private boolean showingRawJson = false;
+  private RawJsonPresentation currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentOutlineSourceIdentity;
@@ -980,6 +986,7 @@ public class MainWindowController implements UiScreenController {
     rawJsonContentFlow.setVisible(false);
     rawJsonButton.setText("Raw JSON");
     showingRawJson = false;
+    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
   }
 
   private void setValidationBadge(String text, String styleClass) {
@@ -1159,8 +1166,13 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void renderRawJsonContent(String rawJson) {
+    currentRawJsonPresentation = rawJsonPresentationService.present(rawJson);
     searchTextFlowHighlighter.appendHighlightedText(
-        rawJsonContentFlow, rawJson, currentRawHighlightRanges(), "raw-json-text", "#2d333a");
+        rawJsonContentFlow,
+        currentRawJsonPresentation.content(),
+        currentRawHighlightRanges(),
+        "raw-json-text",
+        "#2d333a");
     treeContentFlow.setManaged(false);
     treeContentFlow.setVisible(false);
     rawJsonContentFlow.setManaged(true);
@@ -1184,7 +1196,10 @@ public class MainWindowController implements UiScreenController {
     return searchWorkflowService
         .currentSession()
         .filter(JsonSearchSession::hasMatches)
-        .map(searchMatchProjector::rawRanges)
+        .map(
+            session ->
+                searchMatchProjector.rawRanges(
+                    session, currentRawJsonPresentation.sourceToDisplayBoundaries()))
         .orElse(List.of());
   }
 

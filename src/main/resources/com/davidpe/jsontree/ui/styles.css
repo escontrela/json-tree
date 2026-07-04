@@ -468,6 +468,24 @@
     -fx-border-color: #004a9f;
 }
 
+.history-import-button {
+    -fx-background-color: #1c69d4;
+    -fx-border-color: #1c69d4;
+    -fx-border-width: 1;
+    -fx-padding: 10 16 10 16;
+    -fx-text-fill: #ffffff;
+}
+
+.history-import-button:hover {
+    -fx-background-color: #0653b6;
+    -fx-border-color: #0653b6;
+}
+
+.history-import-button:pressed {
+    -fx-background-color: #004a9f;
+    -fx-border-color: #004a9f;
+}
+
 .search-strip-button {
     -fx-padding: 8 12 8 12;
 }
