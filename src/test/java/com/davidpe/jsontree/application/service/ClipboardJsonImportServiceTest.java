@@ -16,6 +16,7 @@ import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
@@ -152,7 +153,12 @@ class ClipboardJsonImportServiceTest {
         validValidationPort(),
         new InMemoryHistoryRepository(),
         renderSimpleAsciiTree(),
+        inspectionModeResolver(),
         fixedClock());
+  }
+
+  private JsonInspectionModeResolver inspectionModeResolver() {
+    return new JsonInspectionModeResolver(new LargePreviewProperties());
   }
 
   private JsonValidationPort validValidationPort() {

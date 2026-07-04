@@ -9,6 +9,7 @@ import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
 import com.davidpe.jsontree.application.port.out.JsonFileChooserPort;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.infrastructure.rendering.JacksonAsciiTreeFormatter;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.davidpe.jsontree.infrastructure.validation.JacksonJsonValidationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -106,7 +107,12 @@ class HistoryJsonImportServiceTest {
         new JacksonJsonValidationService(objectMapper),
         historyRepository,
         new JacksonAsciiTreeFormatter(objectMapper),
+        inspectionModeResolver(),
         fixedClock());
+  }
+
+  private JsonInspectionModeResolver inspectionModeResolver() {
+    return new JsonInspectionModeResolver(new LargePreviewProperties());
   }
 
   private Clock fixedClock() {

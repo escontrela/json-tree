@@ -2,6 +2,7 @@ package com.davidpe.jsontree.application.service;
 
 import com.davidpe.jsontree.application.model.HistoryJsonImportResult;
 import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
+import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.in.OpenHistoryUseCase;
@@ -39,6 +40,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   private final JsonValidationPort validationPort;
   private final JsonHistoryRepository jsonHistoryRepository;
   private final AsciiTreeRendererPort asciiTreeRendererPort;
+  private final JsonInspectionModeResolver inspectionModeResolver;
   private final Clock clock;
 
   private JsonViewerLoadResult currentView;
@@ -47,18 +49,26 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   public JsonViewerWorkflowService(
       JsonValidationPort validationPort,
       JsonHistoryRepository jsonHistoryRepository,
-      AsciiTreeRendererPort asciiTreeRendererPort) {
-    this(validationPort, jsonHistoryRepository, asciiTreeRendererPort, Clock.systemDefaultZone());
+      AsciiTreeRendererPort asciiTreeRendererPort,
+      JsonInspectionModeResolver inspectionModeResolver) {
+    this(
+        validationPort,
+        jsonHistoryRepository,
+        asciiTreeRendererPort,
+        inspectionModeResolver,
+        Clock.systemDefaultZone());
   }
 
   JsonViewerWorkflowService(
       JsonValidationPort validationPort,
       JsonHistoryRepository jsonHistoryRepository,
       AsciiTreeRendererPort asciiTreeRendererPort,
+      JsonInspectionModeResolver inspectionModeResolver,
       Clock clock) {
     this.validationPort = validationPort;
     this.jsonHistoryRepository = jsonHistoryRepository;
     this.asciiTreeRendererPort = asciiTreeRendererPort;
+    this.inspectionModeResolver = inspectionModeResolver;
     this.clock = clock;
   }
 
@@ -112,6 +122,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   }
 
   public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult) {
+    JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(importResult);
     if (!importResult.available()) {
       JsonViewerLoadResult unavailableResult =
           new JsonViewerLoadResult(
@@ -119,7 +130,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
               new JsonValidationResult(
                   JsonValidationStatus.PARSING_ERROR, "JSON file is not available.", null, null),
               null,
-              null);
+              null,
+              inspectionMode);
       currentView = unavailableResult;
       return unavailableResult;
     }
@@ -135,7 +147,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     JsonViewerLoadResult loadResult =
-        new JsonViewerLoadResult(importResult, validationResult, asciiTreeDocument, historyEntry);
+        new JsonViewerLoadResult(
+            importResult, validationResult, asciiTreeDocument, historyEntry, inspectionMode);
     currentView = loadResult;
     return loadResult;
   }
@@ -150,6 +163,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     if (historyEntry.isEmpty() || storedJson.isEmpty()) {
       return Optional.empty();
     }
+    JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(historyEntry.get());
 
     Path virtualPath = Path.of(historyEntry.get().storedName());
     JsonImportResult importResult =
@@ -168,7 +182,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         asciiTreeRendererPort.render(writeTempSnapshot(storedJson.get(), storedName));
     JsonViewerLoadResult loadResult =
         new JsonViewerLoadResult(
-            importResult, validationResult, asciiTreeDocument, historyEntry.get());
+            importResult,
+            validationResult,
+            asciiTreeDocument,
+            historyEntry.get(),
+            inspectionMode);
     currentView = loadResult;
     return Optional.of(loadResult);
   }

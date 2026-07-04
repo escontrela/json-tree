@@ -18,8 +18,10 @@ import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,7 +30,8 @@ class JsonViewerWorkflowServiceTest {
     private final JsonViewerWorkflowService service = new JsonViewerWorkflowService(
             unusedValidationPort(),
             new InMemoryHistoryRepository(),
-            unusedRendererPort()
+            unusedRendererPort(),
+            inspectionModeResolver(1024L)
     );
 
     @TempDir
@@ -69,7 +72,8 @@ class JsonViewerWorkflowServiceTest {
         JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
                 path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
                 new InMemoryHistoryRepository(),
-                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2)
+                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2),
+                inspectionModeResolver(1024L)
         );
         Path importedFile = Files.writeString(tempDir.resolve("imported.json"), "{\"id\":1}");
 
@@ -86,6 +90,67 @@ class JsonViewerWorkflowServiceTest {
         assertTrue(result.validationResult().valid());
         assertTrue(result.hasRenderableTree());
         assertEquals("imported.json", result.importResult().fileName());
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, result.inspectionMode());
+    }
+
+    @Test
+    void classifiesLargeFilesBeforeRendering() throws IOException {
+        AtomicBoolean classifiedBeforeRender = new AtomicBoolean(false);
+        JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(properties(16L)) {
+            @Override
+            public com.davidpe.jsontree.application.model.JsonInspectionMode resolve(JsonImportResult importResult) {
+                classifiedBeforeRender.set(true);
+                return super.resolve(importResult);
+            }
+        };
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                path -> new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
+                new InMemoryHistoryRepository(),
+                path -> {
+                    assertTrue(classifiedBeforeRender.get());
+                    return new AsciiTreeDocument("root", "root\n└─ id: 1", 2);
+                },
+                resolver
+        );
+        Path importedFile = Files.writeString(tempDir.resolve("large.json"), "{\"id\":1,\"payload\":\"01234567890123456789\"}");
+
+        JsonViewerLoadResult result = workflowService.loadImportedFile(new JsonImportResult(
+                importedFile,
+                "large.json",
+                128L,
+                true,
+                true,
+                true,
+                JsonDocumentSourceKind.LOCAL_FILE
+        ));
+
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
+    }
+
+    @Test
+    void classifiesHistoryReopenUsingStoredMetadataSize() throws IOException {
+        InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+        ImportedJsonFile historyEntry = new ImportedJsonFile(
+                "2026-07-04_10-00-00_large.json",
+                "large.json",
+                Instant.parse("2026-07-04T10:00:00Z"),
+                128L,
+                3,
+                true,
+                false
+        );
+        repository.entry = historyEntry;
+        repository.storedJson = "{\"id\":1}";
+        JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
+                unusedValidationPort(),
+                repository,
+                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2),
+                inspectionModeResolver(16L)
+        );
+
+        JsonViewerLoadResult result = workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
+
+        assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
     }
 
     private JsonValidationPort unusedValidationPort() {
@@ -96,7 +161,21 @@ class JsonViewerWorkflowServiceTest {
         return path -> null;
     }
 
+    private JsonInspectionModeResolver inspectionModeResolver(long fullRenderMaxBytes) {
+        return new JsonInspectionModeResolver(properties(fullRenderMaxBytes));
+    }
+
+    private com.davidpe.jsontree.infrastructure.config.LargePreviewProperties properties(long fullRenderMaxBytes) {
+        com.davidpe.jsontree.infrastructure.config.LargePreviewProperties properties =
+                new com.davidpe.jsontree.infrastructure.config.LargePreviewProperties();
+        properties.setFullRenderMaxBytes(fullRenderMaxBytes);
+        return properties;
+    }
+
     private static final class InMemoryHistoryRepository implements JsonHistoryRepository {
+
+        private ImportedJsonFile entry;
+        private String storedJson;
 
         @Override
         public List<ImportedJsonFile> findAll() {
@@ -105,12 +184,14 @@ class JsonViewerWorkflowServiceTest {
 
         @Override
         public Optional<ImportedJsonFile> findByStoredName(String storedName) {
-            return Optional.empty();
+            return Optional.ofNullable(entry).filter(existing -> existing.storedName().equals(storedName));
         }
 
         @Override
         public Optional<String> readStoredJson(String storedName) {
-            return Optional.empty();
+            return entry != null && entry.storedName().equals(storedName)
+                    ? Optional.ofNullable(storedJson)
+                    : Optional.empty();
         }
 
         @Override

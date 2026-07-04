@@ -9,3 +9,9 @@ json-tree:
     root-directory: app-data
     history-directory-name: history
     metadata-file-name: metadata.json
+  large-preview:
+    full-render-max-bytes: 1048576
+    preview-max-lines: 400
+    preview-max-depth: 8
+    preview-max-children-per-container: 64
+    text-node-budget: 12000
