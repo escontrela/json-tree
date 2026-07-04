@@ -46,4 +46,28 @@
   "lineCount" : 10,
   "valid" : true,
   "favorite" : true
+}, {
+  "storedName" : "2026-07-04_10-54-35_Chess-Game-Dataset_1-level_12-MB_minified.json",
+  "originalName" : "Chess-Game-Dataset_1-level_12-MB_minified.json",
+  "importedAt" : 1783155275.018568000,
+  "sizeBytes" : 12907632,
+  "lineCount" : 340987,
+  "valid" : true,
+  "favorite" : false
+}, {
+  "storedName" : "2026-07-04_10-56-23_Chess-Game-Dataset_1-level_1-MB_minified.json",
+  "originalName" : "Chess-Game-Dataset_1-level_1-MB_minified.json",
+  "importedAt" : 1783155383.393047000,
+  "sizeBytes" : 1050131,
+  "lineCount" : 28136,
+  "valid" : true,
+  "favorite" : false
+}, {
+  "storedName" : "2026-07-04_11-00-30_Chess-Game-Dataset_1-level_10-KB_minified.json",
+  "originalName" : "Chess-Game-Dataset_1-level_10-KB_minified.json",
+  "importedAt" : 1783155630.095207000,
+  "sizeBytes" : 10001,
+  "lineCount" : 290,
+  "valid" : true,
+  "favorite" : true
 } ]
