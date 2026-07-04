@@ -338,6 +338,14 @@
     -fx-font-weight: 400;
 }
 
+.history-import-feedback {
+    -fx-padding: 0 0 4 0;
+}
+
+.history-import-feedback.history-import-feedback-error {
+    -fx-text-fill: #9e281f;
+}
+
 .history-entry-title {
     -fx-text-fill: #1a2129;
     -fx-font-size: 15px;

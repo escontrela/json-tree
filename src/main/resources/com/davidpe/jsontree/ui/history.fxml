@@ -54,10 +54,12 @@
                             <Label styleClass="viewer-card-title" text="Stored JSON inspections" />
                         </VBox>
                         <HBox fx:id="storedInspectionsRegion" alignment="CENTER_RIGHT" spacing="8.0" HBox.hgrow="ALWAYS">
+                            <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="ghost-button" text="Import JSON" />
                             <Button fx:id="favoritesFilterButton" mnemonicParsing="false" onAction="#toggleFavoritesOnly" styleClass="ghost-button history-filter-button" text="Favorites only" />
                         </HBox>
                     </HBox>
                     <Region styleClass="viewer-divider" />
+                    <Label fx:id="historyImportFeedbackLabel" managed="false" styleClass="viewer-card-meta history-import-feedback" visible="false" wrapText="true" />
                     <Label fx:id="emptyHistoryLabel" styleClass="empty-state" wrapText="true" />
                     <ListView fx:id="historyListView" prefHeight="520.0" visible="false" />
                 </VBox>

@@ -1,5 +1,7 @@
 package com.davidpe.jsontree.application.service;
 
+import com.davidpe.jsontree.application.model.HistoryJsonImportResult;
+import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.in.OpenHistoryUseCase;
@@ -80,6 +82,33 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   public JsonViewerLoadResult loadFile(Path jsonFilePath) {
     JsonImportResult importResult = importFile(jsonFilePath);
     return loadImportedFile(importResult);
+  }
+
+  public HistoryJsonImportResult importIntoHistory(JsonImportResult importResult) {
+    if (!importResult.available()) {
+      return HistoryJsonImportResult.failure(
+          HistoryJsonImportStatus.UNREADABLE_FILE,
+          "Selected JSON file is not available.");
+    }
+
+    JsonValidationResult validationResult = validationPort.validate(importResult.path());
+    if (validationResult.status() == JsonValidationStatus.EMPTY) {
+      return HistoryJsonImportResult.failure(
+          HistoryJsonImportStatus.EMPTY_JSON,
+          "Selected JSON file is empty.");
+    }
+    if (!validationResult.valid()) {
+      return HistoryJsonImportResult.failure(
+          validationResult.status() == JsonValidationStatus.INVALID
+              ? HistoryJsonImportStatus.INVALID_JSON
+              : HistoryJsonImportStatus.UNREADABLE_FILE,
+          composeValidationMessage(validationResult));
+    }
+
+    AsciiTreeDocument asciiTreeDocument = asciiTreeRendererPort.render(importResult.path());
+    ImportedJsonFile historyEntry = createHistoryEntry(importResult, asciiTreeDocument);
+    jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
+    return HistoryJsonImportResult.imported(historyEntry);
   }
 
   public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult) {
@@ -231,6 +260,18 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     } catch (IOException exception) {
       throw new IllegalStateException("Unable to read JSON file: " + path, exception);
     }
+  }
+
+  private String composeValidationMessage(JsonValidationResult validationResult) {
+    if (validationResult.line() == null || validationResult.column() == null) {
+      return validationResult.message();
+    }
+    return validationResult.message()
+        + " (line "
+        + validationResult.line()
+        + ", column "
+        + validationResult.column()
+        + ")";
   }
 
   private Path writeTempSnapshot(String content, String storedName) {

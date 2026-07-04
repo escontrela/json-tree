@@ -1,5 +1,8 @@
 package com.davidpe.jsontree.ui.controller;
 
+import com.davidpe.jsontree.application.model.HistoryJsonImportResult;
+import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
+import com.davidpe.jsontree.application.port.in.ImportHistoryJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ToggleHistoryFavoriteUseCase;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
@@ -42,6 +45,7 @@ public class HistoryScreenController implements UiScreenController {
           .withZone(ZoneId.systemDefault());
 
   private final JsonViewerWorkflowService workflowService;
+  private final ImportHistoryJsonUseCase importHistoryJsonUseCase;
   private final ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase;
   private final HistoryFavoritePresentationResolver historyFavoritePresentationResolver;
   private final HistoryFavoritesViewStateResolver historyFavoritesViewStateResolver;
@@ -50,11 +54,13 @@ public class HistoryScreenController implements UiScreenController {
 
   public HistoryScreenController(
       JsonViewerWorkflowService workflowService,
+      ImportHistoryJsonUseCase importHistoryJsonUseCase,
       ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase,
       HistoryFavoritePresentationResolver historyFavoritePresentationResolver,
       HistoryFavoritesViewStateResolver historyFavoritesViewStateResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.workflowService = workflowService;
+    this.importHistoryJsonUseCase = importHistoryJsonUseCase;
     this.toggleHistoryFavoriteUseCase = toggleHistoryFavoriteUseCase;
     this.historyFavoritePresentationResolver = historyFavoritePresentationResolver;
     this.historyFavoritesViewStateResolver = historyFavoritesViewStateResolver;
@@ -73,11 +79,16 @@ public class HistoryScreenController implements UiScreenController {
 
   @FXML private Button favoritesFilterButton;
 
+  @FXML private Button importJsonButton;
+
+  @FXML private Label historyImportFeedbackLabel;
+
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
     historyListView.setCellFactory(unused -> new HistoryEntryListCell());
     applyFavoritesFilterButtonStyle(false);
+    hideImportFeedback();
   }
 
   @Override
@@ -88,6 +99,7 @@ public class HistoryScreenController implements UiScreenController {
     historyMetaLabel.setText(viewState.summaryLabel());
     favoritesFilterButton.setText(viewState.toggleButtonText());
     applyFavoritesFilterButtonStyle(viewState.favoritesOnly());
+    syncImportButtonVisibility(viewState.favoritesOnly());
 
     if (viewState.visibleEntries().isEmpty()) {
       historyListView.getItems().clear();
@@ -117,6 +129,27 @@ public class HistoryScreenController implements UiScreenController {
     onShow();
   }
 
+  @FXML
+  void importJson() {
+    HistoryJsonImportResult result = importHistoryJsonUseCase.importFromDisk();
+    if (result.status() == HistoryJsonImportStatus.CANCELLED) {
+      return;
+    }
+
+    if (result.successful()) {
+      showImportFeedback(
+          "Imported " + result.importedEntry().originalName() + " into history.",
+          false);
+      onShow();
+      historyListView.getSelectionModel().select(result.importedEntry());
+      historyListView.scrollTo(result.importedEntry());
+      return;
+    }
+
+    showImportFeedback(result.message(), true);
+    onShow();
+  }
+
   private void applyFavoritesFilterButtonStyle(boolean active) {
     ObservableList<String> styleClasses = favoritesFilterButton.getStyleClass();
     if (!styleClasses.contains("ghost-button")) {
@@ -129,6 +162,28 @@ public class HistoryScreenController implements UiScreenController {
     if (active) {
       styleClasses.addAll("primary-button", "history-filter-button-active");
     }
+  }
+
+  private void syncImportButtonVisibility(boolean favoritesOnlyActive) {
+    importJsonButton.setManaged(!favoritesOnlyActive);
+    importJsonButton.setVisible(!favoritesOnlyActive);
+  }
+
+  private void showImportFeedback(String message, boolean error) {
+    historyImportFeedbackLabel.setText(message);
+    historyImportFeedbackLabel.setManaged(true);
+    historyImportFeedbackLabel.setVisible(true);
+    ObservableList<String> styleClasses = historyImportFeedbackLabel.getStyleClass();
+    styleClasses.remove("history-import-feedback-error");
+    if (error) {
+      styleClasses.add("history-import-feedback-error");
+    }
+  }
+
+  private void hideImportFeedback() {
+    historyImportFeedbackLabel.setManaged(false);
+    historyImportFeedbackLabel.setVisible(false);
+    historyImportFeedbackLabel.getStyleClass().remove("history-import-feedback-error");
   }
 
   private void reopenEntry(ImportedJsonFile entry) {
