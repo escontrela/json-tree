@@ -6,10 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.HistoryJsonImportResult;
 import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
-import com.davidpe.jsontree.application.port.out.JsonFileChooserPort;
+import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
+import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
-import com.davidpe.jsontree.infrastructure.rendering.JacksonAsciiTreeFormatter;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
+import com.davidpe.jsontree.infrastructure.rendering.JacksonAsciiTreeFormatter;
 import com.davidpe.jsontree.infrastructure.validation.JacksonJsonValidationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -101,18 +102,41 @@ class HistoryJsonImportServiceTest {
     assertEquals(HistoryJsonImportStatus.EMPTY_JSON, result.status());
   }
 
-  private JsonViewerWorkflowService viewerWorkflowService(InMemoryHistoryRepository historyRepository) {
-    ObjectMapper objectMapper = new ObjectMapper();
-    return new JsonViewerWorkflowService(
-        new JacksonJsonValidationService(objectMapper),
-        historyRepository,
-        new JacksonAsciiTreeFormatter(objectMapper),
-        inspectionModeResolver(),
-        fixedClock());
+  @Test
+  void importsOversizedJsonIntoHistoryThroughLargePreviewRendererPath() throws IOException {
+    Path largeJson = tempDir.resolve("oversized.json");
+    Files.writeString(largeJson, "{\"payload\":\"012345678901234567890123456789\"}");
+    InMemoryHistoryRepository historyRepository = new InMemoryHistoryRepository();
+    TrackingRendererPort rendererPort = new TrackingRendererPort();
+    JsonViewerWorkflowService workflowService = viewerWorkflowService(historyRepository, rendererPort, 8L);
+
+    HistoryJsonImportResult result =
+        new HistoryJsonImportService(() -> Optional.of(largeJson), workflowService).importFromDisk();
+
+    assertTrue(result.successful());
+    assertTrue(rendererPort.largePreviewUsed);
   }
 
-  private JsonInspectionModeResolver inspectionModeResolver() {
-    return new JsonInspectionModeResolver(new LargePreviewProperties());
+  private JsonViewerWorkflowService viewerWorkflowService(InMemoryHistoryRepository historyRepository) {
+    return viewerWorkflowService(
+        historyRepository,
+        new JacksonAsciiTreeFormatter(new ObjectMapper()),
+        Long.MAX_VALUE);
+  }
+
+  private JsonViewerWorkflowService viewerWorkflowService(
+      InMemoryHistoryRepository historyRepository,
+      AsciiTreeRendererPort rendererPort,
+      long fullRenderMaxBytes) {
+    ObjectMapper objectMapper = new ObjectMapper();
+    LargePreviewProperties properties = new LargePreviewProperties();
+    properties.setFullRenderMaxBytes(fullRenderMaxBytes);
+    return new JsonViewerWorkflowService(
+        new JacksonJsonValidationService(objectMapper, properties),
+        historyRepository,
+        rendererPort,
+        new JsonInspectionModeResolver(properties),
+        fixedClock());
   }
 
   private Clock fixedClock() {
@@ -158,6 +182,22 @@ class HistoryJsonImportServiceTest {
     @Override
     public void deleteByStoredName(String storedName) {
       entries.removeIf(existing -> existing.storedName().equals(storedName));
+    }
+  }
+
+  private static final class TrackingRendererPort implements AsciiTreeRendererPort {
+
+    private boolean largePreviewUsed;
+
+    @Override
+    public AsciiTreeDocument render(Path jsonFilePath) {
+      return new AsciiTreeDocument("root", "root\n├─ full: true", 2);
+    }
+
+    @Override
+    public AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
+      largePreviewUsed = true;
+      return new AsciiTreeDocument("root", "root\n├─ preview: true", 2);
     }
   }
 }

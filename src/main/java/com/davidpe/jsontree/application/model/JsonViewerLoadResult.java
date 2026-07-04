@@ -10,7 +10,8 @@ public record JsonViewerLoadResult(
         JsonValidationResult validationResult,
         AsciiTreeDocument asciiTreeDocument,
         ImportedJsonFile historyEntry,
-        JsonInspectionMode inspectionMode
+        JsonInspectionMode inspectionMode,
+        JsonViewerCapabilities capabilities
 ) {
 
     public boolean hasRenderableTree() {

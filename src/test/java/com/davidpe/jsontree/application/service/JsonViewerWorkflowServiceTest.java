@@ -91,6 +91,8 @@ class JsonViewerWorkflowServiceTest {
         assertTrue(result.hasRenderableTree());
         assertEquals("imported.json", result.importResult().fileName());
         assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.FULL, result.inspectionMode());
+        assertTrue(result.capabilities().rawJsonAvailable());
+        assertTrue(result.capabilities().searchAvailable());
     }
 
     @Test
@@ -125,6 +127,8 @@ class JsonViewerWorkflowServiceTest {
         ));
 
         assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
+        assertFalse(result.capabilities().rawJsonAvailable());
+        assertFalse(result.capabilities().searchAvailable());
     }
 
     @Test
@@ -146,13 +150,14 @@ class JsonViewerWorkflowServiceTest {
         JsonViewerWorkflowService workflowService = new JsonViewerWorkflowService(
                 unusedValidationPort(),
                 repository,
-                path -> new AsciiTreeDocument("root", "root\n└─ id: 1", 2),
+                new TrackingRendererPort(),
                 inspectionModeResolver(16L)
         );
 
         JsonViewerLoadResult result = workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
 
         assertEquals(com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW, result.inspectionMode());
+        assertFalse(result.capabilities().outlineAvailable());
     }
 
     @Test
@@ -237,6 +242,19 @@ class JsonViewerWorkflowServiceTest {
 
         @Override
         public void deleteByStoredName(String storedName) {
+        }
+    }
+
+    private static final class TrackingRendererPort implements AsciiTreeRendererPort {
+
+        @Override
+        public AsciiTreeDocument render(Path jsonFilePath) {
+            throw new AssertionError("Large-preview history reopen must not use full render path.");
+        }
+
+        @Override
+        public AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
+            return new AsciiTreeDocument("root", "root\n├─ preview: true", 2);
         }
     }
 }
