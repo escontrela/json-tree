@@ -36,6 +36,8 @@ import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
+import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
+import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
@@ -105,6 +107,7 @@ public class MainWindowController implements UiScreenController {
   private final SearchTextFlowHighlighter searchTextFlowHighlighter;
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
+  private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
@@ -123,6 +126,7 @@ public class MainWindowController implements UiScreenController {
       SearchTextFlowHighlighter searchTextFlowHighlighter,
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
+      ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
@@ -140,6 +144,7 @@ public class MainWindowController implements UiScreenController {
     this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
+    this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -198,6 +203,10 @@ public class MainWindowController implements UiScreenController {
   @FXML private Button rawJsonButton;
 
   @FXML private Button searchButton;
+
+  @FXML private Button copyTreeButton;
+
+  @FXML private Button outlineToggleButton;
 
   @FXML private Button previousSearchButton;
 
@@ -515,8 +524,9 @@ public class MainWindowController implements UiScreenController {
     restoreViewFromWorkflow();
   }
 
-  public void renderAsciiTree(AsciiTreeDocument document) {
-    syncOutlineModelWithCurrentView();
+  public void renderAsciiTree(JsonViewerLoadResult result) {
+    AsciiTreeDocument document = result.asciiTreeDocument();
+    applyCapabilityPresentation(result);
     resetViewModeIfNeeded();
     syntaxHighlighter.appendHighlightedContent(
         treeContentFlow, document, currentAsciiHighlightRanges(document));
@@ -526,22 +536,18 @@ public class MainWindowController implements UiScreenController {
     rawJsonContentFlow.setVisible(false);
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    showOutlineValidShell(document);
-    setValidationBadge("Valid", "status-valid");
-    footerStatusLabel.setText("Rendered " + document.lineCount() + " lines");
-    statusStateValueLabel.setText("VALID");
+    updateOutlineShell(result, document);
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
-    rawJsonButton.setDisable(false);
-    searchButton.setDisable(false);
   }
 
   public void showEmptyViewer() {
     resetOutlineModel();
     currentLoadedAt = null;
     currentViewIdentity = null;
+    resetToolbarForNonRenderableState();
     updateFileNameLabel("No file loaded");
     fileMetaLabel.setText("Drop a JSON anywhere in the window");
     fileLoadedAtValueLabel.setText("Not loaded");
@@ -557,8 +563,6 @@ public class MainWindowController implements UiScreenController {
     footerStatusLabel.setText("No JSON loaded");
     setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
     viewerContentBox.autosize();
-    rawJsonButton.setDisable(true);
-    searchButton.setDisable(true);
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
@@ -583,6 +587,7 @@ public class MainWindowController implements UiScreenController {
     resetOutlineModel();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
+    resetToolbarForNonRenderableState();
     updateFileNameLabel(fileName);
     fileMetaLabel.setText("Preparing JSON preview");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
@@ -601,8 +606,6 @@ public class MainWindowController implements UiScreenController {
     treeContentFlow.setVisible(false);
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
-    rawJsonButton.setDisable(true);
-    searchButton.setDisable(true);
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
@@ -612,6 +615,7 @@ public class MainWindowController implements UiScreenController {
 
   public void showInvalidState(String message) {
     resetOutlineModel();
+    resetToolbarForNonRenderableState();
     showOutlineShellState(
         "Outline unavailable",
         "The current JSON payload cannot produce an outline minimap.",
@@ -628,8 +632,6 @@ public class MainWindowController implements UiScreenController {
     treeContentFlow.setVisible(false);
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
-    rawJsonButton.setDisable(true);
-    searchButton.setDisable(true);
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
@@ -748,13 +750,17 @@ public class MainWindowController implements UiScreenController {
   private void presentLoadResult(JsonViewerLoadResult result) {
     updateFileSummary(result);
     searchWorkflowService.clearIfSourceChanged(currentViewIdentity(result));
+    if (!result.capabilities().searchAvailable()) {
+      searchWorkflowService.clear();
+      hideSearchModal();
+    }
     syncActiveSearchStrip();
     syncStatusRail(result);
     refreshInlineHistory();
 
     JsonValidationResult validationResult = result.validationResult();
     if (validationResult.status() == JsonValidationStatus.VALID && result.hasRenderableTree()) {
-      renderAsciiTree(result.asciiTreeDocument());
+      renderAsciiTree(result);
       return;
     }
     if (validationResult.status() == JsonValidationStatus.EMPTY) {
@@ -833,9 +839,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void updateFileSummary(JsonViewerLoadResult result) {
+    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
     updateFileNameLabel(result.importResult().fileName());
     fileMetaLabel.setText(
-        formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind()));
+        formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind())
+            + presentation.fileMetaSuffix());
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(resolveLoadedAt(result)));
     fileSourceValueLabel.setText(sourceLabel(result.importResult().sourceKind()));
   }
@@ -868,12 +876,15 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void syncStatusRail(JsonViewerLoadResult result) {
+    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
     String state =
-        switch (result.validationResult().status()) {
-          case VALID -> "VALID";
-          case EMPTY -> "EMPTY";
-          case INVALID, PARSING_ERROR -> "INVALID";
-        };
+        result.validationResult().status() == JsonValidationStatus.VALID
+            ? presentation.statusState()
+            : switch (result.validationResult().status()) {
+              case EMPTY -> "EMPTY";
+              case INVALID, PARSING_ERROR -> "INVALID";
+              case VALID -> presentation.statusState();
+            };
     String lines =
         result.hasRenderableTree()
             ? Integer.toString(result.asciiTreeDocument().lineCount())
@@ -963,12 +974,15 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void toggleRawJson() {
+    if (rawJsonButton.isDisable()) {
+      return;
+    }
     if (showingRawJson) {
       workflowService
           .currentView()
           .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
           .filter(JsonViewerLoadResult::hasRenderableTree)
-          .ifPresent(result -> renderAsciiTree(result.asciiTreeDocument()));
+          .ifPresent(this::renderAsciiTree);
     } else {
       workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
     }
@@ -1004,6 +1018,9 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void openSearchModal() {
+    if (searchButton.isDisable()) {
+      return;
+    }
     searchQueryField.setText(
         searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(""));
     searchModalErrorLabel.setManaged(false);
@@ -1075,11 +1092,18 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void copyTree() {
-    workflowService.currentViewRawJson().ifPresent(clipboardPort::copy);
+    workflowService
+        .currentView()
+        .map(JsonViewerLoadResult::asciiTreeDocument)
+        .map(AsciiTreeDocument::content)
+        .ifPresent(clipboardPort::copy);
   }
 
   @FXML
   void toggleOutline() {
+    if (outlineToggleButton.isDisable()) {
+      return;
+    }
     boolean nextVisible = !outlineVBox.isVisible();
     outlineVBox.setVisible(nextVisible);
     outlineVBox.setManaged(nextVisible);
@@ -1107,7 +1131,9 @@ public class MainWindowController implements UiScreenController {
 
     currentOutlineModel =
         workflowService
-            .currentViewRawJson()
+            .currentView()
+            .filter(result -> result.capabilities().outlineAvailable())
+            .flatMap(unused -> workflowService.currentViewRawJson())
             .map(outlineModelService::buildFromRawJson)
             .orElse(JsonOutlineModel.empty());
     currentOutlineSourceIdentity = currentViewIdentity;
@@ -1126,13 +1152,54 @@ public class MainWindowController implements UiScreenController {
         .ifPresent(
             result -> {
               if (showingRawJson) {
-                workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
-                return;
+                if (result.capabilities().rawJsonAvailable()) {
+                  workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
+                  return;
+                }
+                resetViewModeIfNeeded();
               }
               if (result.hasRenderableTree()) {
-                renderAsciiTree(result.asciiTreeDocument());
+                renderAsciiTree(result);
+                return;
               }
             });
+  }
+
+  private void applyCapabilityPresentation(JsonViewerLoadResult result) {
+    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
+    copyTreeButton.setText(presentation.copyButtonText());
+    copyTreeButton.setDisable(false);
+    rawJsonButton.setDisable(!presentation.rawJsonEnabled());
+    searchButton.setDisable(!presentation.searchEnabled());
+    outlineToggleButton.setDisable(!presentation.outlineEnabled());
+    setValidationBadge(
+        presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
+    footerStatusLabel.setText(presentation.footerStatus());
+    statusStateValueLabel.setText(presentation.statusState());
+  }
+
+  private void updateOutlineShell(JsonViewerLoadResult result, AsciiTreeDocument document) {
+    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
+    if (presentation.outlineEnabled()) {
+      syncOutlineModelWithCurrentView();
+      showOutlineValidShell(document);
+      return;
+    }
+
+    resetOutlineModel();
+    showOutlineShellState(
+        presentation.outlineTitle(),
+        presentation.outlineStateMessage(),
+        presentation.outlineMetaMessage(),
+        null);
+  }
+
+  private void resetToolbarForNonRenderableState() {
+    copyTreeButton.setText("Copy tree");
+    copyTreeButton.setDisable(true);
+    rawJsonButton.setDisable(true);
+    searchButton.setDisable(true);
+    outlineToggleButton.setDisable(false);
   }
 
   private void syncActiveSearchStrip() {

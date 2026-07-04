@@ -33,7 +33,7 @@
                     <Label fx:id="activeSearchOccurrenceLabel" styleClass="active-search-occurrence" text="Ready" />
                     <Button mnemonicParsing="false" onAction="#clearSearchSession" styleClass="ghost-button search-strip-button" text="Clear" />
                 </HBox>
-                <Button mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button" text="Copy tree" />
+                <Button fx:id="copyTreeButton" mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button" text="Copy tree" />
                 <Button fx:id="rawJsonButton" disable="true" mnemonicParsing="false" onAction="#toggleRawJson" styleClass="ghost-button" text="Raw JSON" />
                 <Button fx:id="searchButton" disable="true" mnemonicParsing="false" onAction="#openSearchModal" styleClass="ghost-button" text="Search" />
             </HBox>
@@ -109,7 +109,7 @@
                     <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
                         <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Focus" />
                         <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Density" />
-                        <Button mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
+                        <Button fx:id="outlineToggleButton" mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
                     </HBox>
                 </HBox>
 
