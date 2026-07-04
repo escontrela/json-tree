@@ -57,6 +57,7 @@
                         <Label fx:id="fileNameLabel" styleClass="file-name" />
                     </VBox>
                     <Region HBox.hgrow="ALWAYS" />
+                    <Label fx:id="fileWarningIconLabel" managed="false" styleClass="warning-icon-shell" visible="false" />
                     <Label fx:id="validationStatusLabel" styleClass="status-pill" />
                 </HBox>
                 <Region styleClass="card-divider" />

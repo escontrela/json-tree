@@ -27,6 +27,8 @@ import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
@@ -108,6 +110,7 @@ public class MainWindowController implements UiScreenController {
   private final SearchTextFlowHighlighter searchTextFlowHighlighter;
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
+  private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
   public MainWindowController(
@@ -127,6 +130,7 @@ public class MainWindowController implements UiScreenController {
       SearchTextFlowHighlighter searchTextFlowHighlighter,
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
+      LargePreviewIndicatorResolver largePreviewIndicatorResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
@@ -145,6 +149,7 @@ public class MainWindowController implements UiScreenController {
     this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
+    this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
@@ -158,6 +163,8 @@ public class MainWindowController implements UiScreenController {
   @FXML private Label fileLoadedAtValueLabel;
 
   @FXML private Label fileSourceValueLabel;
+
+  @FXML private Label fileWarningIconLabel;
 
   @FXML private Label validationStatusLabel;
 
@@ -245,6 +252,7 @@ public class MainWindowController implements UiScreenController {
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
+    fileWarningIconLabel.setGraphic(LargePreviewWarningIconFactory.create(16.0));
     configureWindowMetricsLogging();
     rootPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleGlobalKeyPressed);
     rootPane.setOnDragOver(this::handleDragOver);
@@ -553,6 +561,7 @@ public class MainWindowController implements UiScreenController {
     currentLoadedAt = null;
     currentViewIdentity = null;
     resetToolbarForNonRenderableState();
+    showFileWarningIcon(false);
     updateFileNameLabel("No file loaded");
     fileMetaLabel.setText("Drop a JSON anywhere in the window");
     fileLoadedAtValueLabel.setText("Not loaded");
@@ -576,6 +585,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showDraggingState() {
+    showFileWarningIcon(false);
     emptyStateLabel.setText("Release to inspect this JSON file");
     showOutlineShellState(
         "Drop ready",
@@ -593,6 +603,7 @@ public class MainWindowController implements UiScreenController {
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
     resetToolbarForNonRenderableState();
+    showFileWarningIcon(false);
     updateFileNameLabel(fileName);
     fileMetaLabel.setText("Preparing JSON preview");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
@@ -785,6 +796,7 @@ public class MainWindowController implements UiScreenController {
     resetOutlineModel();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "clipboard-error:" + currentLoadedAt.toEpochMilli();
+    showFileWarningIcon(false);
     updateFileNameLabel("Clipboard JSON");
     fileMetaLabel.setText(
         "Paste valid JSON using Command+P or Command+V on macOS, Ctrl+P or Ctrl+V elsewhere.");
@@ -846,6 +858,7 @@ public class MainWindowController implements UiScreenController {
   private void updateFileSummary(JsonViewerLoadResult result) {
     ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
     updateFileNameLabel(result.importResult().fileName());
+    showFileWarningIcon(largePreviewIndicatorResolver.showForCurrentView(result));
     fileMetaLabel.setText(
         formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind())
             + presentation.fileMetaSuffix());
@@ -948,12 +961,18 @@ public class MainWindowController implements UiScreenController {
 
     private final Label titleLabel = new Label();
     private final Label metaLabel = new Label();
+    private final HBox titleRow = new HBox(8.0);
+    private final javafx.scene.image.ImageView warningIcon =
+        LargePreviewWarningIconFactory.create(12.0);
     private final VBox content = new VBox(4.0);
 
     private InlineHistoryListCell() {
       titleLabel.getStyleClass().add("history-inline-title");
       metaLabel.getStyleClass().add("history-inline-meta");
-      content.getChildren().addAll(titleLabel, metaLabel);
+      warningIcon.setManaged(false);
+      warningIcon.setVisible(false);
+      titleRow.getChildren().addAll(titleLabel, warningIcon);
+      content.getChildren().addAll(titleRow, metaLabel);
     }
 
     @Override
@@ -965,6 +984,9 @@ public class MainWindowController implements UiScreenController {
         return;
       }
       titleLabel.setText(item.originalName());
+      boolean showWarning = largePreviewIndicatorResolver.showForHistoryEntry(item);
+      warningIcon.setManaged(showWarning);
+      warningIcon.setVisible(showWarning);
       metaLabel.setText(
           FILE_TIME_FORMATTER.format(item.importedAt())
               + " • "
@@ -1205,6 +1227,11 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
     outlineToggleButton.setDisable(false);
+  }
+
+  private void showFileWarningIcon(boolean visible) {
+    fileWarningIconLabel.setManaged(visible);
+    fileWarningIconLabel.setVisible(visible);
   }
 
   private void syncActiveSearchStrip() {

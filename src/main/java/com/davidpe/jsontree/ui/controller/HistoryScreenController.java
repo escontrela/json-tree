@@ -10,11 +10,13 @@ import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.ui.support.HistoryArchiveViewState;
 import com.davidpe.jsontree.ui.support.HistoryArchiveViewStateResolver;
+import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
+import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
-import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
-import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.time.ZoneId;
@@ -53,6 +55,7 @@ public class HistoryScreenController implements UiScreenController {
   private final ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase;
   private final HistoryFavoritePresentationResolver historyFavoritePresentationResolver;
   private final HistoryArchiveViewStateResolver historyArchiveViewStateResolver;
+  private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final UiFlowManager uiFlowManager;
   private boolean favoritesOnly;
   private String activeSearchQuery = "";
@@ -64,6 +67,7 @@ public class HistoryScreenController implements UiScreenController {
       ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase,
       HistoryFavoritePresentationResolver historyFavoritePresentationResolver,
       HistoryArchiveViewStateResolver historyArchiveViewStateResolver,
+      LargePreviewIndicatorResolver largePreviewIndicatorResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.workflowService = workflowService;
     this.importHistoryJsonUseCase = importHistoryJsonUseCase;
@@ -71,6 +75,7 @@ public class HistoryScreenController implements UiScreenController {
     this.toggleHistoryFavoriteUseCase = toggleHistoryFavoriteUseCase;
     this.historyFavoritePresentationResolver = historyFavoritePresentationResolver;
     this.historyArchiveViewStateResolver = historyArchiveViewStateResolver;
+    this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -279,8 +284,11 @@ public class HistoryScreenController implements UiScreenController {
 
     private final Label titleLabel = new Label();
     private final Label metaLabel = new Label();
+    private final javafx.scene.image.ImageView warningIcon =
+        LargePreviewWarningIconFactory.create(14.0);
     private final Button favoriteButton = new Button("Pin");
     private final Button deleteButton = new Button("Delete");
+    private final HBox titleRow = new HBox(8.0);
     private final VBox textBox = new VBox(4.0);
     private final Region spacer = new Region();
     private final HBox content = new HBox(12.0);
@@ -288,6 +296,8 @@ public class HistoryScreenController implements UiScreenController {
     private HistoryEntryListCell() {
       titleLabel.getStyleClass().add("history-entry-title");
       metaLabel.getStyleClass().add("history-entry-meta");
+      warningIcon.setManaged(false);
+      warningIcon.setVisible(false);
       favoriteButton.getStyleClass().addAll("ghost-button", "history-favorite-button");
       favoriteButton.setOnAction(
           event -> {
@@ -308,7 +318,8 @@ public class HistoryScreenController implements UiScreenController {
             event.consume();
           });
 
-      textBox.getChildren().addAll(titleLabel, metaLabel);
+      titleRow.getChildren().addAll(titleLabel, warningIcon);
+      textBox.getChildren().addAll(titleRow, metaLabel);
       HBox.setHgrow(spacer, Priority.ALWAYS);
       content.setAlignment(Pos.CENTER_LEFT);
       content.getChildren().addAll(textBox, spacer, favoriteButton, deleteButton);
@@ -332,6 +343,9 @@ public class HistoryScreenController implements UiScreenController {
         return;
       }
       titleLabel.setText(item.originalName());
+      boolean showWarning = largePreviewIndicatorResolver.showForHistoryEntry(item);
+      warningIcon.setManaged(showWarning);
+      warningIcon.setVisible(showWarning);
       metaLabel.setText(
           HISTORY_TIME_FORMATTER.format(item.importedAt())
               + " • "
