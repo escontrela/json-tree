@@ -207,7 +207,7 @@
 ## History Archive Search
 
 - The history screen now exposes a compact text search plus `Search` action inside `storedInspectionsRegion`, alongside the existing import and favorites controls.
-- Archive search runs through a dedicated application input port and service that scans stored JSON snapshot content without moving file traversal logic into the JavaFX controller.
+- Archive search runs through a dedicated application input port and service that scans both filename metadata and stored JSON snapshot content without moving file traversal logic into the JavaFX controller.
 - The feature is available only in the all-history mode; when favorites-only mode is active, the history search controls are hidden and archive search does not execute.
 - Blank or whitespace-only search input automatically clears the active history filter and restores the standard archive summary and list state.
 - Search-specific empty states now distinguish `no stored history yet` from `no stored JSON matches this query`, while reopen, delete, import, and favorite-toggle interactions continue to refresh coherently after filtering.

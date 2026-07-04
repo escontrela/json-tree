@@ -35,6 +35,52 @@ class HistoryJsonSearchServiceTest {
   }
 
   @Test
+  void returnsMatchingHistoryEntriesForAnOriginalFileNameQuery() {
+    InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+    ImportedJsonFile matching =
+        new ImportedJsonFile(
+            "2026-07-04_10-00-00_api-response.json",
+            "api-response.json",
+            Instant.parse("2026-07-04T10:00:00Z"),
+            20L,
+            4,
+            true,
+            false);
+    ImportedJsonFile other = entry("other", Instant.parse("2026-07-04T11:00:00Z"), true);
+    repository.save(matching, "{\"name\":\"David\"}");
+    repository.save(other, "{\"name\":\"Alice\"}");
+
+    HistoryJsonSearchResult result =
+        new HistoryJsonSearchService(repository).search("response", true);
+
+    assertEquals(HistoryJsonSearchStatus.MATCHES, result.status());
+    assertEquals(List.of(matching), result.entries());
+  }
+
+  @Test
+  void returnsMatchingHistoryEntriesForAStoredSnapshotNameQuery() {
+    InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+    ImportedJsonFile matching =
+        new ImportedJsonFile(
+            "2026-07-04_10-00-00_customer-export.json",
+            "export.json",
+            Instant.parse("2026-07-04T10:00:00Z"),
+            20L,
+            4,
+            true,
+            false);
+    ImportedJsonFile other = entry("other", Instant.parse("2026-07-04T11:00:00Z"), true);
+    repository.save(matching, "{\"name\":\"David\"}");
+    repository.save(other, "{\"name\":\"Alice\"}");
+
+    HistoryJsonSearchResult result =
+        new HistoryJsonSearchService(repository).search("customer-export", true);
+
+    assertEquals(HistoryJsonSearchStatus.MATCHES, result.status());
+    assertEquals(List.of(matching), result.entries());
+  }
+
+  @Test
   void blankQueryClearsTheHistorySearchBackToFullArchive() {
     InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
     ImportedJsonFile first = entry("first", Instant.parse("2026-07-04T10:00:00Z"), false);

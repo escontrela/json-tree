@@ -32,13 +32,25 @@ public class HistoryJsonSearchService implements SearchHistoryJsonUseCase {
     String normalizedQuery = query.toLowerCase(Locale.ROOT);
     List<ImportedJsonFile> matchingEntries =
         allEntries.stream()
-            .filter(entry -> matchesStoredJson(entry, normalizedQuery))
+            .filter(entry -> matchesEntry(entry, normalizedQuery))
             .toList();
 
     if (matchingEntries.isEmpty()) {
       return HistoryJsonSearchResult.noResults(query);
     }
     return HistoryJsonSearchResult.matches(query, matchingEntries);
+  }
+
+  private boolean matchesEntry(ImportedJsonFile entry, String normalizedQuery) {
+    if (matchesName(entry, normalizedQuery)) {
+      return true;
+    }
+    return matchesStoredJson(entry, normalizedQuery);
+  }
+
+  private boolean matchesName(ImportedJsonFile entry, String normalizedQuery) {
+    return entry.originalName().toLowerCase(Locale.ROOT).contains(normalizedQuery)
+        || entry.storedName().toLowerCase(Locale.ROOT).contains(normalizedQuery);
   }
 
   private boolean matchesStoredJson(ImportedJsonFile entry, String normalizedQuery) {
