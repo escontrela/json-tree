@@ -35,4 +35,14 @@ class RawJsonPresentationServiceTest {
 
     assertEquals("hello world", highlighted);
   }
+
+  @Test
+  void fallsBackToPlainChunkWhenTheCurrentFragmentIsNotStandaloneJson() {
+    String rawJson = "{\"tail\":true";
+
+    RawJsonPresentation presentation = service.present(rawJson);
+
+    assertEquals(rawJson, presentation.content());
+    assertEquals(rawJson.length() + 1, presentation.sourceToDisplayBoundaries().length);
+  }
 }
