@@ -276,6 +276,7 @@
 ## Large Preview Operational Defaults
 
 - The paged large-preview workflow keeps `FULL` untouched for small files and applies the oversized path with a default page budget of `400` logical lines per stored ASCII page.
-- The hot cache window remains bounded to `current - 2` through `current + 2`, which keeps at most five large-preview pages resident in memory while older pages stay recoverable from temporary session storage.
+- The hot cache window is now configurable through `json-tree.large-preview.warm-page-radius`, defaults to `20`, and is clamped to a safe upper bound so oversized sessions cannot request an unbounded resident page window by configuration mistake.
+- Residency is always calculated from the same current-page state resolved by the global viewer scroll and outline anchors, and pages outside `current - radius` through `current + radius` are evicted from memory while remaining reloadable from temp storage.
 - Temporary paged-session storage is cleaned when the active oversized file is replaced, when the session is discarded, and when the application tears down the paged workflow at shutdown.
 - Large mode remains intentionally stream-safe rather than a byte-for-byte clone of the small-file renderer, and `Raw JSON` plus regex search stay disabled there until a dedicated follow-up ticket changes that contract.

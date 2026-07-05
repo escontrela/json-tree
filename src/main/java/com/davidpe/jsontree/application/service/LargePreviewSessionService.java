@@ -52,7 +52,7 @@ public class LargePreviewSessionService {
       int warmPageRadius,
       ExecutorService executorService) {
     this.sessionStorePort = sessionStorePort;
-    this.warmPageRadius = Math.max(0, warmPageRadius);
+    this.warmPageRadius = sanitizeWarmPageRadius(warmPageRadius);
     this.executorService = executorService;
   }
 
@@ -187,10 +187,6 @@ public class LargePreviewSessionService {
     runtimeSession.session = session;
   }
 
-  private boolean withinWarmWindow(int pageIndex, int currentPageIndex, int radius) {
-    return pageIndex >= Math.max(0, currentPageIndex - radius) && pageIndex <= currentPageIndex + radius;
-  }
-
   private RuntimeSession buildCompletedRuntimeSession(
       String sessionId,
       LargePreviewSessionSource source,
@@ -208,6 +204,10 @@ public class LargePreviewSessionService {
     }
     refreshPageStates(runtimeSession);
     return runtimeSession;
+  }
+
+  private int sanitizeWarmPageRadius(int configuredRadius) {
+    return Math.max(0, Math.min(configuredRadius, LargePreviewProperties.MAX_WARM_PAGE_RADIUS));
   }
 
   private static final class RuntimeSession {

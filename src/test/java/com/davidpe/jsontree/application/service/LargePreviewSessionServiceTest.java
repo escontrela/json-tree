@@ -110,6 +110,24 @@ class LargePreviewSessionServiceTest {
   }
 
   @Test
+  void clampsConfiguredResidentRadiusAndExposesItInSessionState() throws Exception {
+    TestLargePreviewSessionStore store =
+        new TestLargePreviewSessionStore(
+            tempDir,
+            List.of("page-0", "page-1", "page-2", "page-3"),
+            pageIndex -> {});
+    try (ExecutorService executor = Executors.newCachedThreadPool()) {
+      LargePreviewSessionService service = new LargePreviewSessionService(store, 999, executor);
+
+      LargePreviewPageLoadResult firstPage = service.openSession(localSource());
+      LargePreviewPagedSession session = service.session(firstPage.session().sessionId()).orElseThrow();
+
+      assertEquals(200, session.residentPageRadius());
+      assertEquals(List.of(0, 1, 2, 3), residentPageIndexes(session));
+    }
+  }
+
+  @Test
   void closesAllOpenSessionsAndDeletesTheirTemporaryStorage() throws Exception {
     TestLargePreviewSessionStore store =
         new TestLargePreviewSessionStore(tempDir, List.of("page-0", "page-1"), pageIndex -> {});

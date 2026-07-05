@@ -5,10 +5,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "json-tree.large-preview")
 public class LargePreviewProperties {
 
+  public static final int DEFAULT_WARM_PAGE_RADIUS = 20;
+  public static final int MAX_WARM_PAGE_RADIUS = 200;
+
   private long fullRenderMaxBytes = 1_048_576L;
   private int previewMaxLines = 400;
   private int pageLineCount = 400;
-  private int warmPageRadius = 2;
+  private int warmPageRadius = DEFAULT_WARM_PAGE_RADIUS;
   private int previewMaxDepth = 8;
   private int previewMaxChildrenPerContainer = 64;
   private int textNodeBudget = 12000;
@@ -42,7 +45,7 @@ public class LargePreviewProperties {
   }
 
   public void setWarmPageRadius(int warmPageRadius) {
-    this.warmPageRadius = warmPageRadius;
+    this.warmPageRadius = Math.max(0, Math.min(warmPageRadius, MAX_WARM_PAGE_RADIUS));
   }
 
   public int getPreviewMaxDepth() {
