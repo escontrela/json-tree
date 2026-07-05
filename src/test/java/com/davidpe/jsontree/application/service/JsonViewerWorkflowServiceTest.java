@@ -313,6 +313,31 @@ class JsonViewerWorkflowServiceTest {
   }
 
   @Test
+  void replacesThePreviousLargeSessionWhenAnotherLargeFileBecomesCurrent() throws IOException {
+    TrackingLargePreviewSessionStore largePreviewStore =
+        new TrackingLargePreviewSessionStore(
+            List.of("{\"chunk\":\"first\"}", "{\"chunk\":\"second\"}"),
+            LargePreviewOutlineDigest.empty());
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            new InMemoryHistoryRepository(),
+            unusedRendererPort(),
+            inspectionModeResolver(8L),
+            largePreviewSessionService(largePreviewStore));
+    Path firstLargeFile = Files.writeString(tempDir.resolve("first-large.json"), "{\"first\":true}");
+    Path secondLargeFile = Files.writeString(tempDir.resolve("second-large.json"), "{\"second\":true}");
+
+    JsonViewerLoadResult firstLargeResult = workflowService.loadFile(firstLargeFile);
+    JsonViewerLoadResult secondLargeResult = workflowService.loadFile(secondLargeFile);
+
+    assertNotNull(firstLargeResult.largePreviewSession());
+    assertNotNull(secondLargeResult.largePreviewSession());
+    assertEquals(1, largePreviewStore.deletedSessionPaths.size());
+    assertEquals(secondLargeResult.asciiTreeDocument().content(), workflowService.currentViewRawJson().orElseThrow());
+  }
+
+  @Test
   void returnsEmptyWhenHistorySnapshotPathIsMissing() {
     InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
     repository.entry =
