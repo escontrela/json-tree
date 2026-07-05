@@ -50,6 +50,7 @@ class LargePreviewSessionServiceTest {
       assertEquals(1, store.materializeCalls());
       assertEquals(4, session.totalPages());
       assertTrue(session.hasDocumentRanges());
+      assertEquals(1, session.currentPageRange().orElseThrow().trailingOverlapBytes());
       assertEquals(List.of(0, 1, 2), residentPageIndexes(session));
 
       service.closeSession(session.sessionId());
@@ -191,8 +192,15 @@ class LargePreviewSessionServiceTest {
           Path pagePath = sessionDir.resolve("page-%05d.txt".formatted(pageIndex));
           Files.writeString(pagePath, content);
           int logicalLineCount = Math.max(1, content.split("\\R", -1).length);
+          int overlapBytes = Math.min(32, logicalLineCount);
           LargePreviewPageDescriptor descriptor =
-              new LargePreviewPageDescriptor(pageIndex, pagePath, logicalLineStart, logicalLineCount);
+              new LargePreviewPageDescriptor(
+                  pageIndex,
+                  pagePath,
+                  logicalLineStart,
+                  logicalLineCount,
+                  pageIndex == 0 ? 0 : overlapBytes,
+                  pageIndex == pages.size() - 1 ? 0 : overlapBytes);
           descriptors.put(pageIndex, descriptor);
           logicalLineStart += logicalLineCount;
           onPageAvailable.accept(descriptor);
