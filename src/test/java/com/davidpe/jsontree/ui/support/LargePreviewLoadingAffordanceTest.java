@@ -52,4 +52,22 @@ class LargePreviewLoadingAffordanceTest {
     assertEquals(0, revealCount.get());
     assertEquals(0, hideCount.get());
   }
+
+  @Test
+  void ignoresStaleRevealWhenANewerColdRequestHasAlreadyStarted() {
+    AtomicInteger revealCount = new AtomicInteger();
+    AtomicInteger hideCount = new AtomicInteger();
+    LargePreviewLoadingAffordance affordance =
+        new LargePreviewLoadingAffordance(
+            revealCount::incrementAndGet, hideCount::incrementAndGet, unused -> {});
+
+    long firstRequest = affordance.beginRequest();
+    long secondRequest = affordance.beginRequest();
+    affordance.revealIfPending(firstRequest);
+    affordance.revealIfPending(secondRequest);
+
+    assertTrue(affordance.visible());
+    assertEquals(1, revealCount.get());
+    assertEquals(0, hideCount.get());
+  }
 }
