@@ -1,10 +1,10 @@
 package com.davidpe.jsontree.application.model;
 
 /**
- * Document-wide logical range owned by one persisted large-preview page.
+ * Document-wide source-byte range owned by one large-preview chunk.
  *
- * <p>The range is expressed in logical lines rather than JavaFX pixels so the application layer can
- * reason about global scroll positions without leaking presentation details.
+ * <p>The field names remain stable for compatibility, but in the current byte-paginated variant
+ * they represent byte offsets and byte lengths.
  */
 public record LargePreviewPageRange(int pageIndex, long startingLogicalLine, int logicalLineCount) {
 

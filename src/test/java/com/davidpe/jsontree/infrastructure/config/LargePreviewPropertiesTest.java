@@ -17,6 +17,9 @@ class LargePreviewPropertiesTest {
     assertEquals(8, properties.getPreviewMaxDepth());
     assertEquals(64, properties.getPreviewMaxChildrenPerContainer());
     assertEquals(12000, properties.getTextNodeBudget());
+    assertEquals(512 * 1024, properties.getPageIndexStrideBytes());
+    assertEquals(150 * 1024, properties.getVisibleChunkBytes());
+    assertEquals(12 * 1024, properties.getChunkOverlapBytes());
   }
 
   @Test
@@ -28,5 +31,9 @@ class LargePreviewPropertiesTest {
 
     properties.setWarmPageRadius(999);
     assertEquals(200, properties.getWarmPageRadius());
+
+    properties.setVisibleChunkBytes(2048);
+    properties.setChunkOverlapBytes(999999);
+    assertEquals(1024, properties.getChunkOverlapBytes());
   }
 }

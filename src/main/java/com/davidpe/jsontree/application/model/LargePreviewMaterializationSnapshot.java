@@ -16,7 +16,17 @@ public record LargePreviewMaterializationSnapshot(
     Path sessionStoragePath,
     List<LargePreviewPageDescriptor> pages,
     long totalLogicalLines,
+    List<Long> indexOffsets,
     LargePreviewOutlineDigest outlineDigest) {
+
+  public LargePreviewMaterializationSnapshot(
+      String sessionId,
+      Path sessionStoragePath,
+      List<LargePreviewPageDescriptor> pages,
+      long totalLogicalLines,
+      LargePreviewOutlineDigest outlineDigest) {
+    this(sessionId, sessionStoragePath, pages, totalLogicalLines, List.of(), outlineDigest);
+  }
 
   public LargePreviewMaterializationSnapshot {
     if (sessionId == null || sessionId.isBlank()) {
@@ -31,6 +41,7 @@ public record LargePreviewMaterializationSnapshot(
           "Large-preview materialization total logical lines must be zero or greater.");
     }
     outlineDigest = outlineDigest == null ? LargePreviewOutlineDigest.empty() : outlineDigest;
+    indexOffsets = Objects.requireNonNullElse(indexOffsets, List.<Long>of()).stream().sorted().toList();
     pages =
         Objects.requireNonNullElse(pages, List.<LargePreviewPageDescriptor>of()).stream()
             .sorted(Comparator.comparingInt(LargePreviewPageDescriptor::pageIndex))

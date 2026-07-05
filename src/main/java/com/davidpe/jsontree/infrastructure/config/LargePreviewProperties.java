@@ -7,6 +7,9 @@ public class LargePreviewProperties {
 
   public static final int DEFAULT_WARM_PAGE_RADIUS = 20;
   public static final int MAX_WARM_PAGE_RADIUS = 200;
+  public static final int DEFAULT_PAGE_INDEX_STRIDE_BYTES = 512 * 1024;
+  public static final int DEFAULT_VISIBLE_CHUNK_BYTES = 150 * 1024;
+  public static final int DEFAULT_CHUNK_OVERLAP_BYTES = 12 * 1024;
 
   private long fullRenderMaxBytes = 1_048_576L;
   private int previewMaxLines = 400;
@@ -15,6 +18,9 @@ public class LargePreviewProperties {
   private int previewMaxDepth = 8;
   private int previewMaxChildrenPerContainer = 64;
   private int textNodeBudget = 12000;
+  private int pageIndexStrideBytes = DEFAULT_PAGE_INDEX_STRIDE_BYTES;
+  private int visibleChunkBytes = DEFAULT_VISIBLE_CHUNK_BYTES;
+  private int chunkOverlapBytes = DEFAULT_CHUNK_OVERLAP_BYTES;
 
   public long getFullRenderMaxBytes() {
     return fullRenderMaxBytes;
@@ -70,5 +76,29 @@ public class LargePreviewProperties {
 
   public void setTextNodeBudget(int textNodeBudget) {
     this.textNodeBudget = textNodeBudget;
+  }
+
+  public int getPageIndexStrideBytes() {
+    return pageIndexStrideBytes;
+  }
+
+  public void setPageIndexStrideBytes(int pageIndexStrideBytes) {
+    this.pageIndexStrideBytes = Math.max(1024, pageIndexStrideBytes);
+  }
+
+  public int getVisibleChunkBytes() {
+    return visibleChunkBytes;
+  }
+
+  public void setVisibleChunkBytes(int visibleChunkBytes) {
+    this.visibleChunkBytes = Math.max(1024, visibleChunkBytes);
+  }
+
+  public int getChunkOverlapBytes() {
+    return Math.max(0, Math.min(chunkOverlapBytes, Math.max(0, visibleChunkBytes - 1024)));
+  }
+
+  public void setChunkOverlapBytes(int chunkOverlapBytes) {
+    this.chunkOverlapBytes = Math.max(0, chunkOverlapBytes);
   }
 }
