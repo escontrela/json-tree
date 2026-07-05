@@ -46,6 +46,15 @@ class MainFxmlResourceTest {
         assertReferencedTypesAreImported("/com/davidpe/jsontree/ui/history.fxml");
     }
 
+    @Test
+    @DisplayName("main FXML keeps the large outline as minimap shell instead of page-card rail")
+    void mainFxmlDoesNotExposeLargeOutlinePageCardRail() throws IOException {
+        String fxml = readResource("/com/davidpe/jsontree/ui/main.fxml");
+
+        assertTrue(!fxml.contains("largePreviewOutlineScrollPane"));
+        assertTrue(!fxml.contains("largePreviewOutlineStepsBox"));
+    }
+
     private static void assertReferencedTypesAreImported(String resourcePath) throws IOException {
         String fxml = readResource(resourcePath);
         Set<String> importedTypes = extractImportedTypes(fxml);
