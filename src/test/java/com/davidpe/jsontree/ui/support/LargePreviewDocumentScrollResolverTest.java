@@ -1,12 +1,12 @@
 package com.davidpe.jsontree.ui.support;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.LargePreviewPageRange;
 import com.davidpe.jsontree.application.model.LargePreviewPageState;
 import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
@@ -16,33 +16,29 @@ import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class LargePreviewScrollPageResolverTest {
+class LargePreviewDocumentScrollResolverTest {
 
-  private final LargePreviewScrollPageResolver resolver = new LargePreviewScrollPageResolver();
+  private final LargePreviewDocumentScrollResolver resolver =
+      new LargePreviewDocumentScrollResolver();
 
   @Test
-  void resolvesForwardPageSwapNearBottomForLargePreview() {
-    JsonViewerLoadResult result = largePreviewResult(2, 5);
+  void resolvesDocumentWideScrollIntoPageIndexes() {
+    JsonViewerLoadResult result = largePreviewResult(0);
 
-    assertTrue(resolver.targetPage(result, 0.99).isPresent());
-    assertEquals(3, resolver.targetPage(result, 0.99).getAsInt());
+    assertEquals(0, resolver.targetPage(result, 0.0).orElseThrow());
+    assertEquals(2, resolver.targetPage(result, 0.50).orElseThrow());
+    assertEquals(4, resolver.targetPage(result, 1.0).orElseThrow());
   }
 
   @Test
-  void resolvesBackwardPageSwapNearTopForLargePreview() {
-    JsonViewerLoadResult result = largePreviewResult(3, 5);
+  void exposesStablePageStartAnchors() {
+    JsonViewerLoadResult result = largePreviewResult(2);
 
-    assertTrue(resolver.targetPage(result, 0.01).isPresent());
-    assertEquals(2, resolver.targetPage(result, 0.01).getAsInt());
-  }
-
-  @Test
-  void ignoresFullModeAndLargePreviewEndOfDocument() {
-    assertTrue(resolver.targetPage(fullResult(), 0.99).isEmpty());
-    assertTrue(resolver.targetPage(largePreviewResult(4, 5), 0.99).isEmpty());
-    assertFalse(resolver.targetPage(largePreviewResult(0, 5), 0.50).isPresent());
+    assertEquals(400D / 999D, resolver.pageStartScrollValue(result, 2).orElseThrow());
+    assertTrue(resolver.pageStartScrollValue(fullResult(), 0).isEmpty());
   }
 
   private JsonViewerLoadResult fullResult() {
@@ -63,16 +59,24 @@ class LargePreviewScrollPageResolverTest {
         null);
   }
 
-  private JsonViewerLoadResult largePreviewResult(int currentPageIndex, int totalPages) {
+  private JsonViewerLoadResult largePreviewResult(int currentPageIndex) {
     LargePreviewPagedSession session =
         LargePreviewPagedSession.initializing(
                 "session-1", LargePreviewSessionSource.local(Path.of("/tmp/large.json")))
-            .withPageState(LargePreviewPageState.available(0, false, true, 400))
-            .withPageState(LargePreviewPageState.available(1, false, true, 400))
-            .withPageState(LargePreviewPageState.available(2, true, true, 400))
-            .withPageState(LargePreviewPageState.available(3, false, true, 400))
-            .withPageState(LargePreviewPageState.available(4, false, true, 400))
-            .withKnownTotals(totalPages, 2_000L)
+            .withPageState(LargePreviewPageState.available(0, false, true, 200))
+            .withPageState(LargePreviewPageState.available(1, false, true, 200))
+            .withPageState(LargePreviewPageState.available(2, true, true, 200))
+            .withPageState(LargePreviewPageState.available(3, false, true, 200))
+            .withPageState(LargePreviewPageState.available(4, false, true, 200))
+            .withKnownTotals(
+                5,
+                1_000L,
+                List.of(
+                    new LargePreviewPageRange(0, 0L, 200),
+                    new LargePreviewPageRange(1, 200L, 200),
+                    new LargePreviewPageRange(2, 400L, 200),
+                    new LargePreviewPageRange(3, 600L, 200),
+                    new LargePreviewPageRange(4, 800L, 200)))
             .withCurrentPageIndex(currentPageIndex);
     return new JsonViewerLoadResult(
         new JsonImportResult(

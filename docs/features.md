@@ -236,13 +236,13 @@
 
 - Oversized JSON rendering now has a streaming materialization path that writes ordered ASCII pages into temporary session storage instead of assuming a single bounded preview buffer.
 - Each materialized page carries deterministic access metadata, including page index, starting logical line, logical line count, and persisted page path for later reads.
-- The first page is emitted as soon as it fills, which enables the workflow layer to show page zero before the whole oversized document finishes materializing.
+- The large-session workflow now waits for the full streaming pass to finish before entering interactive mode, so import and history reopen both start with known total pages and stable document-wide ranges.
 
-## Large Preview Background Coordination
+## Large Preview Global Scroll Workflow
 
-- Large-preview sessions now build remaining pages in background after page zero is available, instead of forcing the caller to wait for the full oversized document.
-- The application layer keeps a bounded warm cache window of `current - 2` to `current + 2`, marks resident pages in session state, and releases more distant pages from memory while leaving them recoverable from temp storage.
-- Page access now reports whether a navigation was an in-memory hit or required waiting for materialization, which prepares the existing viewer shell for later scroll swapping and loader affordances.
+- Large-mode activation no longer depends on threshold-based page swaps. The controller resolves the active page from the global viewer scroll value using the persisted logical page ranges stored in the session.
+- The main viewer keeps a single rendered large-preview page bounded in JavaFX while adding top and bottom spacer regions that make the `ScrollPane` represent the full oversized document instead of the visible page alone.
+- Import, reopen, outline scrolling, and later page controls all share the same document-wide coordinate system, which removes the previous drift between scroll position and page identity.
 
 ## Large Preview Full Activation
 
@@ -258,7 +258,7 @@
 ## Large Preview Outline Navigation
 
 - The right-side outline rail now resolves pointer interactions into paged large-preview targets using the existing minimap layout buckets plus the full-document digest page mapping.
-- When an outline region belongs to another page, the controller reuses the same paged viewer workflow as scroll-based swaps, so warm pages jump immediately and cold pages follow the existing asynchronous page-load path.
+- When an outline region belongs to another page, the controller reuses the same paged viewer workflow as the global document scroll model, so warm pages jump immediately and cold pages follow the existing asynchronous page-load path.
 - If the clicked outline region maps to the page that is already visible, the interaction falls back to the previous in-page scroll behavior instead of forcing a redundant page reload.
 
 ## Large Preview Loading Affordance

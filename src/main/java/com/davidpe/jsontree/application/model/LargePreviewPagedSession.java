@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 public record LargePreviewPagedSession(
     String sessionId,
@@ -144,6 +145,38 @@ public record LargePreviewPagedSession(
         .findFirst();
   }
 
+  public OptionalLong logicalLineForScrollValue(double scrollValue) {
+    if (!totalLogicalLinesKnown()) {
+      return OptionalLong.empty();
+    }
+    if (totalLogicalLines == 0L) {
+      return OptionalLong.of(0L);
+    }
+    long maxLogicalLine = Math.max(0L, totalLogicalLines - 1L);
+    return OptionalLong.of(Math.round(clampScrollValue(scrollValue) * maxLogicalLine));
+  }
+
+  public OptionalInt resolvePageIndexForScrollValue(double scrollValue) {
+    OptionalLong logicalLine = logicalLineForScrollValue(scrollValue);
+    return logicalLine.isPresent()
+        ? resolvePageIndexForLogicalLine(logicalLine.orElseThrow())
+        : OptionalInt.empty();
+  }
+
+  public double scrollValueForPageStart(int pageIndex) {
+    return pageRange(pageIndex)
+        .map(pageRange -> scrollValueForLogicalLine(pageRange.startingLogicalLine()))
+        .orElse(0.0);
+  }
+
+  public double scrollValueForLogicalLine(long logicalLine) {
+    if (!totalLogicalLinesKnown() || totalLogicalLines <= 1L) {
+      return 0.0;
+    }
+    long clampedLogicalLine = Math.max(0L, Math.min(logicalLine, totalLogicalLines - 1L));
+    return clampedLogicalLine / (double) (totalLogicalLines - 1L);
+  }
+
   public LargePreviewPagedSession withCurrentPageIndex(int nextCurrentPageIndex) {
     assertOpen();
     return new LargePreviewPagedSession(
@@ -270,5 +303,12 @@ public record LargePreviewPagedSession(
     if (closed) {
       throw new IllegalStateException("Closed large-preview sessions cannot transition.");
     }
+  }
+
+  private double clampScrollValue(double scrollValue) {
+    if (Double.isNaN(scrollValue) || Double.isInfinite(scrollValue)) {
+      return 0.0;
+    }
+    return Math.max(0.0, Math.min(1.0, scrollValue));
   }
 }

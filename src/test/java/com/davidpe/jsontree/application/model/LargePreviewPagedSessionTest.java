@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import org.junit.jupiter.api.Test;
 
 class LargePreviewPagedSessionTest {
@@ -62,6 +63,9 @@ class LargePreviewPagedSessionTest {
     assertTrue(session.hasDocumentRanges());
     assertEquals(5, session.residentPageRadius());
     assertEquals(OptionalInt.of(1), session.resolvePageIndexForLogicalLine(241L));
+    assertEquals(OptionalLong.of(1_220L), session.logicalLineForScrollValue(0.5));
+    assertEquals(OptionalInt.of(5), session.resolvePageIndexForScrollValue(0.5));
+    assertEquals(240D / 2439D, session.scrollValueForPageStart(1));
     assertEquals(240L, session.currentPageRange().orElseThrow().startingLogicalLine());
     assertEquals(LargePreviewPageStatus.REQUESTED, session.currentPageState().orElseThrow().status());
     assertTrue(session.outlineDigestReady());
