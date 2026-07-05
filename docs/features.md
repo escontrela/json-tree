@@ -242,13 +242,13 @@
 
 - Large-mode activation no longer depends on threshold-based page swaps. The controller resolves the active page from the global viewer scroll value using the persisted logical page ranges stored in the session.
 - The main viewer keeps a single rendered large-preview page bounded in JavaFX while adding top and bottom spacer regions that make the `ScrollPane` represent the full oversized document instead of the visible page alone.
-- Import, reopen, outline scrolling, and later page controls all share the same document-wide coordinate system, which removes the previous drift between scroll position and page identity.
+- Import, reopen, outline dragging, manual viewer scroll, and page controls now all feed the same shared viewport state, which removes drift between scroll position, visible page, and minimap marker.
 
 ## Large Preview Page Controls
 
 - Large mode now exposes a compact page strip in the main viewer toolbar with `Previous`, `Next`, the current page label, and the known total page count.
-- The controls stay hidden for ordinary `FULL` rendering, disable themselves at the first and last large-preview pages, and reuse the same page-anchor scroll model as manual viewer scrolling.
-- Because the strip state is resolved from the active session rather than inferred from JavaFX widgets, button navigation and manual scrolling stay synchronized on the same current page identity.
+- The controls stay hidden for ordinary `FULL` rendering, disable themselves at the first and last large-preview pages, and route through the same shared viewport state used by outline interaction and manual viewer scrolling.
+- Because the strip state is resolved from the active session rather than inferred from JavaFX widgets, button navigation, viewer scroll, and minimap movement stay synchronized on the same current page identity.
 
 ## Large Preview Full Activation
 
@@ -263,9 +263,9 @@
 
 ## Large Preview Outline Navigation
 
-- In large mode, the right-side outline rail now switches from the proportional minimap interaction to an explicit list of page anchors derived from the session page ranges and full-document digest metadata.
-- Selecting an outline anchor jumps through the same paged viewer workflow used by global scrolling and page controls, so the viewer, the toolbar strip, and the outline always converge on the same current page identity.
-- When the list of large-page anchors exceeds the rail height, the outline scrolls internally and automatically keeps the active page anchor in view without changing the small-file outline behavior.
+- The mistaken large-mode page-card rail has been removed again. In large mode, the right-side outline is a visual minimap shell with a single marker that represents the current document position.
+- Dragging or clicking the minimap marker resolves a deterministic page jump through the same shared viewport state used by manual viewer scrolling and `Previous` / `Next`.
+- The corrected model is simple: outline moves page, page moves scroll, scroll moves outline, and all three paths stay synchronized through one page-based viewport state.
 
 ## Large Preview Loading Affordance
 
@@ -277,6 +277,6 @@
 
 - The paged large-preview workflow keeps `FULL` untouched for small files and applies the oversized path with a default page budget of `400` logical lines per stored ASCII page.
 - The hot cache window is now configurable through `json-tree.large-preview.warm-page-radius`, defaults to `20`, and is clamped to a safe upper bound so oversized sessions cannot request an unbounded resident page window by configuration mistake.
-- Residency is always calculated from the same current-page state resolved by the global viewer scroll and outline anchors, and pages outside `current - radius` through `current + radius` are evicted from memory while remaining reloadable from temp storage.
+- Residency is always calculated from the same current-page state resolved by the global viewer scroll and the minimap marker, and pages outside `current - radius` through `current + radius` are evicted from memory while remaining reloadable from temp storage.
 - Temporary paged-session storage is cleaned when the active oversized file is replaced, when the session is discarded, and when the application tears down the paged workflow at shutdown.
 - Large mode remains intentionally stream-safe rather than a byte-for-byte clone of the small-file renderer, and `Raw JSON` plus regex search stay disabled there until a dedicated follow-up ticket changes that contract.

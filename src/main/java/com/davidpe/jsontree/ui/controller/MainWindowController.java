@@ -32,9 +32,8 @@ import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationStateResolver;
-import com.davidpe.jsontree.ui.support.LargePreviewOutlineViewportStateResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewViewportNavigationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewViewportState;
-import com.davidpe.jsontree.ui.support.LargePreviewViewportStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
@@ -129,8 +128,7 @@ public class MainWindowController implements UiScreenController {
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
-  private final LargePreviewOutlineViewportStateResolver largePreviewOutlineViewportStateResolver;
-  private final LargePreviewViewportStateResolver largePreviewViewportStateResolver;
+  private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
   public MainWindowController(
@@ -152,8 +150,7 @@ public class MainWindowController implements UiScreenController {
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
-      LargePreviewOutlineViewportStateResolver largePreviewOutlineViewportStateResolver,
-      LargePreviewViewportStateResolver largePreviewViewportStateResolver,
+      LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
@@ -174,8 +171,7 @@ public class MainWindowController implements UiScreenController {
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
-    this.largePreviewOutlineViewportStateResolver = largePreviewOutlineViewportStateResolver;
-    this.largePreviewViewportStateResolver = largePreviewViewportStateResolver;
+    this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
@@ -547,19 +543,14 @@ public class MainWindowController implements UiScreenController {
     if (currentView.isPresent() && currentView.get().usesLargePreview()) {
       double contentHeight = viewerContentBox.getLayoutBounds().getHeight();
       double viewportHeight = viewerScrollPane.getViewportBounds().getHeight();
-      largePreviewOutlineViewportStateResolver
-          .resolveForPointer(
+      largePreviewViewportNavigationResolver
+          .resolveForOutlinePointer(
               currentView.get(),
               event.getY(),
               outlinePreviewShell.getHeight(),
               viewportHeight,
               contentHeight)
-          .filter(
-              targetViewportState ->
-                  !currentLargePreviewViewportState.active()
-                      || targetViewportState.currentPageIndex()
-                          != currentLargePreviewViewportState.currentPageIndex())
-          .ifPresent(this::requestLargePreviewPage);
+          .ifPresent(targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
       event.consume();
       return;
     }
@@ -1430,22 +1421,17 @@ public class MainWindowController implements UiScreenController {
         .currentView()
         .ifPresent(
             result -> {
-              largePreviewViewportStateResolver
+              largePreviewViewportNavigationResolver
                   .resolveForScroll(result, verticalScrollValue)
                   .ifPresent(
-                      targetViewportState -> {
-                        currentLargePreviewViewportState = targetViewportState;
-                        syncLargePreviewPageControls(result);
-                        if (targetViewportState.currentPageIndex()
-                            != result.largePreviewSession().currentPageIndex()) {
-                          requestLargePreviewPage(targetViewportState);
-                        }
-                      });
+                      targetViewportState ->
+                          navigateLargePreviewToState(targetViewportState, true));
             });
   }
 
-  private void requestLargePreviewPage(LargePreviewViewportState targetViewportState) {
-    if (largePreviewPageLoadInFlight) {
+  private void navigateLargePreviewToState(
+      LargePreviewViewportState targetViewportState, boolean viewerScrollAlreadyApplied) {
+    if (largePreviewPageLoadInFlight || targetViewportState == null || !targetViewportState.active()) {
       return;
     }
     workflowService
@@ -1453,26 +1439,38 @@ public class MainWindowController implements UiScreenController {
         .filter(JsonViewerLoadResult::hasLargePreviewSession)
         .ifPresent(
             result -> {
-              largePreviewPageLoadInFlight = true;
               currentLargePreviewViewportState = targetViewportState;
-              pendingLargePreviewScrollValue = -1.0;
-              beginLargePreviewLoadingAffordance();
-              String sessionId = result.largePreviewSession().sessionId();
-              CompletableFuture
-                  .supplyAsync(
-                      () ->
-                          workflowService.loadLargePreviewPage(
-                              sessionId, targetViewportState.currentPageIndex()))
-                  .whenComplete(
-                      (pageResult, throwable) ->
-                          Platform.runLater(
-                              () ->
-                                  handleLargePreviewPageResult(
-                                      sessionId,
-                                      pageResult,
-                                      throwable,
-                                      targetViewportState)));
+              syncLargePreviewPageControls(result);
+              if (targetViewportState.currentPageIndex()
+                  != result.largePreviewSession().currentPageIndex()) {
+                requestLargePreviewPage(result, targetViewportState);
+                return;
+              }
+              if (!viewerScrollAlreadyApplied) {
+                setViewerScrollPosition(0.0, targetViewportState.globalScrollValue());
+              }
+              scheduleOutlineViewportRefresh();
             });
+  }
+
+  private void requestLargePreviewPage(
+      JsonViewerLoadResult result, LargePreviewViewportState targetViewportState) {
+    if (largePreviewPageLoadInFlight) {
+      return;
+    }
+    largePreviewPageLoadInFlight = true;
+    pendingLargePreviewScrollValue = -1.0;
+    beginLargePreviewLoadingAffordance();
+    String sessionId = result.largePreviewSession().sessionId();
+    CompletableFuture
+        .supplyAsync(
+            () -> workflowService.loadLargePreviewPage(sessionId, targetViewportState.currentPageIndex()))
+        .whenComplete(
+            (pageResult, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleLargePreviewPageResult(
+                            sessionId, pageResult, throwable, targetViewportState)));
   }
 
   private void handleLargePreviewPageResult(
@@ -1593,19 +1591,19 @@ public class MainWindowController implements UiScreenController {
   private void syncLargePreviewViewportState(
       JsonViewerLoadResult result, double targetVerticalScrollValue) {
     currentLargePreviewViewportState =
-        largePreviewViewportStateResolver
+        largePreviewViewportNavigationResolver
             .resolveForScroll(result, targetVerticalScrollValue)
             .or(
                 () ->
                     result.hasLargePreviewSession()
-                        ? largePreviewViewportStateResolver.resolveForPage(
+                        ? largePreviewViewportNavigationResolver.resolveForPage(
                             result, result.largePreviewSession().currentPageIndex())
                         : java.util.Optional.empty())
-            .orElseGet(largePreviewViewportStateResolver::inactive);
+            .orElseGet(largePreviewViewportNavigationResolver::inactive);
   }
 
   private void clearLargePreviewViewportState() {
-    currentLargePreviewViewportState = largePreviewViewportStateResolver.inactive();
+    currentLargePreviewViewportState = largePreviewViewportNavigationResolver.inactive();
   }
 
   private void navigateLargePreviewByStep(int pageDelta) {
@@ -1620,18 +1618,9 @@ public class MainWindowController implements UiScreenController {
         .filter(JsonViewerLoadResult::hasLargePreviewSession)
         .flatMap(
             result ->
-                largePreviewViewportStateResolver.resolveForPage(
-                    result,
-                    Math.max(
-                        0,
-                        Math.min(
-                            currentLargePreviewViewportState.currentPageIndex() + pageDelta,
-                            currentLargePreviewViewportState.totalPages() - 1))))
-        .filter(
-            targetViewportState ->
-                targetViewportState.currentPageIndex()
-                    != currentLargePreviewViewportState.currentPageIndex())
-        .ifPresent(this::requestLargePreviewPage);
+                largePreviewViewportNavigationResolver.resolveForRelativePage(
+                    result, currentLargePreviewViewportState, pageDelta))
+        .ifPresent(targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
   }
 
   private void syncLargePreviewPageControls(JsonViewerLoadResult result) {
