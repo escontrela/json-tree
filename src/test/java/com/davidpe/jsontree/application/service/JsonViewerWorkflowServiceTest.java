@@ -151,8 +151,9 @@ class JsonViewerWorkflowServiceTest {
     assertEquals(
         com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
         result.inspectionMode());
-    assertFalse(result.capabilities().rawJsonAvailable());
+    assertTrue(result.capabilities().rawJsonAvailable());
     assertFalse(result.capabilities().searchAvailable());
+    assertFalse(result.capabilities().outlineAvailable());
     assertTrue(result.hasLargePreviewSession());
     assertEquals(1, largePreviewStore.materializeCalls);
   }
@@ -189,7 +190,8 @@ class JsonViewerWorkflowServiceTest {
     assertEquals(
         com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
         result.inspectionMode());
-    assertTrue(result.capabilities().outlineAvailable());
+    assertTrue(result.capabilities().rawJsonAvailable());
+    assertFalse(result.capabilities().outlineAvailable());
     assertEquals(0, renderer.fullRenderCount);
     assertEquals(0, renderer.largePreviewRenderCount);
     assertTrue(result.hasLargePreviewSession());
@@ -268,8 +270,6 @@ class JsonViewerWorkflowServiceTest {
         workflowService.loadLargePreviewPage(sessionId, 2).orElseThrow().loadResult();
     JsonViewerLoadResult backToFirstPage =
         workflowService.loadLargePreviewPage(sessionId, 0).orElseThrow().loadResult();
-    LargePreviewOutlineDigest outlineDigest =
-        workflowService.currentLargePreviewOutlineDigest().orElseThrow();
     JsonViewerLoadResult smallResult = workflowService.loadFile(smallFile);
 
     assertEquals(
@@ -280,7 +280,7 @@ class JsonViewerWorkflowServiceTest {
     assertEquals(2, thirdPage.largePreviewSession().currentPageIndex());
     assertTrue(thirdPage.asciiTreeDocument().content().contains("page: 2"));
     assertEquals(0, backToFirstPage.largePreviewSession().currentPageIndex());
-    assertEquals(OptionalInt.of(2), outlineDigest.pageIndexForEntry(2));
+    assertTrue(workflowService.currentLargePreviewOutlineDigest().isEmpty());
     assertEquals(
         com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
         smallResult.inspectionMode());
@@ -288,6 +288,28 @@ class JsonViewerWorkflowServiceTest {
     assertTrue(smallResult.capabilities().searchAvailable());
     assertEquals(1, largePreviewStore.deletedSessionPaths.size());
     assertEquals(1, renderer.fullRenderCount);
+  }
+
+  @Test
+  void returnsCurrentChunkAsRawJsonForLargePreviewMode() throws IOException {
+    TrackingLargePreviewSessionStore largePreviewStore =
+        new TrackingLargePreviewSessionStore(List.of("{\"chunk\":1}", "{\"chunk\":2}"), LargePreviewOutlineDigest.empty());
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            new InMemoryHistoryRepository(),
+            unusedRendererPort(),
+            inspectionModeResolver(8L),
+            largePreviewSessionService(largePreviewStore));
+    Path largeFile = Files.writeString(tempDir.resolve("chunked.json"), "{\"chunk\":1}{\"chunk\":2}");
+
+    JsonViewerLoadResult firstPage = workflowService.loadFile(largeFile);
+    assertEquals(firstPage.asciiTreeDocument().content(), workflowService.currentViewRawJson().orElseThrow());
+    String sessionId = firstPage.largePreviewSession().sessionId();
+    JsonViewerLoadResult secondPage =
+        workflowService.loadLargePreviewPage(sessionId, 1).orElseThrow().loadResult();
+
+    assertEquals(secondPage.asciiTreeDocument().content(), workflowService.currentViewRawJson().orElseThrow());
   }
 
   @Test

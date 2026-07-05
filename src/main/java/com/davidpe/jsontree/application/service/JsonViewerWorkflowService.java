@@ -314,6 +314,10 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       return Optional.empty();
     }
 
+    if (currentView.usesLargePreview() && currentView.hasRenderableTree()) {
+      return Optional.ofNullable(currentView.asciiTreeDocument().content());
+    }
+
     if (currentView.historyEntry() != null) {
       return jsonHistoryRepository.readStoredJson(currentView.historyEntry().storedName());
     }
@@ -361,7 +365,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     if (currentView == null || !currentView.hasLargePreviewSession()) {
       return Optional.empty();
     }
-    return largePreviewSessionService.outlineDigest(currentView.largePreviewSession().sessionId());
+    return Optional.empty();
   }
 
   /** Opens history through the input port contract. */
@@ -439,10 +443,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   }
 
   private AsciiTreeDocument toAsciiTreeDocument(LargePreviewPageLoadResult pageLoadResult) {
+    String chunkContent = pageLoadResult.page().content();
     return new AsciiTreeDocument(
         "root",
-        pageLoadResult.page().content(),
-        pageLoadResult.page().descriptor().logicalLineCount());
+        chunkContent,
+        chunkContent.isEmpty() ? 0 : chunkContent.split("\\R", -1).length);
   }
 
   private LargePreviewSessionSource sourceFor(
