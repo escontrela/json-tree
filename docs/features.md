@@ -227,6 +227,11 @@
 - The session model tracks stable session identity, normalized source identity, current page, optional total pages, optional logical line totals, and page readiness state without leaking JavaFX concerns into `application` or `domain`.
 - The contract also leaves room for background materialization, bounded warm-page caching, and compact outline metadata so later tickets can wire paginated oversized inspection without redesigning the existing small-file workflow.
 
+## Large Preview Global Ranges
+
+- The paged large-preview session contract now exposes document-wide logical page ranges in addition to page indexes, which gives later UI work a stable coordinate system for full-document scrolling without leaking JavaFX pixel math into the application layer.
+- Each session also carries explicit resident-cache radius metadata, so the workflow can reason about bounded nearby-page residency as part of the session state instead of relying on controller heuristics.
+
 ## Large Preview Page Materialization
 
 - Oversized JSON rendering now has a streaming materialization path that writes ordered ASCII pages into temporary session storage instead of assuming a single bounded preview buffer.

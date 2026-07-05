@@ -40,4 +40,8 @@ public record LargePreviewMaterializationSnapshot(
   public int totalPages() {
     return pages.size();
   }
+
+  public List<LargePreviewPageRange> pageRanges() {
+    return pages.stream().map(LargePreviewPageRange::fromDescriptor).toList();
+  }
 }

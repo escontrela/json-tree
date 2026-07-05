@@ -59,7 +59,7 @@ public class LargePreviewSessionService {
   public LargePreviewPageLoadResult openSession(LargePreviewSessionSource source) {
     String sessionId = UUID.randomUUID().toString();
     RuntimeSession runtimeSession =
-        new RuntimeSession(LargePreviewPagedSession.initializing(sessionId, source));
+        new RuntimeSession(LargePreviewPagedSession.initializing(sessionId, source, warmPageRadius));
     RuntimeSession previous = sessions.putIfAbsent(sessionId, runtimeSession);
     if (previous != null) {
       throw new IllegalStateException("Duplicate large-preview session id generated: " + sessionId);
@@ -200,6 +200,7 @@ public class LargePreviewSessionService {
         runtimeSession.session =
             runtimeSession.session
                 .withKnownTotals(snapshot.totalPages(), snapshot.totalLogicalLines())
+                .withPageRanges(snapshot.pageRanges())
                 .withOutlineDigestReady(!snapshot.outlineDigest().emptyDigest());
         refreshPageStates(runtimeSession);
         runtimeSession.monitor.notifyAll();
