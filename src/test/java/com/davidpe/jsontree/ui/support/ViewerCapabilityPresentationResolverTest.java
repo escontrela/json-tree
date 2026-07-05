@@ -39,15 +39,15 @@ class ViewerCapabilityPresentationResolverTest {
   void resolvesLargePreviewPresentation() {
     ViewerCapabilityPresentation presentation = resolver.resolve(largePreviewResult());
 
-    assertFalse(presentation.rawJsonEnabled());
+    assertTrue(presentation.rawJsonEnabled());
     assertFalse(presentation.searchEnabled());
-    assertTrue(presentation.outlineEnabled());
+    assertFalse(presentation.outlineEnabled());
     assertEquals("Copy preview", presentation.copyButtonText());
     assertEquals("Preview", presentation.validationBadgeText());
     assertEquals("status-accent", presentation.validationBadgeStyleClass());
-    assertEquals(" • bounded large preview", presentation.fileMetaSuffix());
+    assertEquals(" • byte-paged large preview", presentation.fileMetaSuffix());
     assertEquals("PREVIEW", presentation.statusState());
-    assertTrue(presentation.outlineStateMessage().contains("bounded outline minimap"));
+    assertTrue(presentation.outlineStateMessage().contains("disables the outline"));
   }
 
   @Test
@@ -55,7 +55,7 @@ class ViewerCapabilityPresentationResolverTest {
     ViewerCapabilityPresentation largePreview = resolver.resolve(largePreviewResult());
     ViewerCapabilityPresentation full = resolver.resolve(fullResult());
 
-    assertFalse(largePreview.rawJsonEnabled());
+    assertTrue(largePreview.rawJsonEnabled());
     assertTrue(full.rawJsonEnabled());
     assertEquals("Copy tree", full.copyButtonText());
     assertEquals("VALID", full.statusState());

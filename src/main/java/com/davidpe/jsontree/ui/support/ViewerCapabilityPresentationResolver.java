@@ -9,18 +9,18 @@ public class ViewerCapabilityPresentationResolver {
   public ViewerCapabilityPresentation resolve(JsonViewerLoadResult result) {
     if (result.usesLargePreview()) {
       return new ViewerCapabilityPresentation(
-          false,
-          false,
           true,
+          false,
+          false,
           "Copy preview",
           "Preview",
           "status-accent",
-          " • bounded large preview",
-          "Showing bounded large preview for oversized JSON",
+          " • byte-paged large preview",
+          "Showing a byte-bounded preview chunk for oversized JSON",
           "PREVIEW",
-          "Preview outline",
-          "Large preview mode uses a bounded outline minimap derived from the visible preview.",
-          "Raw JSON and regex search stay disabled until a smaller file is loaded.");
+          "Outline unavailable",
+          "Large preview disables the outline and minimap while the viewer pages through source chunks.",
+          "Raw JSON stays available for the current chunk only. Regex search stays disabled.");
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;
