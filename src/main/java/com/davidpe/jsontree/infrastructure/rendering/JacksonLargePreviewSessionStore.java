@@ -1,20 +1,17 @@
 package com.davidpe.jsontree.infrastructure.rendering;
 
-import com.davidpe.jsontree.application.model.JsonOutlineEntry;
-import com.davidpe.jsontree.application.model.JsonOutlineEntryKind;
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
 import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
-import com.davidpe.jsontree.application.model.LargePreviewOutlineDigestEntry;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
 import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
-import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -24,10 +21,18 @@ import java.util.function.Consumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+/**
+ * Builds a byte-based large-preview session index and reads chunk content on demand from the
+ * original JSON file.
+ *
+ * <p>The store keeps the existing port contract and temporary session root, but it no longer
+ * materializes full ASCII pages in advance. Instead, it creates byte-window descriptors plus coarse
+ * offset checkpoints and only reads the requested chunk from the source file when the workflow asks
+ * for it.
+ */
 @Service
 public class JacksonLargePreviewSessionStore implements LargePreviewSessionStorePort {
 
-  private final ObjectMapper objectMapper;
   private final LargePreviewProperties largePreviewProperties;
   private final Path tempRootDirectory;
 
@@ -45,7 +50,6 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
       ObjectMapper objectMapper,
       LargePreviewProperties largePreviewProperties,
       Path tempRootDirectory) {
-    this.objectMapper = objectMapper;
     this.largePreviewProperties = largePreviewProperties;
     this.tempRootDirectory = tempRootDirectory.toAbsolutePath().normalize();
   }
@@ -58,31 +62,14 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
     Consumer<LargePreviewPageDescriptor> safeListener =
         onPageAvailable == null ? descriptor -> {} : onPageAvailable;
     Path sessionStoragePath = createSessionStoragePath(sessionId);
-    try (InputStream inputStream = Files.newInputStream(source.path());
-        JsonParser parser = objectMapper.getFactory().createParser(inputStream)) {
+    try {
       Files.createDirectories(sessionStoragePath);
-      PagedPreviewWriter writer =
-          new PagedPreviewWriter(
-              sessionStoragePath, largePreviewProperties.getPageLineCount(), safeListener);
-      writer.appendLine("root");
-
-      JsonToken rootToken = parser.nextToken();
-      if (rootToken == null) {
-        return writer.finish(sessionId);
-      }
-
-      if (rootToken == JsonToken.START_OBJECT) {
-        appendObject(writer, parser, "");
-      } else if (rootToken == JsonToken.START_ARRAY) {
-        appendArray(writer, parser, "");
-      } else {
-        writer.appendLine("├─ value: " + formatScalar(parser, rootToken));
-      }
-      return writer.finish(sessionId);
+      return buildChunkSnapshot(sessionId, source, sessionStoragePath, safeListener);
     } catch (IOException exception) {
       deleteSessionStorage(sessionStoragePath);
       throw new IllegalStateException(
-          "Unable to materialize paged large-preview session for: " + source.path(), exception);
+          "Unable to materialize byte-indexed large-preview session for: " + source.path(),
+          exception);
     }
   }
 
@@ -92,11 +79,10 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
       if (!Files.exists(descriptor.storagePath())) {
         return Optional.empty();
       }
-      return Optional.of(
-          new LargePreviewPageContent(descriptor, Files.readString(descriptor.storagePath())));
+      return Optional.of(new LargePreviewPageContent(descriptor, readChunkText(descriptor)));
     } catch (IOException exception) {
       throw new IllegalStateException(
-          "Unable to read large-preview page: " + descriptor.storagePath(), exception);
+          "Unable to read large-preview page chunk: " + descriptor.storagePath(), exception);
     }
   }
 
@@ -122,51 +108,109 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
     }
   }
 
-  private void appendObject(PagedPreviewWriter writer, JsonParser parser, String prefix)
+  private LargePreviewMaterializationSnapshot buildChunkSnapshot(
+      String sessionId,
+      LargePreviewSessionSource source,
+      Path sessionStoragePath,
+      Consumer<LargePreviewPageDescriptor> onPageAvailable)
       throws IOException {
-    while (parser.nextToken() != JsonToken.END_OBJECT) {
-      String fieldName = parser.getCurrentName();
-      JsonToken valueToken = parser.nextToken();
-      appendEntry(writer, parser, prefix, fieldName, valueToken);
+    long fileSize = Files.size(source.path());
+    int visibleChunkBytes = Math.max(1024, largePreviewProperties.getVisibleChunkBytes());
+    int overlapBytes =
+        Math.max(
+            0, Math.min(largePreviewProperties.getChunkOverlapBytes(), visibleChunkBytes - 1024));
+    long visibleStride = Math.max(1L, visibleChunkBytes - (long) overlapBytes);
+
+    List<Long> indexOffsets =
+        buildIndexOffsets(fileSize, Math.max(1024, largePreviewProperties.getPageIndexStrideBytes()));
+    List<LargePreviewPageDescriptor> pages = new ArrayList<>();
+
+    if (fileSize == 0L) {
+      LargePreviewPageDescriptor emptyDescriptor =
+          new LargePreviewPageDescriptor(0, source.path(), 0L, 0, 0, 0);
+      pages.add(emptyDescriptor);
+      onPageAvailable.accept(emptyDescriptor);
+      return new LargePreviewMaterializationSnapshot(
+          sessionId,
+          sessionStoragePath,
+          pages,
+          0L,
+          indexOffsets,
+          LargePreviewOutlineDigest.empty());
+    }
+
+    long startOffset = 0L;
+    int pageIndex = 0;
+    while (startOffset < fileSize) {
+      int byteCount = (int) Math.min(visibleChunkBytes, fileSize - startOffset);
+      int leadingOverlap = pageIndex == 0 ? 0 : Math.min(overlapBytes, byteCount);
+      int trailingOverlap =
+          startOffset + byteCount >= fileSize ? 0 : Math.min(overlapBytes, byteCount);
+      LargePreviewPageDescriptor descriptor =
+          new LargePreviewPageDescriptor(
+              pageIndex, source.path(), startOffset, byteCount, leadingOverlap, trailingOverlap);
+      pages.add(descriptor);
+      onPageAvailable.accept(descriptor);
+      pageIndex++;
+      startOffset += visibleStride;
+    }
+
+    return new LargePreviewMaterializationSnapshot(
+        sessionId,
+        sessionStoragePath,
+        pages,
+        fileSize,
+        indexOffsets,
+        LargePreviewOutlineDigest.empty());
+  }
+
+  private List<Long> buildIndexOffsets(long fileSize, int strideBytes) {
+    long safeStride = Math.max(1024L, strideBytes);
+    List<Long> offsets = new ArrayList<>();
+    for (long offset = 0L; offset < fileSize; offset += safeStride) {
+      offsets.add(offset);
+    }
+    if (offsets.isEmpty()) {
+      offsets.add(0L);
+    }
+    return offsets;
+  }
+
+  private String readChunkText(LargePreviewPageDescriptor descriptor) throws IOException {
+    if (descriptor.logicalLineCount() == 0) {
+      return "";
+    }
+    try (SeekableByteChannel channel = Files.newByteChannel(descriptor.storagePath())) {
+      channel.position(descriptor.startingLogicalLine());
+      ByteBuffer buffer = ByteBuffer.allocate(descriptor.logicalLineCount());
+      while (buffer.hasRemaining()) {
+        if (channel.read(buffer) < 0) {
+          break;
+        }
+      }
+      byte[] trimmedBytes = trimUtf8Boundaries(buffer.array(), buffer.position());
+      return new String(trimmedBytes, StandardCharsets.UTF_8);
     }
   }
 
-  private void appendArray(PagedPreviewWriter writer, JsonParser parser, String prefix)
-      throws IOException {
-    int itemIndex = 0;
-    while (parser.nextToken() != JsonToken.END_ARRAY) {
-      appendEntry(writer, parser, prefix, "[" + itemIndex + "]", parser.currentToken());
-      itemIndex++;
+  private byte[] trimUtf8Boundaries(byte[] bytes, int length) {
+    int start = 0;
+    while (start < length && (bytes[start] & 0xC0) == 0x80) {
+      start++;
     }
-  }
-
-  private void appendEntry(
-      PagedPreviewWriter writer,
-      JsonParser parser,
-      String prefix,
-      String label,
-      JsonToken valueToken)
-      throws IOException {
-    if (valueToken == JsonToken.START_OBJECT) {
-      writer.appendLine(prefix + "├─ " + label);
-      appendObject(writer, parser, prefix + "│  ");
-      return;
+    int end = length;
+    while (end > start && (bytes[end - 1] & 0xC0) == 0x80) {
+      end--;
     }
-    if (valueToken == JsonToken.START_ARRAY) {
-      writer.appendLine(prefix + "├─ " + label + " [preview]");
-      appendArray(writer, parser, prefix + "│  ");
-      return;
+    if (start == 0 && end == length) {
+      byte[] direct = new byte[length];
+      System.arraycopy(bytes, 0, direct, 0, length);
+      return direct;
     }
-    writer.appendLine(prefix + "├─ " + label + ": " + formatScalar(parser, valueToken));
-  }
-
-  private String formatScalar(JsonParser parser, JsonToken token) throws IOException {
-    return switch (token) {
-      case VALUE_STRING -> "\"" + parser.getText() + "\"";
-      case VALUE_NUMBER_INT, VALUE_NUMBER_FLOAT, VALUE_TRUE, VALUE_FALSE, VALUE_NULL ->
-          parser.getText();
-      default -> "\"<unsupported>\"";
-    };
+    int safeLength = Math.max(0, end - start);
+    byte[] trimmed = new byte[safeLength];
+    System.arraycopy(bytes, start, trimmed, 0, safeLength);
+    return trimmed;
   }
 
   private Path createSessionStoragePath(String sessionId) {
@@ -183,159 +227,5 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
 
   private static Path defaultTempRoot() {
     return Path.of(System.getProperty("java.io.tmpdir"));
-  }
-
-  private static final class PagedPreviewWriter {
-
-    private final Path sessionStoragePath;
-    private final int pageLineCount;
-    private final Consumer<LargePreviewPageDescriptor> onPageAvailable;
-    private final List<String> pendingLines = new ArrayList<>();
-    private final List<LargePreviewPageDescriptor> pages = new ArrayList<>();
-    private final OutlineDigestBuilder outlineDigestBuilder = new OutlineDigestBuilder();
-    private int pageIndex;
-    private long totalLogicalLines;
-
-    private PagedPreviewWriter(
-        Path sessionStoragePath,
-        int pageLineCount,
-        Consumer<LargePreviewPageDescriptor> onPageAvailable) {
-      this.sessionStoragePath = sessionStoragePath;
-      this.pageLineCount = Math.max(1, pageLineCount);
-      this.onPageAvailable = onPageAvailable;
-    }
-
-    private void appendLine(String line) throws IOException {
-      outlineDigestBuilder.appendLine(line, pageIndex);
-      pendingLines.add(line);
-      totalLogicalLines++;
-      if (pendingLines.size() >= pageLineCount) {
-        flushPage();
-      }
-    }
-
-    private LargePreviewMaterializationSnapshot finish(String sessionId) throws IOException {
-      if (!pendingLines.isEmpty() || pages.isEmpty()) {
-        flushPage();
-      }
-      return new LargePreviewMaterializationSnapshot(
-          sessionId,
-          sessionStoragePath,
-          List.copyOf(pages),
-          totalLogicalLines,
-          outlineDigestBuilder.build());
-    }
-
-    private void flushPage() throws IOException {
-      Path pagePath = sessionStoragePath.resolve("page-%05d.txt".formatted(pageIndex));
-      Files.writeString(pagePath, String.join("\n", pendingLines));
-      LargePreviewPageDescriptor descriptor =
-          new LargePreviewPageDescriptor(
-              pageIndex,
-              pagePath,
-              totalLogicalLines - pendingLines.size(),
-              pendingLines.size());
-      pages.add(descriptor);
-      pendingLines.clear();
-      pageIndex++;
-      onPageAvailable.accept(descriptor);
-    }
-  }
-
-  private static final class OutlineDigestBuilder {
-
-    private final List<LargePreviewOutlineDigestEntry> entries = new ArrayList<>();
-    private int maxDepth;
-
-    private void appendLine(String line, int pageIndex) {
-      if (line == null || line.isBlank()) {
-        return;
-      }
-      int depth = previewDepth(line);
-      String payload = previewPayload(line);
-      JsonOutlineEntryKind kind = previewKind(payload);
-      int childCount = previewChildCount(payload, kind);
-      int visualWeight = computePreviewVisualWeight(payload, kind, childCount);
-      entries.add(
-          new LargePreviewOutlineDigestEntry(
-              pageIndex, new JsonOutlineEntry(depth, visualWeight, kind, childCount)));
-      maxDepth = Math.max(maxDepth, depth);
-    }
-
-    private LargePreviewOutlineDigest build() {
-      return entries.isEmpty()
-          ? LargePreviewOutlineDigest.empty()
-          : new LargePreviewOutlineDigest(List.copyOf(entries), maxDepth);
-    }
-
-    private int previewDepth(String line) {
-      int branchIndex = Math.max(line.lastIndexOf("├─ "), line.lastIndexOf("└─ "));
-      if (branchIndex < 0) {
-        return 0;
-      }
-      int depth = 1;
-      for (int index = 0; index < branchIndex; index++) {
-        if (line.charAt(index) == '│') {
-          depth++;
-        }
-      }
-      return depth;
-    }
-
-    private String previewPayload(String line) {
-      int branchIndex = Math.max(line.lastIndexOf("├─ "), line.lastIndexOf("└─ "));
-      return branchIndex < 0 ? line.trim() : line.substring(branchIndex + 3).trim();
-    }
-
-    private JsonOutlineEntryKind previewKind(String payload) {
-      if (payload.startsWith("... ")) {
-        return JsonOutlineEntryKind.VALUE;
-      }
-      int separatorIndex = payload.indexOf(": ");
-      if (separatorIndex >= 0) {
-        String value = payload.substring(separatorIndex + 2);
-        if (value.startsWith("{")) {
-          return JsonOutlineEntryKind.OBJECT;
-        }
-        if (value.startsWith("[")) {
-          return JsonOutlineEntryKind.ARRAY;
-        }
-        return JsonOutlineEntryKind.VALUE;
-      }
-      if (payload.matches("^.+\\s\\[.+]$")) {
-        return JsonOutlineEntryKind.ARRAY;
-      }
-      return JsonOutlineEntryKind.OBJECT;
-    }
-
-    private int previewChildCount(String payload, JsonOutlineEntryKind kind) {
-      int countStart = payload.lastIndexOf('[');
-      int countEnd = payload.lastIndexOf(']');
-      if (countStart >= 0 && countEnd > countStart) {
-        String digits = payload.substring(countStart + 1, countEnd).replaceAll("[^0-9]", "");
-        if (!digits.isBlank()) {
-          return Integer.parseInt(digits);
-        }
-      }
-      if (kind == JsonOutlineEntryKind.ARRAY && payload.contains("[")) {
-        return 1;
-      }
-      if (kind == JsonOutlineEntryKind.OBJECT && payload.contains("{")) {
-        return 1;
-      }
-      return 0;
-    }
-
-    private int computePreviewVisualWeight(
-        String payload, JsonOutlineEntryKind kind, int childCount) {
-      int baseWeight =
-          switch (kind) {
-            case OBJECT -> 18;
-            case ARRAY -> 16;
-            case VALUE -> 10;
-          };
-      int signal = Math.min(Math.max(payload.length(), childCount), 10);
-      return Math.max(6, Math.min(30, Math.max(baseWeight, signal + 8)));
-    }
   }
 }

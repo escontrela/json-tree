@@ -2,7 +2,6 @@ package com.davidpe.jsontree.infrastructure.rendering;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
@@ -14,10 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -28,139 +23,63 @@ class JacksonLargePreviewSessionStoreTest {
   @TempDir Path tempDir;
 
   @Test
-  void materializesOrderedMultiPageAsciiPreviewIntoTemporaryStorage() throws Exception {
-    Path jsonFile =
-        Files.writeString(
-            tempDir.resolve("large.json"),
-            """
-            {
-              "app": {
-                "name": "json-tree",
-                "version": "1.0.0",
-                "themes": ["dark", "light"]
-              },
-              "user": {
-                "id": 1,
-                "roles": ["dev", "ops"]
-              },
-              "flags": {
-                "active": true,
-                "beta": false
-              }
-            }
-            """);
-    JacksonLargePreviewSessionStore store = storeWithPageSize(5);
+  void buildsByteIndexedChunkDescriptorsWithoutMaterializingWholePreview() throws Exception {
+    Path jsonFile = Files.writeString(tempDir.resolve("large.json"), repeatedJson(420_000));
+    JacksonLargePreviewSessionStore store = storeWithChunkConfig(150 * 1024, 12 * 1024, 512 * 1024);
 
     LargePreviewMaterializationSnapshot snapshot =
-        store.materialize(
-            "session-1", LargePreviewSessionSource.local(jsonFile), descriptor -> {});
+        store.materialize("session-1", LargePreviewSessionSource.local(jsonFile), descriptor -> {});
 
     assertEquals("session-1", snapshot.sessionId());
     assertTrue(Files.isDirectory(snapshot.sessionStoragePath()));
+    assertEquals(Files.size(jsonFile), snapshot.totalLogicalLines());
+    assertFalse(snapshot.pages().isEmpty());
+    assertTrue(snapshot.indexOffsets().contains(0L));
+    assertTrue(snapshot.outlineDigest().emptyDigest());
     assertEquals(
-        List.of(0, 1, 2),
-        snapshot.pages().stream().map(LargePreviewPageDescriptor::pageIndex).toList());
-    assertEquals(
-        List.of(5, 5, 5),
-        snapshot.pages().stream().map(LargePreviewPageDescriptor::logicalLineCount).toList());
-    assertEquals(
-        List.of(0L, 5L, 10L),
-        snapshot.pages().stream().map(LargePreviewPageDescriptor::startingLogicalLine).toList());
-    assertEquals(15, snapshot.outlineDigest().entries().size());
-    assertEquals(2, snapshot.outlineDigest().entries().getLast().pageIndex());
-    assertEquals(
-        List.of(
-            """
-            root
-            ├─ app
-            │  ├─ name: "json-tree"
-            │  ├─ version: "1.0.0"
-            │  ├─ themes [preview]""",
-            """
-            │  │  ├─ [0]: "dark"
-            │  │  ├─ [1]: "light"
-            ├─ user
-            │  ├─ id: 1
-            │  ├─ roles [preview]""",
-            """
-            │  │  ├─ [0]: "dev"
-            │  │  ├─ [1]: "ops"
-            ├─ flags
-            │  ├─ active: true
-            │  ├─ beta: false"""),
-        snapshot.pages().stream()
-            .map(store::readPage)
-            .map(optional -> optional.orElseThrow().content())
-            .toList());
-    assertEquals(15L, snapshot.totalLogicalLines());
+        jsonFile.toAbsolutePath().normalize(),
+        snapshot.pages().getFirst().storagePath().toAbsolutePath().normalize());
+    assertEquals(0L, snapshot.pages().getFirst().startingLogicalLine());
+    assertEquals(150 * 1024, snapshot.pages().getFirst().logicalLineCount());
+    assertEquals(0, snapshot.pages().getFirst().leadingOverlapBytes());
+    assertEquals(12 * 1024, snapshot.pages().getFirst().trailingOverlapBytes());
   }
 
   @Test
-  void exposesFirstPageBeforeFullMaterializationFinishes() throws Exception {
-    Path jsonFile =
-        Files.writeString(
-            tempDir.resolve("large-early-page.json"),
-            """
-            {
-              "nodes": [
-                {"id": 1, "name": "alpha"},
-                {"id": 2, "name": "beta"},
-                {"id": 3, "name": "gamma"},
-                {"id": 4, "name": "delta"}
-              ],
-              "meta": {
-                "count": 4
-              }
-            }
-            """);
-    JacksonLargePreviewSessionStore store = storeWithPageSize(4);
-    CountDownLatch firstPageAvailable = new CountDownLatch(1);
-    CountDownLatch releaseFirstPage = new CountDownLatch(1);
+  void readsOverlappingChunksWithoutLeavingByteGaps() throws Exception {
+    Path jsonFile = Files.writeString(tempDir.resolve("source.json"), repeatedJson(360_000));
+    JacksonLargePreviewSessionStore store = storeWithChunkConfig(150 * 1024, 12 * 1024, 512 * 1024);
     List<LargePreviewPageDescriptor> seenPages = new ArrayList<>();
 
-    try (var executor = Executors.newSingleThreadExecutor()) {
-      CompletableFuture<LargePreviewMaterializationSnapshot> future =
-          CompletableFuture.supplyAsync(
-              () ->
-                  store.materialize(
-                      "session-early",
-                      LargePreviewSessionSource.local(jsonFile),
-                      descriptor -> {
-                        seenPages.add(descriptor);
-                        if (descriptor.pageIndex() == 0) {
-                          firstPageAvailable.countDown();
-                          try {
-                            releaseFirstPage.await(2, TimeUnit.SECONDS);
-                          } catch (InterruptedException exception) {
-                            Thread.currentThread().interrupt();
-                            throw new IllegalStateException(exception);
-                          }
-                        }
-                      }),
-              executor);
+    LargePreviewMaterializationSnapshot snapshot =
+        store.materialize("session-overlap", LargePreviewSessionSource.local(jsonFile), seenPages::add);
 
-      assertTrue(firstPageAvailable.await(2, TimeUnit.SECONDS));
-      LargePreviewPageDescriptor firstPage = seenPages.get(0);
-      assertNotNull(firstPage);
-      assertTrue(Files.exists(firstPage.storagePath()));
-      assertFalse(future.isDone());
-      assertTrue(
-          store
-              .readPage(firstPage)
-              .orElseThrow()
-              .content()
-              .startsWith("root\n├─ nodes [preview]"));
+    assertTrue(snapshot.pages().size() >= 2);
+    LargePreviewPageDescriptor firstPage = seenPages.get(0);
+    LargePreviewPageDescriptor secondPage = seenPages.get(1);
+    String firstChunk = store.readPage(firstPage).orElseThrow().content();
+    String secondChunk = store.readPage(secondPage).orElseThrow().content();
+    String firstTail =
+        firstChunk.substring(Math.max(0, firstChunk.length() - firstPage.trailingOverlapBytes()));
+    String secondHead =
+        secondChunk.substring(0, Math.min(secondChunk.length(), secondPage.leadingOverlapBytes()));
 
-      releaseFirstPage.countDown();
-      LargePreviewMaterializationSnapshot snapshot = future.get(2, TimeUnit.SECONDS);
-      assertTrue(snapshot.totalPages() >= 2);
-      assertFalse(snapshot.outlineDigest().emptyDigest());
-    }
+    assertEquals(12 * 1024, secondPage.leadingOverlapBytes());
+    assertTrue(secondPage.startingLogicalLine() < firstPage.endingLogicalLineExclusive());
+    assertEquals(firstTail, secondHead);
   }
 
-  private JacksonLargePreviewSessionStore storeWithPageSize(int pageLineCount) {
+  private JacksonLargePreviewSessionStore storeWithChunkConfig(
+      int visibleChunkBytes, int overlapBytes, int pageIndexStrideBytes) {
     LargePreviewProperties properties = new LargePreviewProperties();
-    properties.setPageLineCount(pageLineCount);
+    properties.setVisibleChunkBytes(visibleChunkBytes);
+    properties.setChunkOverlapBytes(overlapBytes);
+    properties.setPageIndexStrideBytes(pageIndexStrideBytes);
     return new JacksonLargePreviewSessionStore(objectMapper, properties, tempDir);
+  }
+
+  private String repeatedJson(int payloadBytes) {
+    String repeated = "0123456789abcdef".repeat(Math.max(1, payloadBytes / 16));
+    return "{\"payload\":\"" + repeated + "\"}";
   }
 }
