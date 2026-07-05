@@ -244,6 +244,11 @@
 - The application layer keeps a bounded warm cache window of `current - 2` to `current + 2`, marks resident pages in session state, and releases more distant pages from memory while leaving them recoverable from temp storage.
 - Page access now reports whether a navigation was an in-memory hit or required waiting for materialization, which prepares the existing viewer shell for later scroll swapping and loader affordances.
 
+## Large Preview Full Activation
+
+- The V2 oversized workflow refines the paged-session strategy by treating a large-preview session as interactive only after the full streaming materialization pass has completed, which means total page count and document-wide page ranges are known before the viewer enters large mode.
+- This V2 path supersedes the earlier first-page-first activation strategy whenever deterministic full-document scroll coordinates are required.
+
 ## Large Preview Outline Digest
 
 - The paged large-preview materializer now emits a dedicated compact outline digest for the entire oversized document during the same streaming pass that writes ASCII pages to temp storage.

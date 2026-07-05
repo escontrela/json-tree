@@ -58,14 +58,14 @@ public class LargePreviewSessionService {
 
   public LargePreviewPageLoadResult openSession(LargePreviewSessionSource source) {
     String sessionId = UUID.randomUUID().toString();
-    RuntimeSession runtimeSession =
-        new RuntimeSession(LargePreviewPagedSession.initializing(sessionId, source, warmPageRadius));
+    LargePreviewMaterializationSnapshot snapshot =
+        sessionStorePort.materialize(sessionId, source, descriptor -> {});
+    RuntimeSession runtimeSession = buildCompletedRuntimeSession(sessionId, source, snapshot);
     RuntimeSession previous = sessions.putIfAbsent(sessionId, runtimeSession);
     if (previous != null) {
+      sessionStorePort.deleteSessionStorage(snapshot.sessionStoragePath());
       throw new IllegalStateException("Duplicate large-preview session id generated: " + sessionId);
     }
-    runtimeSession.materializationTask =
-        executorService.submit(() -> materializeInBackground(runtimeSession));
     return loadPageInternal(runtimeSession, 0).orElseThrow();
   }
 
@@ -102,13 +102,9 @@ public class LargePreviewSessionService {
     if (runtimeSession == null) {
       return;
     }
-    if (runtimeSession.materializationTask != null) {
-      runtimeSession.materializationTask.cancel(true);
-    }
     synchronized (runtimeSession.monitor) {
       runtimeSession.closed = true;
       runtimeSession.session = runtimeSession.session.close();
-      runtimeSession.monitor.notifyAll();
     }
     Path sessionStoragePath = runtimeSession.sessionStoragePath;
     if (sessionStoragePath != null) {
@@ -128,7 +124,6 @@ public class LargePreviewSessionService {
 
   private Optional<LargePreviewPageLoadResult> loadPageInternal(
       RuntimeSession runtimeSession, int pageIndex) {
-    boolean waitedForAvailability = false;
     boolean cacheHit = false;
     LargePreviewPageContent page;
 
@@ -136,32 +131,11 @@ public class LargePreviewSessionService {
       if (runtimeSession.closed) {
         return Optional.empty();
       }
-      runtimeSession.session = applyRequestedWindow(runtimeSession.session, pageIndex);
 
       page = runtimeSession.warmPages.get(pageIndex);
       if (page != null) {
         cacheHit = true;
       } else {
-        while (!runtimeSession.pageDescriptors.containsKey(pageIndex)
-            && runtimeSession.failure == null
-            && !runtimeSession.materializationFinished
-            && !runtimeSession.closed) {
-          waitedForAvailability = true;
-          try {
-            runtimeSession.monitor.wait();
-          } catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException(
-                "Interrupted while waiting for large-preview page " + pageIndex,
-                exception);
-          }
-        }
-        if (runtimeSession.closed) {
-          return Optional.empty();
-        }
-        if (runtimeSession.failure != null) {
-          throw runtimeSession.failure;
-        }
         LargePreviewPageDescriptor descriptor = runtimeSession.pageDescriptors.get(pageIndex);
         if (descriptor == null) {
           return Optional.empty();
@@ -176,63 +150,7 @@ public class LargePreviewSessionService {
       refreshPageStates(runtimeSession);
       return Optional.of(
           new LargePreviewPageLoadResult(
-              runtimeSession.session, runtimeSession.warmPages.get(pageIndex), cacheHit, waitedForAvailability));
-    }
-  }
-
-  private void materializeInBackground(RuntimeSession runtimeSession) {
-    LargePreviewPagedSession initialSession;
-    synchronized (runtimeSession.monitor) {
-      initialSession = runtimeSession.session;
-    }
-
-    try {
-      LargePreviewMaterializationSnapshot snapshot =
-          sessionStorePort.materialize(
-              initialSession.sessionId(),
-              initialSession.source(),
-              descriptor -> onPageMaterialized(runtimeSession, descriptor));
-      synchronized (runtimeSession.monitor) {
-        runtimeSession.snapshot = snapshot;
-        runtimeSession.outlineDigest = snapshot.outlineDigest();
-        runtimeSession.materializationFinished = true;
-        runtimeSession.sessionStoragePath = snapshot.sessionStoragePath();
-        runtimeSession.session =
-            runtimeSession.session
-                .withKnownTotals(snapshot.totalPages(), snapshot.totalLogicalLines())
-                .withPageRanges(snapshot.pageRanges())
-                .withOutlineDigestReady(!snapshot.outlineDigest().emptyDigest());
-        refreshPageStates(runtimeSession);
-        runtimeSession.monitor.notifyAll();
-      }
-    } catch (RuntimeException exception) {
-      synchronized (runtimeSession.monitor) {
-        runtimeSession.failure = exception;
-        runtimeSession.monitor.notifyAll();
-      }
-    }
-  }
-
-  private void onPageMaterialized(
-      RuntimeSession runtimeSession, LargePreviewPageDescriptor descriptor) {
-    synchronized (runtimeSession.monitor) {
-      if (runtimeSession.closed) {
-        return;
-      }
-      runtimeSession.pageDescriptors.put(descriptor.pageIndex(), descriptor);
-      runtimeSession.sessionStoragePath = descriptor.storagePath().getParent();
-      runtimeSession.session =
-          runtimeSession.session.withPageState(
-              LargePreviewPageState.available(
-                  descriptor.pageIndex(), false, true, descriptor.logicalLineCount()));
-      if (withinWarmWindow(
-          descriptor.pageIndex(), runtimeSession.session.currentPageIndex(), warmPageRadius)) {
-        LargePreviewPageContent page = sessionStorePort.readPage(descriptor).orElseThrow();
-        runtimeSession.warmPages.put(descriptor.pageIndex(), page);
-        evictOutsideWarmWindow(runtimeSession, runtimeSession.session.currentPageIndex());
-        refreshPageStates(runtimeSession);
-      }
-      runtimeSession.monitor.notifyAll();
+              runtimeSession.session, runtimeSession.warmPages.get(pageIndex), cacheHit, false));
     }
   }
 
@@ -269,21 +187,27 @@ public class LargePreviewSessionService {
     runtimeSession.session = session;
   }
 
-  private LargePreviewPagedSession applyRequestedWindow(
-      LargePreviewPagedSession session, int currentPageIndex) {
-    LargePreviewPagedSession nextSession = session;
-    int startIndex = Math.max(0, currentPageIndex - warmPageRadius);
-    int endIndex = currentPageIndex + warmPageRadius;
-    for (int pageIndex = startIndex; pageIndex <= endIndex; pageIndex++) {
-      if (nextSession.pageState(pageIndex).isEmpty()) {
-        nextSession = nextSession.withPageState(LargePreviewPageState.requested(pageIndex));
-      }
-    }
-    return nextSession;
-  }
-
   private boolean withinWarmWindow(int pageIndex, int currentPageIndex, int radius) {
     return pageIndex >= Math.max(0, currentPageIndex - radius) && pageIndex <= currentPageIndex + radius;
+  }
+
+  private RuntimeSession buildCompletedRuntimeSession(
+      String sessionId,
+      LargePreviewSessionSource source,
+      LargePreviewMaterializationSnapshot snapshot) {
+    LargePreviewPagedSession session =
+        LargePreviewPagedSession.initializing(sessionId, source, warmPageRadius)
+            .withKnownTotals(snapshot.totalPages(), snapshot.totalLogicalLines(), snapshot.pageRanges())
+            .withOutlineDigestReady(!snapshot.outlineDigest().emptyDigest());
+    RuntimeSession runtimeSession = new RuntimeSession(session);
+    runtimeSession.snapshot = snapshot;
+    runtimeSession.outlineDigest = snapshot.outlineDigest();
+    runtimeSession.sessionStoragePath = snapshot.sessionStoragePath();
+    for (LargePreviewPageDescriptor descriptor : snapshot.pages()) {
+      runtimeSession.pageDescriptors.put(descriptor.pageIndex(), descriptor);
+    }
+    refreshPageStates(runtimeSession);
+    return runtimeSession;
   }
 
   private static final class RuntimeSession {
@@ -294,9 +218,6 @@ public class LargePreviewSessionService {
     private LargePreviewPagedSession session;
     private LargePreviewMaterializationSnapshot snapshot;
     private LargePreviewOutlineDigest outlineDigest;
-    private RuntimeException failure;
-    private java.util.concurrent.Future<?> materializationTask;
-    private boolean materializationFinished;
     private boolean closed;
     private Path sessionStoragePath;
 

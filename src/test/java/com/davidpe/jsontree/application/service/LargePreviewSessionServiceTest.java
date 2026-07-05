@@ -21,11 +21,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -34,34 +31,26 @@ class LargePreviewSessionServiceTest {
   @TempDir Path tempDir;
 
   @Test
-  void opensFirstPageWhileRemainingPagesContinueMaterializingInBackground() throws Exception {
-    CountDownLatch afterFirstPage = new CountDownLatch(1);
-    CountDownLatch releaseRemainingPages = new CountDownLatch(1);
+  void opensCompletedSessionWithKnownTotalsAndResidentWindow() throws Exception {
     TestLargePreviewSessionStore store =
         new TestLargePreviewSessionStore(
             tempDir,
             List.of("page-0", "page-1", "page-2", "page-3"),
-            pageIndex -> {
-              if (pageIndex == 0) {
-                afterFirstPage.countDown();
-                await(releaseRemainingPages);
-              }
-            });
+            pageIndex -> {});
     try (ExecutorService executor = Executors.newCachedThreadPool()) {
       LargePreviewSessionService service = new LargePreviewSessionService(store, 2, executor);
 
       LargePreviewPageLoadResult firstPage = service.openSession(localSource());
+      LargePreviewPagedSession session = service.session(firstPage.session().sessionId()).orElseThrow();
 
       assertEquals("page-0", firstPage.page().content());
-      assertFalse(firstPage.session().totalPagesKnown());
+      assertFalse(firstPage.cacheHit());
+      assertFalse(firstPage.waitedForAvailability());
+      assertTrue(firstPage.session().totalPagesKnown());
       assertEquals(1, store.materializeCalls());
-      assertTrue(afterFirstPage.getCount() == 0L);
-
-      releaseRemainingPages.countDown();
-      awaitCondition(
-          () -> service.session(firstPage.session().sessionId()).map(LargePreviewPagedSession::totalPagesKnown).orElse(false));
-      LargePreviewPagedSession session = service.session(firstPage.session().sessionId()).orElseThrow();
       assertEquals(4, session.totalPages());
+      assertTrue(session.hasDocumentRanges());
+      assertEquals(List.of(0, 1, 2), residentPageIndexes(session));
 
       service.closeSession(session.sessionId());
       assertEquals(1, store.deletedSessionPaths().size());
@@ -79,8 +68,6 @@ class LargePreviewSessionServiceTest {
       LargePreviewSessionService service = new LargePreviewSessionService(store, 2, executor);
 
       LargePreviewPageLoadResult firstPage = service.openSession(localSource());
-      awaitCondition(
-          () -> service.session(firstPage.session().sessionId()).map(LargePreviewPagedSession::totalPagesKnown).orElse(false));
 
       LargePreviewPageLoadResult pageThree =
           service.loadPage(firstPage.session().sessionId(), 3).orElseThrow();
@@ -97,31 +84,22 @@ class LargePreviewSessionServiceTest {
   }
 
   @Test
-  void reportsWaitsForColdPagesAndCacheHitsForWarmPages() throws Exception {
-    CountDownLatch releasePageTwo = new CountDownLatch(1);
+  void reportsColdDiskLoadsWithoutWaitsAndWarmCacheHitsAfterwards() throws Exception {
     TestLargePreviewSessionStore store =
         new TestLargePreviewSessionStore(
             tempDir,
             List.of("page-0", "page-1", "page-2", "page-3"),
-            pageIndex -> {
-              if (pageIndex == 1) {
-                await(releasePageTwo);
-              }
-            });
+            pageIndex -> {});
     try (ExecutorService executor = Executors.newCachedThreadPool()) {
-      LargePreviewSessionService service = new LargePreviewSessionService(store, 2, executor);
+      LargePreviewSessionService service = new LargePreviewSessionService(store, 0, executor);
 
       LargePreviewPageLoadResult firstPage = service.openSession(localSource());
-      CompletableFuture<LargePreviewPageLoadResult> coldPageFuture =
-          CompletableFuture.supplyAsync(
-              () -> service.loadPage(firstPage.session().sessionId(), 2).orElseThrow(), executor);
+      LargePreviewPageLoadResult coldPage =
+          service.loadPage(firstPage.session().sessionId(), 2).orElseThrow();
 
-      Thread.sleep(50L);
-      assertFalse(coldPageFuture.isDone());
-      releasePageTwo.countDown();
-
-      LargePreviewPageLoadResult coldPage = coldPageFuture.get(2, TimeUnit.SECONDS);
-      assertTrue(coldPage.waitedForAvailability());
+      assertFalse(firstPage.waitedForAvailability());
+      assertFalse(firstPage.cacheHit());
+      assertFalse(coldPage.waitedForAvailability());
       assertFalse(coldPage.cacheHit());
 
       LargePreviewPageLoadResult warmPage =
@@ -141,19 +119,6 @@ class LargePreviewSessionServiceTest {
       LargePreviewPageLoadResult firstSession = service.openSession(localSource());
       LargePreviewPageLoadResult secondSession = service.openSession(localSource());
 
-      awaitCondition(
-          () ->
-              service
-                  .session(firstSession.session().sessionId())
-                  .map(LargePreviewPagedSession::totalPagesKnown)
-                  .orElse(false));
-      awaitCondition(
-          () ->
-              service
-                  .session(secondSession.session().sessionId())
-                  .map(LargePreviewPagedSession::totalPagesKnown)
-                  .orElse(false));
-
       service.closeAllSessions();
 
       assertTrue(service.session(firstSession.session().sessionId()).isEmpty());
@@ -172,31 +137,6 @@ class LargePreviewSessionServiceTest {
         .filter(LargePreviewPageState -> LargePreviewPageState.residentInMemory())
         .map(LargePreviewPageState -> LargePreviewPageState.pageIndex())
         .toList();
-  }
-
-  private static void await(CountDownLatch latch) {
-    try {
-      latch.await(2, TimeUnit.SECONDS);
-    } catch (InterruptedException exception) {
-      Thread.currentThread().interrupt();
-      throw new IllegalStateException(exception);
-    }
-  }
-
-  private static void awaitCondition(Condition condition) throws Exception {
-    long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-    while (System.nanoTime() < deadline) {
-      if (condition.matches()) {
-        return;
-      }
-      Thread.sleep(20L);
-    }
-    throw new AssertionError("Condition did not become true in time.");
-  }
-
-  @FunctionalInterface
-  private interface Condition {
-    boolean matches() throws Exception;
   }
 
   @FunctionalInterface
