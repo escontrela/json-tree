@@ -312,6 +312,7 @@ public class MainWindowController implements UiScreenController {
   private boolean suppressLargePreviewScrollHandling;
   private boolean largePreviewPageLoadInFlight;
   private double pendingLargePreviewScrollValue = -1.0;
+  private long viewerWorkflowLoadSequence;
   private final List<Button> largePreviewOutlineStepButtons = new ArrayList<>();
   private List<Region> largePreviewLoaderSquares = List.of();
   private LargePreviewLoadingAffordance largePreviewLoadingAffordance;
@@ -868,10 +869,7 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
-    showLoadingState(jsonPath.getFileName().toString());
-    JsonViewerLoadResult result =
-        workflowService.loadImportedFile(importJsonUseCase.importFile(jsonPath));
-    presentLoadResult(result);
+    loadImportedFileAsync(importJsonUseCase.importFile(jsonPath));
     event.setDropCompleted(true);
     event.consume();
   }
@@ -906,6 +904,59 @@ public class MainWindowController implements UiScreenController {
 
   private void restoreViewFromWorkflow() {
     workflowService.currentView().ifPresentOrElse(this::presentLoadResult, this::showEmptyViewer);
+  }
+
+  private void loadImportedFileAsync(com.davidpe.jsontree.domain.model.JsonImportResult importResult) {
+    showLoadingState(importResult.fileName());
+    beginLargePreviewLoadingAffordance();
+    long requestSequence = ++viewerWorkflowLoadSequence;
+    CompletableFuture
+        .supplyAsync(() -> workflowService.loadImportedFile(importResult))
+        .whenComplete(
+            (result, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleImportedFileLoadResult(
+                            requestSequence, importResult.fileName(), result, throwable)));
+  }
+
+  private void handleImportedFileLoadResult(
+      long requestSequence,
+      String fileName,
+      JsonViewerLoadResult result,
+      Throwable throwable) {
+    if (requestSequence != viewerWorkflowLoadSequence) {
+      return;
+    }
+    cancelLargePreviewLoadingAffordance();
+    if (throwable != null || result == null) {
+      showInvalidState("Unable to load JSON file: " + fileName);
+      footerStatusLabel.setText("JSON load failed");
+      return;
+    }
+    presentLoadResult(result);
+  }
+
+  private void handleHistoryReopenResult(
+      long requestSequence,
+      String fileName,
+      java.util.Optional<JsonViewerLoadResult> result,
+      Throwable throwable) {
+    if (requestSequence != viewerWorkflowLoadSequence) {
+      return;
+    }
+    cancelLargePreviewLoadingAffordance();
+    if (throwable != null) {
+      showInvalidState("Unable to reopen history snapshot: " + fileName);
+      footerStatusLabel.setText("History reopen failed");
+      return;
+    }
+    result.ifPresentOrElse(
+        this::presentLoadResult,
+        () -> {
+          showInvalidState("Stored history snapshot is no longer available.");
+          footerStatusLabel.setText("History snapshot unavailable");
+        });
   }
 
   private void presentLoadResult(JsonViewerLoadResult result) {
@@ -1099,7 +1150,20 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void reopenHistoryEntry(ImportedJsonFile entry) {
-    workflowService.reopenHistoryEntry(entry.storedName()).ifPresent(this::presentLoadResult);
+    showLoadingState(entry.originalName());
+    fileMetaLabel.setText("Preparing JSON preview from history");
+    fileSourceValueLabel.setText("History");
+    setStatusRailValues("LOADING", "--", "--", "History");
+    beginLargePreviewLoadingAffordance();
+    long requestSequence = ++viewerWorkflowLoadSequence;
+    CompletableFuture
+        .supplyAsync(() -> workflowService.reopenHistoryEntry(entry.storedName()))
+        .whenComplete(
+            (result, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleHistoryReopenResult(
+                            requestSequence, entry.originalName(), result, throwable)));
   }
 
   private final class InlineHistoryListCell extends ListCell<ImportedJsonFile> {

@@ -269,8 +269,8 @@
 
 ## Large Preview Loading Affordance
 
-- The main viewer now keeps a compact four-square loading affordance reserved for paged large-preview transitions that outlive a short reveal delay, so warm in-memory swaps stay visually silent.
-- Once revealed, the affordance runs a discreet CLI-like cadence inside the existing viewer shell until the requested page has been loaded and rendered through the paged workflow.
+- The main viewer now keeps a compact four-square loading affordance reserved for paged large-preview waits that outlive a short reveal delay, so warm in-memory swaps stay visually silent.
+- Initial oversized imports and history reopens now execute off the JavaFX thread, which lets the same square-based CLI-style cadence appear during real full-session materialization instead of freezing the shell while totals and page ranges are being determined.
 - Ordinary `FULL` rendering and large-mode transitions that complete before the reveal delay do not activate the overlay, which keeps the baseline viewer path unchanged for small files and fast warm-page jumps.
 
 ## Large Preview Operational Defaults
