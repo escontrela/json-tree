@@ -333,6 +333,30 @@
     -fx-padding: 18 20 18 20;
 }
 
+.large-preview-page-strip {
+    -fx-alignment: center-right;
+    -fx-background-color: #f7f9fb;
+    -fx-border-color: #d6dde6;
+    -fx-border-width: 1;
+    -fx-padding: 6 8 6 8;
+}
+
+.large-preview-page-button {
+    -fx-padding: 8 12 8 12;
+}
+
+.large-preview-page-label {
+    -fx-text-fill: #1a2129;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.large-preview-page-meta {
+    -fx-text-fill: #6a7683;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+}
+
 .workspace-overlay-shell {
     -fx-alignment: top-center;
 }

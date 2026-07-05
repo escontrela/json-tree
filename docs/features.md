@@ -244,6 +244,12 @@
 - The main viewer keeps a single rendered large-preview page bounded in JavaFX while adding top and bottom spacer regions that make the `ScrollPane` represent the full oversized document instead of the visible page alone.
 - Import, reopen, outline scrolling, and later page controls all share the same document-wide coordinate system, which removes the previous drift between scroll position and page identity.
 
+## Large Preview Page Controls
+
+- Large mode now exposes a compact page strip in the main viewer toolbar with `Previous`, `Next`, the current page label, and the known total page count.
+- The controls stay hidden for ordinary `FULL` rendering, disable themselves at the first and last large-preview pages, and reuse the same page-anchor scroll model as manual viewer scrolling.
+- Because the strip state is resolved from the active session rather than inferred from JavaFX widgets, button navigation and manual scrolling stay synchronized on the same current page identity.
+
 ## Large Preview Full Activation
 
 - The V2 oversized workflow refines the paged-session strategy by treating a large-preview session as interactive only after the full streaming materialization pass has completed, which means total page count and document-wide page ranges are known before the viewer enters large mode.
