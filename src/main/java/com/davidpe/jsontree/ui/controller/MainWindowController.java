@@ -28,6 +28,7 @@ import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewArrivalScrollResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
@@ -79,6 +80,7 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -126,6 +128,7 @@ public class MainWindowController implements UiScreenController {
   private final SearchTextFlowHighlighter searchTextFlowHighlighter;
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
+  private final LargePreviewArrivalScrollResolver largePreviewArrivalScrollResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
   private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
@@ -148,6 +151,7 @@ public class MainWindowController implements UiScreenController {
       SearchTextFlowHighlighter searchTextFlowHighlighter,
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
+      LargePreviewArrivalScrollResolver largePreviewArrivalScrollResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
       LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
@@ -169,6 +173,7 @@ public class MainWindowController implements UiScreenController {
     this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
+    this.largePreviewArrivalScrollResolver = largePreviewArrivalScrollResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
     this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
@@ -297,6 +302,7 @@ public class MainWindowController implements UiScreenController {
   private boolean suppressLargePreviewScrollHandling;
   private boolean largePreviewPageLoadInFlight;
   private double pendingLargePreviewScrollValue = -1.0;
+  private int pendingLargePreviewArrivalDirection;
   private long viewerWorkflowLoadSequence;
   private LargePreviewViewportState currentLargePreviewViewportState =
       LargePreviewViewportState.inactive();
@@ -418,6 +424,7 @@ public class MainWindowController implements UiScreenController {
               scheduleOutlineViewportRefresh();
               handleViewerScrollValueChanged(newValue.doubleValue());
             });
+    viewerScrollPane.addEventFilter(ScrollEvent.SCROLL, this::handleLargePreviewScrollPaging);
     viewerScrollPane
         .viewportBoundsProperty()
         .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
@@ -1413,6 +1420,9 @@ public class MainWindowController implements UiScreenController {
     if (suppressLargePreviewScrollHandling || showingRawJson) {
       return;
     }
+    if (workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()) {
+      return;
+    }
     if (largePreviewPageLoadInFlight) {
       pendingLargePreviewScrollValue = clamp(verticalScrollValue);
       return;
@@ -1495,7 +1505,12 @@ public class MainWindowController implements UiScreenController {
       LargePreviewViewerPageResult pageResult, LargePreviewViewportState targetViewportState) {
     updateFileSummary(pageResult.loadResult());
     syncStatusRail(pageResult.loadResult());
-    renderAsciiTree(pageResult.loadResult(), targetViewportState.globalScrollValue());
+    double targetScrollValue = resolveLargePreviewArrivalScroll(pageResult.loadResult());
+    if (showingRawJson && pageResult.loadResult().capabilities().rawJsonAvailable()) {
+      renderLargePreviewRawChunk(pageResult.loadResult(), targetScrollValue);
+    } else {
+      renderAsciiTree(pageResult.loadResult(), targetScrollValue);
+    }
     processDeferredLargePreviewScroll();
   }
 
@@ -1591,14 +1606,10 @@ public class MainWindowController implements UiScreenController {
   private void syncLargePreviewViewportState(
       JsonViewerLoadResult result, double targetVerticalScrollValue) {
     currentLargePreviewViewportState =
-        largePreviewViewportNavigationResolver
-            .resolveForScroll(result, targetVerticalScrollValue)
-            .or(
-                () ->
-                    result.hasLargePreviewSession()
-                        ? largePreviewViewportNavigationResolver.resolveForPage(
-                            result, result.largePreviewSession().currentPageIndex())
-                        : java.util.Optional.empty())
+        (result.hasLargePreviewSession()
+                ? largePreviewViewportNavigationResolver.resolveForPage(
+                    result, result.largePreviewSession().currentPageIndex())
+                : java.util.Optional.<LargePreviewViewportState>empty())
             .orElseGet(largePreviewViewportNavigationResolver::inactive);
   }
 
@@ -1620,7 +1631,11 @@ public class MainWindowController implements UiScreenController {
             result ->
                 largePreviewViewportNavigationResolver.resolveForRelativePage(
                     result, currentLargePreviewViewportState, pageDelta))
-        .ifPresent(targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
+        .ifPresent(
+            targetViewportState -> {
+              pendingLargePreviewArrivalDirection = Integer.signum(pageDelta);
+              navigateLargePreviewToState(targetViewportState, false);
+            });
   }
 
   private void syncLargePreviewPageControls(JsonViewerLoadResult result) {
@@ -1661,30 +1676,68 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void applyLargePreviewDocumentScrollShell(JsonViewerLoadResult result) {
-    if (!result.usesLargePreview() || !result.hasLargePreviewSession()) {
-      hideLargePreviewDocumentScrollShell();
+    hideLargePreviewDocumentScrollShell();
+  }
+
+  private void renderLargePreviewRawChunk(
+      JsonViewerLoadResult result, double targetVerticalScrollValue) {
+    syncLargePreviewViewportState(result, targetVerticalScrollValue);
+    applyCapabilityPresentation(result);
+    syncLargePreviewPageControls(result);
+    applyLargePreviewDocumentScrollShell(result);
+    updateOutlineShell(result, result.asciiTreeDocument());
+    renderRawJsonContent(result.asciiTreeDocument().content());
+    setViewerScrollPosition(0.0, targetVerticalScrollValue);
+    applyState(ViewerVisualState.VALID);
+    scheduleOutlineViewportRefresh();
+  }
+
+  private void handleLargePreviewScrollPaging(ScrollEvent event) {
+    if (event.getDeltaY() == 0.0 || largePreviewPageLoadInFlight) {
       return;
     }
-    result
-        .largePreviewSession()
-        .currentPageRange()
-        .ifPresentOrElse(
-            pageRange -> {
-              long totalLogicalLines =
-                  result.largePreviewSession().totalLogicalLines() == null
-                      ? pageRange.logicalLineCount()
-                      : result.largePreviewSession().totalLogicalLines();
-              long topLogicalLines = pageRange.startingLogicalLine();
-              long bottomLogicalLines =
-                  Math.max(0L, totalLogicalLines - pageRange.endingLogicalLineExclusive());
-              viewerContentBox.setSpacing(0.0);
-              showLargePreviewSpacer(
-                  largePreviewTopSpacer, topLogicalLines * LARGE_PREVIEW_LOGICAL_LINE_HEIGHT);
-              showLargePreviewSpacer(
-                  largePreviewBottomSpacer,
-                  bottomLogicalLines * LARGE_PREVIEW_LOGICAL_LINE_HEIGHT);
-            },
-            this::hideLargePreviewDocumentScrollShell);
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::usesLargePreview)
+        .filter(JsonViewerLoadResult::hasLargePreviewSession)
+        .ifPresent(
+            result -> {
+              boolean atTop = viewerScrollPane.getVvalue() <= 0.001;
+              boolean atBottom = viewerScrollPane.getVvalue() >= 0.999;
+              if (event.getDeltaY() < 0.0 && atBottom) {
+                navigateLargePreviewByStep(1);
+                event.consume();
+                return;
+              }
+              if (event.getDeltaY() > 0.0 && atTop) {
+                navigateLargePreviewByStep(-1);
+                event.consume();
+              }
+            });
+  }
+
+  private double resolveLargePreviewArrivalScroll(JsonViewerLoadResult result) {
+    if (!result.hasLargePreviewSession()) {
+      pendingLargePreviewArrivalDirection = 0;
+      return 0.0;
+    }
+    double targetScrollValue =
+        result.largePreviewSession()
+            .currentPageRange()
+            .map(
+                pageRange ->
+                    largePreviewArrivalScrollResolver.resolve(
+                        new com.davidpe.jsontree.application.model.LargePreviewPageDescriptor(
+                            pageRange.pageIndex(),
+                            result.importResult().path(),
+                            pageRange.startingLogicalLine(),
+                            pageRange.logicalLineCount(),
+                            pageRange.leadingOverlapBytes(),
+                            pageRange.trailingOverlapBytes()),
+                        pendingLargePreviewArrivalDirection))
+            .orElse(pendingLargePreviewArrivalDirection < 0 ? 1.0 : 0.0);
+    pendingLargePreviewArrivalDirection = 0;
+    return targetScrollValue;
   }
 
   private void showLargePreviewSpacer(Region spacer, double height) {
