@@ -29,6 +29,15 @@ class OutlineViewportProjectorTest {
   }
 
   @Test
+  void movesMarkerForwardWhenScrollValueAdvances() {
+    OutlineViewportProjection firstProjection = projector.project(0.20, 220.0, 80.0, 400.0);
+    OutlineViewportProjection secondProjection = projector.project(0.80, 220.0, 80.0, 400.0);
+
+    assertTrue(secondProjection.y() > firstProjection.y());
+    assertEquals(firstProjection.height(), secondProjection.height());
+  }
+
+  @Test
   void hidesMarkerWhenGeometryIsUnavailable() {
     OutlineViewportProjection projection = projector.project(0.0, 0.0, 0.0, 0.0);
 

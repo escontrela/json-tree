@@ -29,8 +29,11 @@ class LargePreviewViewportStateResolverTest {
 
     assertTrue(state.active());
     assertEquals(2, state.currentPageIndex());
+    assertEquals(3, state.currentPageNumber());
     assertEquals(5, state.totalPages());
     assertEquals(0.50, state.globalScrollValue());
+    assertTrue(state.previousEnabled());
+    assertTrue(state.nextEnabled());
   }
 
   @Test

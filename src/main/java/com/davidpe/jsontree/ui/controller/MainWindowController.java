@@ -1435,6 +1435,7 @@ public class MainWindowController implements UiScreenController {
                   .ifPresent(
                       targetViewportState -> {
                         currentLargePreviewViewportState = targetViewportState;
+                        syncLargePreviewPageControls(result);
                         if (targetViewportState.currentPageIndex()
                             != result.largePreviewSession().currentPageIndex()) {
                           requestLargePreviewPage(targetViewportState);
@@ -1648,6 +1649,11 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
+    applyLargePreviewPageNavigationState(navigationState);
+  }
+
+  private void applyLargePreviewPageNavigationState(
+      LargePreviewPageNavigationState navigationState) {
     largePreviewPageControls.setManaged(true);
     largePreviewPageControls.setVisible(true);
     largePreviewCurrentPageLabel.setText("Page " + navigationState.currentPageNumber());
