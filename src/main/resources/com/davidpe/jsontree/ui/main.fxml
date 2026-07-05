@@ -180,6 +180,11 @@
             <Label styleClass="eyebrow-label" text="Outline" />
             <Label fx:id="viewerAidTitleLabel" styleClass="viewer-aid-title" text="Awaiting JSON" />
             <StackPane fx:id="outlinePreviewShell" minHeight="260.0" prefHeight="360.0" styleClass="outline-preview-shell" VBox.vgrow="ALWAYS">
+                <ScrollPane fx:id="largePreviewOutlineScrollPane" fitToWidth="true" hbarPolicy="NEVER" managed="false" pannable="true" styleClass="large-preview-outline-scroll-pane" visible="false" vbarPolicy="AS_NEEDED">
+                    <content>
+                        <VBox fx:id="largePreviewOutlineStepsBox" spacing="8.0" styleClass="large-preview-outline-steps" />
+                    </content>
+                </ScrollPane>
                 <Canvas fx:id="outlineCanvas" mouseTransparent="true" />
                 <Region fx:id="outlineViewportMarker" managed="false" mouseTransparent="true" styleClass="outline-viewport-marker" visible="false" />
                 <Label fx:id="outlineStateLabel" styleClass="outline-state-label" text="Load a local JSON file to prepare the outline minimap shell." wrapText="true" />

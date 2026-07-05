@@ -263,9 +263,9 @@
 
 ## Large Preview Outline Navigation
 
-- The right-side outline rail now resolves pointer interactions into paged large-preview targets using the existing minimap layout buckets plus the full-document digest page mapping.
-- When an outline region belongs to another page, the controller reuses the same paged viewer workflow as the global document scroll model, so warm pages jump immediately and cold pages follow the existing asynchronous page-load path.
-- If the clicked outline region maps to the page that is already visible, the interaction falls back to the previous in-page scroll behavior instead of forcing a redundant page reload.
+- In large mode, the right-side outline rail now switches from the proportional minimap interaction to an explicit list of page anchors derived from the session page ranges and full-document digest metadata.
+- Selecting an outline anchor jumps through the same paged viewer workflow used by global scrolling and page controls, so the viewer, the toolbar strip, and the outline always converge on the same current page identity.
+- When the list of large-page anchors exceeds the rail height, the outline scrolls internally and automatically keeps the active page anchor in view without changing the small-file outline behavior.
 
 ## Large Preview Loading Affordance
 

@@ -31,9 +31,11 @@ import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewDocumentScrollResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
-import com.davidpe.jsontree.ui.support.LargePreviewOutlineNavigationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationStateResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewOutlineStep;
+import com.davidpe.jsontree.ui.support.LargePreviewOutlineStepResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewOutlineViewportScrollResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
@@ -52,6 +54,7 @@ import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -69,6 +72,7 @@ import javafx.geometry.Bounds;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
@@ -82,6 +86,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -127,9 +132,10 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
-  private final LargePreviewOutlineNavigationResolver largePreviewOutlineNavigationResolver;
   private final LargePreviewDocumentScrollResolver largePreviewDocumentScrollResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
+  private final LargePreviewOutlineStepResolver largePreviewOutlineStepResolver;
+  private final LargePreviewOutlineViewportScrollResolver largePreviewOutlineViewportScrollResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
   public MainWindowController(
@@ -150,9 +156,10 @@ public class MainWindowController implements UiScreenController {
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
-      LargePreviewOutlineNavigationResolver largePreviewOutlineNavigationResolver,
       LargePreviewDocumentScrollResolver largePreviewDocumentScrollResolver,
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
+      LargePreviewOutlineStepResolver largePreviewOutlineStepResolver,
+      LargePreviewOutlineViewportScrollResolver largePreviewOutlineViewportScrollResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
@@ -172,9 +179,10 @@ public class MainWindowController implements UiScreenController {
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
-    this.largePreviewOutlineNavigationResolver = largePreviewOutlineNavigationResolver;
     this.largePreviewDocumentScrollResolver = largePreviewDocumentScrollResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
+    this.largePreviewOutlineStepResolver = largePreviewOutlineStepResolver;
+    this.largePreviewOutlineViewportScrollResolver = largePreviewOutlineViewportScrollResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
@@ -281,6 +289,10 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private StackPane outlinePreviewShell;
 
+  @FXML private ScrollPane largePreviewOutlineScrollPane;
+
+  @FXML private VBox largePreviewOutlineStepsBox;
+
   @FXML private Canvas outlineCanvas;
 
   @FXML private Region outlineViewportMarker;
@@ -300,6 +312,7 @@ public class MainWindowController implements UiScreenController {
   private boolean suppressLargePreviewScrollHandling;
   private boolean largePreviewPageLoadInFlight;
   private double pendingLargePreviewScrollValue = -1.0;
+  private final List<Button> largePreviewOutlineStepButtons = new ArrayList<>();
   private List<Region> largePreviewLoaderSquares = List.of();
   private LargePreviewLoadingAffordance largePreviewLoadingAffordance;
   private PauseTransition largePreviewLoaderRevealTransition;
@@ -444,6 +457,29 @@ public class MainWindowController implements UiScreenController {
         null);
   }
 
+  private void showLargePreviewOutlineShell(JsonViewerLoadResult result) {
+    List<LargePreviewOutlineStep> outlineSteps = largePreviewOutlineStepResolver.resolve(result);
+    currentOutlineLayout = OutlineMinimapLayout.empty();
+    viewerAidTitleLabel.setText("Page outline");
+    viewerAidMetaLabel.setText(
+        result.largePreviewSession().totalPages()
+            + " page anchors • "
+            + result.largePreviewSession().totalLogicalLines()
+            + " logical lines");
+    largePreviewOutlineScrollPane.setManaged(true);
+    largePreviewOutlineScrollPane.setVisible(true);
+    outlineCanvas.setManaged(false);
+    outlineCanvas.setVisible(false);
+    outlineStateLabel.setManaged(false);
+    outlineStateLabel.setVisible(false);
+    hideOutlineViewportMarker();
+    outlinePreviewShell
+        .getStyleClass()
+        .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
+    outlinePreviewShell.getStyleClass().add("outline-state-valid");
+    renderLargePreviewOutlineSteps(outlineSteps);
+  }
+
   private void showOutlineValidShell(AsciiTreeDocument document) {
     viewerAidTitleLabel.setText("JSON outline");
     viewerAidMetaLabel.setText(
@@ -453,6 +489,12 @@ public class MainWindowController implements UiScreenController {
             + " • "
             + document.lineCount()
             + " viewer lines");
+    largePreviewOutlineScrollPane.setManaged(false);
+    largePreviewOutlineScrollPane.setVisible(false);
+    largePreviewOutlineStepsBox.getChildren().clear();
+    largePreviewOutlineStepButtons.clear();
+    outlineCanvas.setManaged(true);
+    outlineCanvas.setVisible(true);
     outlineStateLabel.setManaged(false);
     outlineStateLabel.setVisible(false);
     outlineViewportMarker.setManaged(false);
@@ -469,6 +511,12 @@ public class MainWindowController implements UiScreenController {
       String title, String stateMessage, String metaMessage, String previewStateClass) {
     viewerAidTitleLabel.setText(title);
     viewerAidMetaLabel.setText(metaMessage);
+    largePreviewOutlineScrollPane.setManaged(false);
+    largePreviewOutlineScrollPane.setVisible(false);
+    largePreviewOutlineStepsBox.getChildren().clear();
+    largePreviewOutlineStepButtons.clear();
+    outlineCanvas.setManaged(true);
+    outlineCanvas.setVisible(true);
     outlineStateLabel.setText(stateMessage);
     outlineStateLabel.setManaged(true);
     outlineStateLabel.setVisible(true);
@@ -485,7 +533,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void refreshOutlineCanvas() {
-    if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel()) {
+    if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel() || !outlineCanvas.isVisible()) {
       currentOutlineLayout = OutlineMinimapLayout.empty();
       drawOutlineShellPlaceholder();
       hideOutlineViewportMarker();
@@ -526,31 +574,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void handleOutlineInteraction(MouseEvent event) {
-    if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
+    if (largePreviewOutlineScrollPane.isVisible()) {
       return;
     }
-    OptionalInt largePreviewTargetPage = OptionalInt.empty();
-    java.util.Optional<JsonViewerLoadResult> currentView = workflowService.currentView();
-    if (currentView.isPresent() && currentView.get().hasLargePreviewSession()) {
-      largePreviewTargetPage =
-          workflowService
-              .currentLargePreviewOutlineDigest()
-              .map(
-                  digest ->
-                      largePreviewOutlineNavigationResolver.targetPage(
-                          currentOutlineLayout, digest, event.getY()))
-              .orElse(OptionalInt.empty());
-      if (largePreviewTargetPage.isPresent()
-          && currentView.get().largePreviewSession().currentPageIndex()
-              != largePreviewTargetPage.getAsInt()) {
-        requestLargePreviewPage(
-            largePreviewTargetPage.getAsInt(),
-            largePreviewDocumentScrollResolver
-                .pageStartScrollValue(currentView.get(), largePreviewTargetPage.getAsInt())
-                .orElse(viewerScrollPane.getVvalue()));
-        event.consume();
-        return;
-      }
+    if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
+      return;
     }
 
     double contentHeight = viewerContentBox.getLayoutBounds().getHeight();
@@ -575,7 +603,9 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void refreshOutlineViewportMarker() {
-    if (currentOutlineLayout.emptyLayout() || !outlinePreviewShell.isVisible()) {
+    if (largePreviewOutlineScrollPane.isVisible()
+        || currentOutlineLayout.emptyLayout()
+        || !outlinePreviewShell.isVisible()) {
       hideOutlineViewportMarker();
       return;
     }
@@ -1362,6 +1392,9 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void requestLargePreviewPage(int targetPageIndex, double targetScrollValue) {
+    if (largePreviewPageLoadInFlight) {
+      return;
+    }
     workflowService
         .currentView()
         .filter(JsonViewerLoadResult::hasLargePreviewSession)
@@ -1625,6 +1658,10 @@ public class MainWindowController implements UiScreenController {
   private void updateOutlineShell(JsonViewerLoadResult result, AsciiTreeDocument document) {
     ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
     if (presentation.outlineEnabled()) {
+      if (result.usesLargePreview()) {
+        showLargePreviewOutlineShell(result);
+        return;
+      }
       syncOutlineModelWithCurrentView();
       showOutlineValidShell(document);
       return;
@@ -1636,6 +1673,57 @@ public class MainWindowController implements UiScreenController {
         presentation.outlineStateMessage(),
         presentation.outlineMetaMessage(),
         null);
+  }
+
+  private void renderLargePreviewOutlineSteps(List<LargePreviewOutlineStep> outlineSteps) {
+    largePreviewOutlineStepsBox.getChildren().clear();
+    largePreviewOutlineStepButtons.clear();
+    for (LargePreviewOutlineStep outlineStep : outlineSteps) {
+      Button outlineStepButton = buildLargePreviewOutlineStepButton(outlineStep);
+      largePreviewOutlineStepButtons.add(outlineStepButton);
+      largePreviewOutlineStepsBox.getChildren().add(outlineStepButton);
+    }
+    Platform.runLater(this::scrollActiveLargePreviewOutlineStepIntoView);
+  }
+
+  private Button buildLargePreviewOutlineStepButton(LargePreviewOutlineStep outlineStep) {
+    Label titleLabel = new Label(outlineStep.title());
+    titleLabel.getStyleClass().add("large-preview-outline-step-title");
+    Label metaLabel = new Label(outlineStep.meta());
+    metaLabel.getStyleClass().add("large-preview-outline-step-meta");
+    VBox content = new VBox(2.0, titleLabel, metaLabel);
+    VBox.setVgrow(content, Priority.NEVER);
+
+    Button button = new Button();
+    button.setMaxWidth(Double.MAX_VALUE);
+    button.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+    button.setGraphic(content);
+    button.getStyleClass().add("large-preview-outline-step");
+    if (outlineStep.active()) {
+      button.getStyleClass().add("large-preview-outline-step-active");
+    }
+    button.setOnAction(
+        unused -> requestLargePreviewPage(outlineStep.pageIndex(), outlineStep.documentScrollValue()));
+    return button;
+  }
+
+  private void scrollActiveLargePreviewOutlineStepIntoView() {
+    if (!largePreviewOutlineScrollPane.isVisible()) {
+      return;
+    }
+    largePreviewOutlineStepButtons.stream()
+        .filter(button -> button.getStyleClass().contains("large-preview-outline-step-active"))
+        .findFirst()
+        .ifPresent(this::scrollLargePreviewOutlineButtonIntoView);
+  }
+
+  private void scrollLargePreviewOutlineButtonIntoView(Button button) {
+    double viewportHeight = largePreviewOutlineScrollPane.getViewportBounds().getHeight();
+    double contentHeight = largePreviewOutlineStepsBox.getLayoutBounds().getHeight();
+    double targetScrollValue =
+        largePreviewOutlineViewportScrollResolver.scrollValueForReveal(
+            button.getLayoutY(), button.getBoundsInParent().getHeight(), viewportHeight, contentHeight);
+    largePreviewOutlineScrollPane.setVvalue(targetScrollValue);
   }
 
   private void resetToolbarForNonRenderableState() {
