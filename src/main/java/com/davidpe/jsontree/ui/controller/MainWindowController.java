@@ -28,11 +28,11 @@ import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
-import com.davidpe.jsontree.ui.support.LargePreviewDocumentScrollResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationStateResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewOutlineViewportStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewViewportState;
 import com.davidpe.jsontree.ui.support.LargePreviewViewportStateResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
@@ -128,8 +128,8 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
-  private final LargePreviewDocumentScrollResolver largePreviewDocumentScrollResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
+  private final LargePreviewOutlineViewportStateResolver largePreviewOutlineViewportStateResolver;
   private final LargePreviewViewportStateResolver largePreviewViewportStateResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
 
@@ -151,8 +151,8 @@ public class MainWindowController implements UiScreenController {
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
-      LargePreviewDocumentScrollResolver largePreviewDocumentScrollResolver,
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
+      LargePreviewOutlineViewportStateResolver largePreviewOutlineViewportStateResolver,
       LargePreviewViewportStateResolver largePreviewViewportStateResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
@@ -173,8 +173,8 @@ public class MainWindowController implements UiScreenController {
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
-    this.largePreviewDocumentScrollResolver = largePreviewDocumentScrollResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
+    this.largePreviewOutlineViewportStateResolver = largePreviewOutlineViewportStateResolver;
     this.largePreviewViewportStateResolver = largePreviewViewportStateResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
@@ -535,6 +535,32 @@ public class MainWindowController implements UiScreenController {
 
   private void handleOutlineInteraction(MouseEvent event) {
     if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
+      return;
+    }
+
+    if (largePreviewPageLoadInFlight) {
+      event.consume();
+      return;
+    }
+
+    java.util.Optional<JsonViewerLoadResult> currentView = workflowService.currentView();
+    if (currentView.isPresent() && currentView.get().usesLargePreview()) {
+      double contentHeight = viewerContentBox.getLayoutBounds().getHeight();
+      double viewportHeight = viewerScrollPane.getViewportBounds().getHeight();
+      largePreviewOutlineViewportStateResolver
+          .resolveForPointer(
+              currentView.get(),
+              event.getY(),
+              outlinePreviewShell.getHeight(),
+              viewportHeight,
+              contentHeight)
+          .filter(
+              targetViewportState ->
+                  !currentLargePreviewViewportState.active()
+                      || targetViewportState.currentPageIndex()
+                          != currentLargePreviewViewportState.currentPageIndex())
+          .ifPresent(this::requestLargePreviewPage);
+      event.consume();
       return;
     }
 
