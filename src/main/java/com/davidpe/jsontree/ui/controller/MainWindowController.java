@@ -1236,6 +1236,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   @FXML
+  void openSettings() {
+    uiFlowManager.show(UiScreenId.SETTINGS);
+  }
+
+  @FXML
   void showPreviousLargePreviewPage() {
     navigateLargePreviewByStep(-1);
   }

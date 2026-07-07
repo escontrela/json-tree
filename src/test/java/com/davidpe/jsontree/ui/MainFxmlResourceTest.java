@@ -35,6 +35,14 @@ class MainFxmlResourceTest {
     }
 
     @Test
+    @DisplayName("settings FXML resource is present on the classpath")
+    void settingsFxmlResourceIsPresentOnTheClasspath() {
+        assertNotNull(
+                MainFxmlResourceTest.class.getResource("/com/davidpe/jsontree/ui/settings.fxml")
+        );
+    }
+
+    @Test
     @DisplayName("main FXML imports every referenced JavaFX type")
     void mainFxmlImportsEveryReferencedJavaFxType() throws IOException {
         assertReferencedTypesAreImported("/com/davidpe/jsontree/ui/main.fxml");
@@ -47,12 +55,27 @@ class MainFxmlResourceTest {
     }
 
     @Test
+    @DisplayName("settings FXML imports every referenced JavaFX type")
+    void settingsFxmlImportsEveryReferencedJavaFxType() throws IOException {
+        assertReferencedTypesAreImported("/com/davidpe/jsontree/ui/settings.fxml");
+    }
+
+    @Test
     @DisplayName("main FXML keeps the large outline as minimap shell instead of page-card rail")
     void mainFxmlDoesNotExposeLargeOutlinePageCardRail() throws IOException {
         String fxml = readResource("/com/davidpe/jsontree/ui/main.fxml");
 
         assertTrue(!fxml.contains("largePreviewOutlineScrollPane"));
         assertTrue(!fxml.contains("largePreviewOutlineStepsBox"));
+    }
+
+    @Test
+    @DisplayName("main FXML exposes the settings toolbar action")
+    void mainFxmlExposesSettingsToolbarAction() throws IOException {
+        String fxml = readResource("/com/davidpe/jsontree/ui/main.fxml");
+
+        assertTrue(fxml.contains("onAction=\"#openSettings\""));
+        assertTrue(fxml.contains("text=\"Settings\""));
     }
 
     private static void assertReferencedTypesAreImported(String resourcePath) throws IOException {
