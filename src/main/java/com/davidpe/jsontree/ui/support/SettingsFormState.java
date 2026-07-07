@@ -6,6 +6,7 @@ package com.davidpe.jsontree.ui.support;
 public record SettingsFormState(
     String thresholdText,
     String chunkText,
+    boolean prettyLargePreviewSelected,
     String memoryReferenceText,
     String warningText,
     boolean warningActive,

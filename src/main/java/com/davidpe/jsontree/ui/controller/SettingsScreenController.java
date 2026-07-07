@@ -12,6 +12,7 @@ import com.davidpe.jsontree.ui.support.SettingsFormStateResolver;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
@@ -38,6 +39,7 @@ public class SettingsScreenController implements UiScreenController {
   @FXML private BorderPane rootPane;
   @FXML private TextField largePreviewThresholdField;
   @FXML private TextField viewerChunkBytesField;
+  @FXML private CheckBox prettyLargePreviewCheckBox;
   @FXML private Label memoryReferenceLabel;
   @FXML private Label memoryWarningLabel;
   @FXML private Label thresholdErrorLabel;
@@ -66,6 +68,9 @@ public class SettingsScreenController implements UiScreenController {
     viewerChunkBytesField
         .textProperty()
         .addListener((unused, oldValue, newValue) -> refreshFormState());
+    prettyLargePreviewCheckBox
+        .selectedProperty()
+        .addListener((unused, oldValue, newValue) -> refreshFormState());
   }
 
   @Override
@@ -86,7 +91,8 @@ public class SettingsScreenController implements UiScreenController {
     saveLargePreviewSettingsUseCase.saveLargePreviewSettings(
         new LargePreviewSettingsSnapshot(
             Long.parseLong(largePreviewThresholdField.getText().trim()),
-            Integer.parseInt(viewerChunkBytesField.getText().trim())));
+            Integer.parseInt(viewerChunkBytesField.getText().trim()),
+            prettyLargePreviewCheckBox.isSelected()));
     loadCurrentSettings();
   }
 
@@ -99,6 +105,7 @@ public class SettingsScreenController implements UiScreenController {
     applyingSnapshot = true;
     largePreviewThresholdField.setText(state.thresholdText());
     viewerChunkBytesField.setText(state.chunkText());
+    prettyLargePreviewCheckBox.setSelected(state.prettyLargePreviewSelected());
     applyingSnapshot = false;
     applyFormState(state);
   }
@@ -111,6 +118,7 @@ public class SettingsScreenController implements UiScreenController {
         settingsFormStateResolver.resolve(
             largePreviewThresholdField.getText(),
             viewerChunkBytesField.getText(),
+            prettyLargePreviewCheckBox.isSelected(),
             processMemoryReferenceService.startupMaxMemoryBytes()));
   }
 

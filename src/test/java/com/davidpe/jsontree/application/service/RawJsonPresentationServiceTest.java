@@ -45,4 +45,26 @@ class RawJsonPresentationServiceTest {
     assertEquals(rawJson, presentation.content());
     assertEquals(rawJson.length() + 1, presentation.sourceToDisplayBoundaries().length);
   }
+
+  @Test
+  void keepsPlainChunkFallbackForLargePreviewWhenBestEffortSettingIsDisabled() {
+    String rawJson = "{\"tail\":true";
+
+    RawJsonPresentation presentation = service.presentLargePreviewChunk(rawJson, false);
+
+    assertEquals(rawJson, presentation.content());
+    assertEquals(rawJson.length() + 1, presentation.sourceToDisplayBoundaries().length);
+  }
+
+  @Test
+  void usesBestEffortFallbackForLargePreviewWhenTheSettingIsEnabled() {
+    String rawJson = "{\"tail\":true,\"items\":[1,2";
+
+    RawJsonPresentation presentation = service.presentLargePreviewChunk(rawJson, true);
+
+    assertTrue(presentation.content().contains(System.lineSeparator()) || presentation.content().contains("\n"));
+    assertTrue(presentation.content().contains("\"tail\" : true"));
+    assertTrue(presentation.content().contains("\"items\" : ["));
+    assertEquals(rawJson.length() + 1, presentation.sourceToDisplayBoundaries().length);
+  }
 }

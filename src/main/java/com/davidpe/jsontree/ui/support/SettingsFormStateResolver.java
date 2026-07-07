@@ -18,11 +18,15 @@ public class SettingsFormStateResolver {
     return resolve(
         Long.toString(snapshot.largePreviewThresholdBytes()),
         Integer.toString(snapshot.viewerChunkBytes()),
+        snapshot.prettyOnLargePreviewEnabled(),
         startupMaxMemoryBytes);
   }
 
   public SettingsFormState resolve(
-      String thresholdText, String chunkText, long startupMaxMemoryBytes) {
+      String thresholdText,
+      String chunkText,
+      boolean prettyLargePreviewSelected,
+      long startupMaxMemoryBytes) {
     ParsedLong threshold = parsePositiveLong(thresholdText);
     ParsedInt chunk = parsePositiveInt(chunkText);
     boolean warningActive =
@@ -30,6 +34,7 @@ public class SettingsFormStateResolver {
     return new SettingsFormState(
         safeText(thresholdText),
         safeText(chunkText),
+        prettyLargePreviewSelected,
         "Startup JVM reference: " + formatBytes(startupMaxMemoryBytes),
         warningActive
             ? "Large preview threshold exceeds the startup JVM memory reference."

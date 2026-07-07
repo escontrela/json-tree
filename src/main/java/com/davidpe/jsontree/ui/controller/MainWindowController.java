@@ -1787,7 +1787,17 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void renderRawJsonContent(String rawJson) {
-    currentRawJsonPresentation = rawJsonPresentationService.present(rawJson);
+    boolean prettyLargePreviewEnabled =
+        workflowService
+            .currentView()
+            .filter(JsonViewerLoadResult::usesLargePreview)
+            .filter(JsonViewerLoadResult::hasLargePreviewSession)
+            .map(result -> result.largePreviewSession().prettyOnLargePreviewEnabled())
+            .orElse(false);
+    currentRawJsonPresentation =
+        prettyLargePreviewEnabled
+            ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
+            : rawJsonPresentationService.present(rawJson);
     TextFlowRenderOutcome renderOutcome =
         searchTextFlowHighlighter.appendHighlightedText(
         rawJsonContentFlow,

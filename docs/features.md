@@ -217,7 +217,8 @@
 - The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating JavaFX `TextFlow`, using `json-tree.large-preview.full-render-max-bytes` as the primary gate.
 - Oversized files now stay on a byte-paginated path: the large session builds an offset index first, then loads bounded chunks directly from the original file on demand instead of materializing a full ASCII tree in memory.
 - The visible chunk is capped by byte budget rather than line budget, so huge payloads remain inspectable without pretending that the full document is currently expanded or resident.
-- `LARGE_PREVIEW` now stays fixed on the current page raw view. The app formats only the active chunk with local pretty-print when that fragment parses cleanly, and otherwise falls back safely to plain chunk text.
+- `LARGE_PREVIEW` now stays fixed on the current page raw view. The app always attempts local Jackson pretty-print when the active chunk parses cleanly as standalone JSON.
+- A persisted `Pretty on large preview` setting can additionally enable a deterministic best-effort formatter for incomplete standalone chunks; when disabled, the old plain-raw fallback remains in place.
 - Regex search and the outline/minimap are intentionally disabled in this variant of `LARGE_PREVIEW`.
 - Even inside allowed modes, the viewer enforces `text-node-budget` guardrails in the syntax-highlighting path. If highlighting would create too many JavaFX text nodes, rendering degrades to simplified plain text instead of risking UI freezes or heap exhaustion.
 - The operational goal is resilience, not unlimited rendering. Large-preview support exists to keep oversized JSON inspectable without crashing the app, while ordinary small files keep the richer full-feature path.
@@ -284,6 +285,7 @@
 
 - The top toolbar now exposes a dedicated `Settings` screen integrated through the normal `UiScreenId` and `UiFlowManager` flow instead of a modal dialog.
 - Settings currently edit two runtime values: the large-preview activation threshold and the byte-paged visible chunk size.
+- Settings also expose `Pretty on large preview`, a persisted toggle that enables best-effort formatting for invalid standalone large-preview raw chunks on future JSON loads.
 - `Back` always discards unsaved form edits and returns to the main screen.
 - `Apply` persists the edited values to local file-based settings storage and updates the runtime snapshot used by the next JSON import or history reopen.
 - The currently opened document is not reprocessed in place after `Apply`; the new values start affecting the next load only.

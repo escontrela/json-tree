@@ -20,7 +20,33 @@ public record LargePreviewPagedSession(
     int residentPageRadius,
     List<LargePreviewPageState> pageStates,
     boolean outlineDigestReady,
+    boolean prettyOnLargePreviewEnabled,
     boolean closed) {
+
+  public LargePreviewPagedSession(
+      String sessionId,
+      LargePreviewSessionSource source,
+      int currentPageIndex,
+      Integer totalPages,
+      Long totalLogicalLines,
+      List<LargePreviewPageRange> pageRanges,
+      int residentPageRadius,
+      List<LargePreviewPageState> pageStates,
+      boolean outlineDigestReady,
+      boolean closed) {
+    this(
+        sessionId,
+        source,
+        currentPageIndex,
+        totalPages,
+        totalLogicalLines,
+        pageRanges,
+        residentPageRadius,
+        pageStates,
+        outlineDigestReady,
+        false,
+        closed);
+  }
 
   public LargePreviewPagedSession {
     if (sessionId == null || sessionId.isBlank()) {
@@ -94,6 +120,14 @@ public record LargePreviewPagedSession(
 
   public static LargePreviewPagedSession initializing(
       String sessionId, LargePreviewSessionSource source, int residentPageRadius) {
+    return initializing(sessionId, source, residentPageRadius, false);
+  }
+
+  public static LargePreviewPagedSession initializing(
+      String sessionId,
+      LargePreviewSessionSource source,
+      int residentPageRadius,
+      boolean prettyOnLargePreviewEnabled) {
     return new LargePreviewPagedSession(
         sessionId,
         source,
@@ -104,6 +138,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         List.of(LargePreviewPageState.building(0)),
         false,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -189,6 +224,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         pageStates,
         outlineDigestReady,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -209,6 +245,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         replacedStates.values().stream().toList(),
         outlineDigestReady,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -237,6 +274,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         pageStates,
         outlineDigestReady,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -252,6 +290,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         pageStates,
         outlineDigestReady,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -267,6 +306,7 @@ public record LargePreviewPagedSession(
         nextResidentPageRadius,
         pageStates,
         outlineDigestReady,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -282,6 +322,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         pageStates,
         nextOutlineDigestReady,
+        prettyOnLargePreviewEnabled,
         false);
   }
 
@@ -296,6 +337,7 @@ public record LargePreviewPagedSession(
         residentPageRadius,
         pageStates,
         outlineDigestReady,
+        prettyOnLargePreviewEnabled,
         true);
   }
 

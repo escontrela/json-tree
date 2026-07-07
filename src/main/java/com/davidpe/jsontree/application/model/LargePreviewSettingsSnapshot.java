@@ -8,7 +8,14 @@ import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
  * <p>The snapshot is intentionally small and transport-friendly so application services can share
  * it without leaking JavaFX or persistence details.
  */
-public record LargePreviewSettingsSnapshot(long largePreviewThresholdBytes, int viewerChunkBytes) {
+public record LargePreviewSettingsSnapshot(
+    long largePreviewThresholdBytes,
+    int viewerChunkBytes,
+    boolean prettyOnLargePreviewEnabled) {
+
+  public LargePreviewSettingsSnapshot(long largePreviewThresholdBytes, int viewerChunkBytes) {
+    this(largePreviewThresholdBytes, viewerChunkBytes, false);
+  }
 
   public LargePreviewSettingsSnapshot {
     if (largePreviewThresholdBytes < 1L) {
@@ -24,13 +31,15 @@ public record LargePreviewSettingsSnapshot(long largePreviewThresholdBytes, int 
   public static LargePreviewSettingsSnapshot defaultsFrom(LargePreviewProperties properties) {
     return new LargePreviewSettingsSnapshot(
         sanitizeThreshold(properties.getFullRenderMaxBytes()),
-        sanitizeViewerChunkBytes(properties.getVisibleChunkBytes()));
+        sanitizeViewerChunkBytes(properties.getVisibleChunkBytes()),
+        false);
   }
 
   public LargePreviewSettingsSnapshot normalized() {
     return new LargePreviewSettingsSnapshot(
         sanitizeThreshold(largePreviewThresholdBytes),
-        sanitizeViewerChunkBytes(viewerChunkBytes));
+        sanitizeViewerChunkBytes(viewerChunkBytes),
+        prettyOnLargePreviewEnabled);
   }
 
   private static long sanitizeThreshold(long thresholdBytes) {

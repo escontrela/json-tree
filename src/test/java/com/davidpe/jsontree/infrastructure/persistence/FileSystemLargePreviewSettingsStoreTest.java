@@ -24,7 +24,8 @@ class FileSystemLargePreviewSettingsStoreTest {
   @Test
   void savesAndLoadsSettingsRoundTrip() {
     FileSystemLargePreviewSettingsStore store = new FileSystemLargePreviewSettingsStore(properties());
-    LargePreviewSettingsSnapshot snapshot = new LargePreviewSettingsSnapshot(8_388_608L, 262_144);
+    LargePreviewSettingsSnapshot snapshot =
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true);
 
     store.save(snapshot);
 
@@ -33,11 +34,27 @@ class FileSystemLargePreviewSettingsStoreTest {
 
   @Test
   void persistedSettingsRemainAvailableForANewStoreInstance() {
-    LargePreviewSettingsSnapshot snapshot = new LargePreviewSettingsSnapshot(8_388_608L, 262_144);
+    LargePreviewSettingsSnapshot snapshot =
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true);
 
     new FileSystemLargePreviewSettingsStore(properties()).save(snapshot);
 
     assertEquals(snapshot, new FileSystemLargePreviewSettingsStore(properties()).load().orElseThrow());
+  }
+
+  @Test
+  void oldSettingsFilesWithoutPrettyFlagRemainReadable() throws Exception {
+    FileSystemLargePreviewSettingsStore store = new FileSystemLargePreviewSettingsStore(properties());
+    Files.createDirectories(tempDir);
+    Files.writeString(
+        tempDir.resolve("preview.properties"),
+        """
+        largePreviewThresholdBytes=8388608
+        viewerChunkBytes=262144
+        """);
+
+    assertEquals(
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, false), store.load().orElseThrow());
   }
 
   @Test

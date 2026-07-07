@@ -14,17 +14,19 @@ class SettingsFormStateResolverTest {
   @Test
   void rendersInitialValuesFromTheCurrentRuntimeSnapshot() {
     SettingsFormState state =
-        resolver.initialState(new LargePreviewSettingsSnapshot(2_097_152L, 262_144), 8_388_608L);
+        resolver.initialState(
+            new LargePreviewSettingsSnapshot(2_097_152L, 262_144, true), 8_388_608L);
 
     assertEquals("2097152", state.thresholdText());
     assertEquals("262144", state.chunkText());
+    assertTrue(state.prettyLargePreviewSelected());
     assertTrue(state.memoryReferenceText().contains("Startup JVM reference"));
     assertTrue(state.applyEnabled());
   }
 
   @Test
   void activatesWarningWhenThresholdExceedsStartupMemoryReference() {
-    SettingsFormState state = resolver.resolve("10485760", "262144", 8_388_608L);
+    SettingsFormState state = resolver.resolve("10485760", "262144", false, 8_388_608L);
 
     assertTrue(state.warningActive());
     assertTrue(state.warningText().contains("exceeds"));
@@ -33,7 +35,7 @@ class SettingsFormStateResolverTest {
 
   @Test
   void disablesApplyAndShowsReadableErrorsForInvalidInput() {
-    SettingsFormState state = resolver.resolve("abc", "", 8_388_608L);
+    SettingsFormState state = resolver.resolve("abc", "", false, 8_388_608L);
 
     assertFalse(state.applyEnabled());
     assertTrue(state.thresholdErrorText().contains("whole number"));

@@ -415,6 +415,12 @@
     -fx-text-fill: #9e281f;
 }
 
+.settings-check-box {
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
+}
+
 .history-import-feedback {
     -fx-padding: 0 0 4 0;
 }

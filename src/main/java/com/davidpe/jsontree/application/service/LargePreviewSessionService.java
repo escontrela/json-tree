@@ -8,6 +8,8 @@ import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
 import com.davidpe.jsontree.application.model.LargePreviewPageState;
 import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
+import com.davidpe.jsontree.application.port.in.ViewLargePreviewSettingsUseCase;
 import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import jakarta.annotation.PreDestroy;
@@ -29,16 +31,20 @@ import org.springframework.stereotype.Service;
 public class LargePreviewSessionService {
 
   private final LargePreviewSessionStorePort sessionStorePort;
+  private final ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase;
   private final int warmPageRadius;
   private final ExecutorService executorService;
   private final ConcurrentMap<String, RuntimeSession> sessions = new ConcurrentHashMap<>();
 
   @Autowired
   public LargePreviewSessionService(
-      LargePreviewSessionStorePort sessionStorePort, LargePreviewProperties largePreviewProperties) {
+      LargePreviewSessionStorePort sessionStorePort,
+      LargePreviewProperties largePreviewProperties,
+      ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase) {
     this(
         sessionStorePort,
         largePreviewProperties.getWarmPageRadius(),
+        viewLargePreviewSettingsUseCase,
         Executors.newCachedThreadPool(
             runnable -> {
               Thread thread = new Thread(runnable, "json-tree-large-preview");
@@ -50,10 +56,21 @@ public class LargePreviewSessionService {
   LargePreviewSessionService(
       LargePreviewSessionStorePort sessionStorePort,
       int warmPageRadius,
+      ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase,
       ExecutorService executorService) {
     this.sessionStorePort = sessionStorePort;
     this.warmPageRadius = sanitizeWarmPageRadius(warmPageRadius);
+    this.viewLargePreviewSettingsUseCase = viewLargePreviewSettingsUseCase;
     this.executorService = executorService;
+  }
+
+  LargePreviewSessionService(
+      LargePreviewSessionStorePort sessionStorePort, int warmPageRadius, ExecutorService executorService) {
+    this(
+        sessionStorePort,
+        warmPageRadius,
+        () -> new LargePreviewSettingsSnapshot(1_048_576L, 150 * 1024),
+        executorService);
   }
 
   public LargePreviewPageLoadResult openSession(LargePreviewSessionSource source) {
@@ -192,7 +209,13 @@ public class LargePreviewSessionService {
       LargePreviewSessionSource source,
       LargePreviewMaterializationSnapshot snapshot) {
     LargePreviewPagedSession session =
-        LargePreviewPagedSession.initializing(sessionId, source, warmPageRadius)
+        LargePreviewPagedSession.initializing(
+                sessionId,
+                source,
+                warmPageRadius,
+                viewLargePreviewSettingsUseCase
+                    .currentLargePreviewSettings()
+                    .prettyOnLargePreviewEnabled())
             .withKnownTotals(snapshot.totalPages(), snapshot.totalLogicalLines(), snapshot.pageRanges())
             .withOutlineDigestReady(!snapshot.outlineDigest().emptyDigest());
     RuntimeSession runtimeSession = new RuntimeSession(session);

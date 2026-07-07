@@ -11,6 +11,7 @@ import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewPageLoadResult;
 import com.davidpe.jsontree.application.model.LargePreviewPagedSession;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import java.io.IOException;
@@ -143,6 +144,24 @@ class LargePreviewSessionServiceTest {
       assertTrue(service.session(firstSession.session().sessionId()).isEmpty());
       assertTrue(service.session(secondSession.session().sessionId()).isEmpty());
       assertEquals(2, store.deletedSessionPaths().size());
+    }
+  }
+
+  @Test
+  void capturesPrettyLargePreviewSettingWhenOpeningTheSession() throws Exception {
+    TestLargePreviewSessionStore store =
+        new TestLargePreviewSessionStore(tempDir, List.of("page-0", "page-1"), pageIndex -> {});
+    try (ExecutorService executor = Executors.newCachedThreadPool()) {
+      LargePreviewSessionService service =
+          new LargePreviewSessionService(
+              store,
+              2,
+              () -> new LargePreviewSettingsSnapshot(1_048_576L, 150 * 1024, true),
+              executor);
+
+      LargePreviewPageLoadResult firstPage = service.openSession(localSource());
+
+      assertTrue(firstPage.session().prettyOnLargePreviewEnabled());
     }
   }
 

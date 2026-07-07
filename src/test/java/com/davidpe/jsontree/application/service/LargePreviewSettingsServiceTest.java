@@ -44,7 +44,7 @@ class LargePreviewSettingsServiceTest {
     LargePreviewSettingsService service =
         new LargePreviewSettingsService(store, new LargePreviewSettingsSnapshot(2_048L, 4_096));
     LargePreviewSettingsSnapshot updatedSnapshot =
-        new LargePreviewSettingsSnapshot(8_192L, 16_384);
+        new LargePreviewSettingsSnapshot(8_192L, 16_384, true);
 
     LargePreviewSettingsSnapshot savedSnapshot = service.saveAndApply(updatedSnapshot);
 

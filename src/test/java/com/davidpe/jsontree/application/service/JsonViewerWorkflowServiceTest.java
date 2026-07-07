@@ -11,6 +11,8 @@ import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
+import com.davidpe.jsontree.application.port.out.LargePreviewSettingsStore;
 import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
 import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
@@ -116,7 +118,18 @@ class JsonViewerWorkflowServiceTest {
   void classifiesLargeFilesBeforeOpeningPagedSession() throws IOException {
     AtomicBoolean classifiedBeforeOpen = new AtomicBoolean(false);
     JsonInspectionModeResolver resolver =
-        new JsonInspectionModeResolver(properties(16L)) {
+        new JsonInspectionModeResolver(
+            new LargePreviewSettingsService(
+                new LargePreviewSettingsStore() {
+                  @Override
+                  public Optional<LargePreviewSettingsSnapshot> load() {
+                    return Optional.empty();
+                  }
+
+                  @Override
+                  public void save(LargePreviewSettingsSnapshot snapshot) {}
+                },
+                new LargePreviewSettingsSnapshot(1_024L, 150 * 1024))) {
           @Override
           public com.davidpe.jsontree.application.model.JsonInspectionMode resolve(
               JsonImportResult importResult) {
@@ -142,7 +155,7 @@ class JsonViewerWorkflowServiceTest {
             new JsonImportResult(
                 importedFile,
                 "large.json",
-                128L,
+                2_048L,
                 true,
                 true,
                 true,
@@ -168,7 +181,7 @@ class JsonViewerWorkflowServiceTest {
             "2026-07-04_10-00-00_large.json",
             "large.json",
             Instant.parse("2026-07-04T10:00:00Z"),
-            128L,
+            2_048L,
             3,
             true,
             false);
@@ -181,7 +194,7 @@ class JsonViewerWorkflowServiceTest {
             unusedValidationPort(),
             repository,
             renderer,
-            inspectionModeResolver(16L),
+            inspectionModeResolver(1_024L),
             largePreviewSessionService(largePreviewStore));
 
     JsonViewerLoadResult result =
@@ -207,13 +220,13 @@ class JsonViewerWorkflowServiceTest {
             unusedValidationPort(),
             new InMemoryHistoryRepository(),
             renderer,
-            inspectionModeResolver(32L),
+            inspectionModeResolver(1_024L),
             largePreviewSessionService(largePreviewStore));
     Path smallFile = Files.writeString(tempDir.resolve("small.json"), "{\"id\":1}");
     Path largeFile =
         Files.writeString(
             tempDir.resolve("large.json"),
-            "{\"id\":1,\"payload\":\"0123456789012345678901234567890123456789\"}");
+            "{\"id\":1,\"payload\":\"" + "0123456789".repeat(150) + "\"}");
 
     JsonViewerLoadResult smallResult = workflowService.loadFile(smallFile);
     JsonViewerLoadResult largeResult = workflowService.loadFile(largeFile);
@@ -256,12 +269,12 @@ class JsonViewerWorkflowServiceTest {
             unusedValidationPort(),
             new InMemoryHistoryRepository(),
             renderer,
-            inspectionModeResolver(32L),
+            inspectionModeResolver(1_024L),
             largePreviewSessionService(largePreviewStore));
     Path largeFile =
         Files.writeString(
             tempDir.resolve("large.json"),
-            "{\"id\":1,\"payload\":\"0123456789012345678901234567890123456789\"}");
+            "{\"id\":1,\"payload\":\"" + "0123456789".repeat(150) + "\"}");
     Path smallFile = Files.writeString(tempDir.resolve("small.json"), "{\"small\":true}");
 
     JsonViewerLoadResult firstPage = workflowService.loadFile(largeFile);
@@ -299,9 +312,12 @@ class JsonViewerWorkflowServiceTest {
             unusedValidationPort(),
             new InMemoryHistoryRepository(),
             unusedRendererPort(),
-            inspectionModeResolver(8L),
+            inspectionModeResolver(1_024L),
             largePreviewSessionService(largePreviewStore));
-    Path largeFile = Files.writeString(tempDir.resolve("chunked.json"), "{\"chunk\":1}{\"chunk\":2}");
+    Path largeFile =
+        Files.writeString(
+            tempDir.resolve("chunked.json"),
+            "{\"payload\":\"" + "chunk".repeat(260) + "\"}");
 
     JsonViewerLoadResult firstPage = workflowService.loadFile(largeFile);
     assertEquals(firstPage.asciiTreeDocument().content(), workflowService.currentViewRawJson().orElseThrow());
@@ -323,10 +339,16 @@ class JsonViewerWorkflowServiceTest {
             unusedValidationPort(),
             new InMemoryHistoryRepository(),
             unusedRendererPort(),
-            inspectionModeResolver(8L),
+            inspectionModeResolver(1_024L),
             largePreviewSessionService(largePreviewStore));
-    Path firstLargeFile = Files.writeString(tempDir.resolve("first-large.json"), "{\"first\":true}");
-    Path secondLargeFile = Files.writeString(tempDir.resolve("second-large.json"), "{\"second\":true}");
+    Path firstLargeFile =
+        Files.writeString(
+            tempDir.resolve("first-large.json"),
+            "{\"payload\":\"" + "first".repeat(260) + "\"}");
+    Path secondLargeFile =
+        Files.writeString(
+            tempDir.resolve("second-large.json"),
+            "{\"payload\":\"" + "second".repeat(260) + "\"}");
 
     JsonViewerLoadResult firstLargeResult = workflowService.loadFile(firstLargeFile);
     JsonViewerLoadResult secondLargeResult = workflowService.loadFile(secondLargeFile);
@@ -369,7 +391,18 @@ class JsonViewerWorkflowServiceTest {
   }
 
   private JsonInspectionModeResolver inspectionModeResolver(long fullRenderMaxBytes) {
-    return new JsonInspectionModeResolver(properties(fullRenderMaxBytes));
+    return new JsonInspectionModeResolver(
+        new LargePreviewSettingsService(
+            new LargePreviewSettingsStore() {
+              @Override
+              public Optional<LargePreviewSettingsSnapshot> load() {
+                return Optional.empty();
+              }
+
+              @Override
+              public void save(LargePreviewSettingsSnapshot snapshot) {}
+            },
+            new LargePreviewSettingsSnapshot(fullRenderMaxBytes, 150 * 1024)));
   }
 
   private LargePreviewProperties properties(long fullRenderMaxBytes) {
