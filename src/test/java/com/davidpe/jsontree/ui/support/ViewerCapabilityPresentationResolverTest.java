@@ -39,7 +39,7 @@ class ViewerCapabilityPresentationResolverTest {
   void resolvesLargePreviewPresentation() {
     ViewerCapabilityPresentation presentation = resolver.resolve(largePreviewResult());
 
-    assertTrue(presentation.rawJsonEnabled());
+    assertFalse(presentation.rawJsonEnabled());
     assertFalse(presentation.searchEnabled());
     assertFalse(presentation.outlineEnabled());
     assertEquals("Copy preview", presentation.copyButtonText());
@@ -48,6 +48,7 @@ class ViewerCapabilityPresentationResolverTest {
     assertEquals(" • byte-paged large preview", presentation.fileMetaSuffix());
     assertEquals("PREVIEW", presentation.statusState());
     assertTrue(presentation.outlineStateMessage().contains("disables the outline"));
+    assertTrue(presentation.footerStatus().contains("current large-file page"));
   }
 
   @Test
@@ -55,7 +56,7 @@ class ViewerCapabilityPresentationResolverTest {
     ViewerCapabilityPresentation largePreview = resolver.resolve(largePreviewResult());
     ViewerCapabilityPresentation full = resolver.resolve(fullResult());
 
-    assertTrue(largePreview.rawJsonEnabled());
+    assertFalse(largePreview.rawJsonEnabled());
     assertTrue(full.rawJsonEnabled());
     assertEquals("Copy tree", full.copyButtonText());
     assertEquals("VALID", full.statusState());

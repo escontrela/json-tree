@@ -66,7 +66,41 @@ class JacksonLargePreviewSessionStoreTest {
 
     assertEquals(12 * 1024, secondPage.leadingOverlapBytes());
     assertTrue(secondPage.startingLogicalLine() < firstPage.endingLogicalLineExclusive());
+    assertEquals(
+        firstPage.startingLogicalLine()
+            + firstPage.logicalLineCount()
+            - firstPage.trailingOverlapBytes(),
+        secondPage.startingLogicalLine());
     assertEquals(firstTail, secondHead);
+  }
+
+  @Test
+  void keepsChunkContinuityWhenUtf8CodePointsCrossPageBoundaries() throws Exception {
+    Path jsonFile =
+        Files.writeString(
+            tempDir.resolve("utf8-source.json"),
+            "{\"payload\":\"" + "áéíóú🙂漢字".repeat(80_000) + "\"}");
+    JacksonLargePreviewSessionStore store =
+        storeWithChunkConfig(16 * 1024, 1024, 512 * 1024);
+    List<LargePreviewPageDescriptor> seenPages = new ArrayList<>();
+
+    LargePreviewMaterializationSnapshot snapshot =
+        store.materialize("session-utf8", LargePreviewSessionSource.local(jsonFile), seenPages::add);
+
+    assertTrue(snapshot.pages().size() >= 2);
+    LargePreviewPageDescriptor firstPage = seenPages.get(0);
+    LargePreviewPageDescriptor secondPage = seenPages.get(1);
+    String firstChunk = store.readPage(firstPage).orElseThrow().content();
+    String secondChunk = store.readPage(secondPage).orElseThrow().content();
+
+    assertFalse(firstChunk.isEmpty());
+    assertFalse(secondChunk.isEmpty());
+    assertEquals(
+        firstPage.startingLogicalLine()
+            + firstPage.logicalLineCount()
+            - firstPage.trailingOverlapBytes(),
+        secondPage.startingLogicalLine());
+    assertTrue(firstChunk.endsWith(secondChunk.substring(0, Math.min(secondChunk.length(), 128))));
   }
 
   private JacksonLargePreviewSessionStore storeWithChunkConfig(

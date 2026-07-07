@@ -119,7 +119,6 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
     int overlapBytes =
         Math.max(
             0, Math.min(largePreviewProperties.getChunkOverlapBytes(), visibleChunkBytes - 1024));
-    long visibleStride = Math.max(1L, visibleChunkBytes - (long) overlapBytes);
 
     List<Long> indexOffsets =
         buildIndexOffsets(fileSize, Math.max(1024, largePreviewProperties.getPageIndexStrideBytes()));
@@ -139,20 +138,46 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
           LargePreviewOutlineDigest.empty());
     }
 
-    long startOffset = 0L;
-    int pageIndex = 0;
-    while (startOffset < fileSize) {
-      int byteCount = (int) Math.min(visibleChunkBytes, fileSize - startOffset);
-      int leadingOverlap = pageIndex == 0 ? 0 : Math.min(overlapBytes, byteCount);
-      int trailingOverlap =
-          startOffset + byteCount >= fileSize ? 0 : Math.min(overlapBytes, byteCount);
-      LargePreviewPageDescriptor descriptor =
-          new LargePreviewPageDescriptor(
-              pageIndex, source.path(), startOffset, byteCount, leadingOverlap, trailingOverlap);
-      pages.add(descriptor);
-      onPageAvailable.accept(descriptor);
-      pageIndex++;
-      startOffset += visibleStride;
+    try (SeekableByteChannel channel = Files.newByteChannel(source.path())) {
+      long startOffset = 0L;
+      long previousEndOffset = 0L;
+      int pageIndex = 0;
+      while (startOffset < fileSize) {
+        long desiredEndOffset = Math.min(fileSize, startOffset + visibleChunkBytes);
+        long safeEndOffset =
+            normalizeUtf8BoundaryAtOrBefore(channel, startOffset, desiredEndOffset, fileSize);
+        if (safeEndOffset <= startOffset) {
+          safeEndOffset = Math.min(fileSize, startOffset + visibleChunkBytes);
+        }
+
+        long nextStartOffset = safeEndOffset;
+        if (safeEndOffset < fileSize) {
+          long desiredNextStartOffset = Math.max(startOffset + 1L, safeEndOffset - overlapBytes);
+          nextStartOffset =
+              normalizeUtf8BoundaryAtOrBefore(channel, startOffset, desiredNextStartOffset, fileSize);
+          if (nextStartOffset >= safeEndOffset) {
+            nextStartOffset = Math.max(startOffset, safeEndOffset - overlapBytes);
+          }
+        }
+
+        int byteCount = Math.toIntExact(safeEndOffset - startOffset);
+        int leadingOverlap = pageIndex == 0 ? 0 : Math.toIntExact(previousEndOffset - startOffset);
+        int trailingOverlap =
+            safeEndOffset >= fileSize ? 0 : Math.toIntExact(safeEndOffset - nextStartOffset);
+        LargePreviewPageDescriptor descriptor =
+            new LargePreviewPageDescriptor(
+                pageIndex,
+                source.path(),
+                startOffset,
+                byteCount,
+                leadingOverlap,
+                trailingOverlap);
+        pages.add(descriptor);
+        onPageAvailable.accept(descriptor);
+        pageIndex++;
+        previousEndOffset = safeEndOffset;
+        startOffset = nextStartOffset;
+      }
     }
 
     return new LargePreviewMaterializationSnapshot(
@@ -188,29 +213,82 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
           break;
         }
       }
-      byte[] trimmedBytes = trimUtf8Boundaries(buffer.array(), buffer.position());
-      return new String(trimmedBytes, StandardCharsets.UTF_8);
+      return new String(buffer.array(), 0, buffer.position(), StandardCharsets.UTF_8);
     }
   }
 
-  private byte[] trimUtf8Boundaries(byte[] bytes, int length) {
-    int start = 0;
-    while (start < length && (bytes[start] & 0xC0) == 0x80) {
-      start++;
+  private long normalizeUtf8BoundaryAtOrBefore(
+      SeekableByteChannel channel, long startOffset, long candidateOffset, long fileSize)
+      throws IOException {
+    long normalizedOffset = Math.max(startOffset, Math.min(candidateOffset, fileSize));
+    if (normalizedOffset == startOffset || normalizedOffset == fileSize) {
+      return normalizedOffset;
     }
-    int end = length;
-    while (end > start && (bytes[end - 1] & 0xC0) == 0x80) {
-      end--;
+    while (normalizedOffset > startOffset
+        && !isUtf8Boundary(channel, startOffset, normalizedOffset, fileSize)) {
+      normalizedOffset--;
     }
-    if (start == 0 && end == length) {
-      byte[] direct = new byte[length];
-      System.arraycopy(bytes, 0, direct, 0, length);
-      return direct;
+    return normalizedOffset;
+  }
+
+  private boolean isUtf8Boundary(
+      SeekableByteChannel channel, long startOffset, long boundaryOffset, long fileSize)
+      throws IOException {
+    if (boundaryOffset <= startOffset || boundaryOffset >= fileSize) {
+      return true;
     }
-    int safeLength = Math.max(0, end - start);
-    byte[] trimmed = new byte[safeLength];
-    System.arraycopy(bytes, start, trimmed, 0, safeLength);
-    return trimmed;
+
+    int bytesToInspect = (int) Math.min(4L, boundaryOffset - startOffset);
+    long inspectionStart = boundaryOffset - bytesToInspect;
+    byte[] tailBytes = readBytes(channel, inspectionStart, bytesToInspect);
+    if (tailBytes.length == 0) {
+      return true;
+    }
+
+    for (int index = tailBytes.length - 1; index >= 0; index--) {
+      if (isUtf8ContinuationByte(tailBytes[index])) {
+        continue;
+      }
+      int expectedLength = utf8SequenceLength(tailBytes[index]);
+      int actualLength = tailBytes.length - index;
+      return expectedLength == actualLength;
+    }
+    return false;
+  }
+
+  private byte[] readBytes(SeekableByteChannel channel, long startOffset, int byteCount)
+      throws IOException {
+    ByteBuffer buffer = ByteBuffer.allocate(Math.max(0, byteCount));
+    channel.position(startOffset);
+    while (buffer.hasRemaining()) {
+      if (channel.read(buffer) < 0) {
+        break;
+      }
+    }
+    byte[] bytes = new byte[buffer.position()];
+    System.arraycopy(buffer.array(), 0, bytes, 0, bytes.length);
+    return bytes;
+  }
+
+  private boolean isUtf8ContinuationByte(byte value) {
+    return (value & 0xC0) == 0x80;
+  }
+
+  private int utf8SequenceLength(byte value) {
+    int unsignedValue = value & 0xFF;
+    if ((unsignedValue & 0x80) == 0) {
+      return 1;
+    }
+    if ((unsignedValue & 0xE0) == 0xC0) {
+      return 2;
+    }
+    if ((unsignedValue & 0xF0) == 0xE0) {
+      return 3;
+    }
+    if ((unsignedValue & 0xF8) == 0xF0) {
+      return 4;
+    }
+    return 1;
   }
 
   private Path createSessionStoragePath(String sessionId) {

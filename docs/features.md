@@ -217,7 +217,7 @@
 - The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating JavaFX `TextFlow`, using `json-tree.large-preview.full-render-max-bytes` as the primary gate.
 - Oversized files now stay on a byte-paginated path: the large session builds an offset index first, then loads bounded chunks directly from the original file on demand instead of materializing a full ASCII tree in memory.
 - The visible chunk is capped by byte budget rather than line budget, so huge payloads remain inspectable without pretending that the full document is currently expanded or resident.
-- `Raw JSON` stays available in `LARGE_PREVIEW`, but only for the current chunk. Pretty formatting is attempted locally for that chunk and falls back safely to plain text when the fragment is not standalone valid JSON.
+- `LARGE_PREVIEW` now stays fixed on the current page raw view. The app formats only the active chunk with local pretty-print when that fragment parses cleanly, and otherwise falls back safely to plain chunk text.
 - Regex search and the outline/minimap are intentionally disabled in this variant of `LARGE_PREVIEW`.
 - Even inside allowed modes, the viewer enforces `text-node-budget` guardrails in the syntax-highlighting path. If highlighting would create too many JavaFX text nodes, rendering degrades to simplified plain text instead of risking UI freezes or heap exhaustion.
 - The operational goal is resilience, not unlimited rendering. Large-preview support exists to keep oversized JSON inspectable without crashing the app, while ordinary small files keep the richer full-feature path.
@@ -242,14 +242,14 @@
 ## Large Preview Global Scroll Workflow
 
 - Large-mode activation no longer uses a global oversized-document scrollbar. The main `ScrollPane` only scrolls inside the current chunk.
-- When the user reaches the top or bottom edge of the current chunk and keeps scrolling, the workflow jumps to the previous or next chunk and lands inside the overlap region to preserve continuity.
-- `Previous` and `Next` use the same paged-session navigation path as edge scrolling, so large navigation stays deterministic without threshold heuristics.
+- Vertical scroll never changes the active page in this variant. Scrolling is intentionally local to the page currently loaded in the viewer.
+- Page changes are explicit through `Previous` and `Next`, which keeps large-file navigation deterministic and removes edge-scroll page jumps.
 
 ## Large Preview Page Controls
 
 - Large mode now exposes a compact page strip in the main viewer toolbar with `Previous`, `Next`, the current page label, and the known total page count.
-- The controls stay hidden for ordinary `FULL` rendering, disable themselves at the first and last large-preview pages, and route through the same chunk-loading workflow used by edge scrolling.
-- Because the strip state is resolved from the active session rather than inferred from JavaFX widgets, button navigation and chunk-edge scrolling stay synchronized on the same current page identity.
+- The controls stay hidden for ordinary `FULL` rendering, disable themselves at the first and last large-preview pages, and become the only way to change page in byte-paged large preview.
+- Because the strip state is resolved from the active session rather than inferred from JavaFX widgets, button navigation stays synchronized on the same current page identity used by raw-page rendering.
 
 ## Large Preview Full Activation
 
@@ -264,7 +264,7 @@
 ## Large Preview Outline Navigation
 
 - The outline/minimap is disabled in the current byte-paginated large-preview workflow.
-- Large navigation is intentionally reduced to `Previous`, `Next`, and chunk-edge scrolling until a dedicated outline follow-up reintroduces a visual navigation aid on top of byte-based sessions.
+- Large navigation is intentionally reduced to `Previous` and `Next` until a dedicated follow-up reintroduces a visual navigation aid on top of byte-based sessions.
 
 ## Large Preview Loading Affordance
 
@@ -278,4 +278,4 @@
 - The hot cache window is now configurable through `json-tree.large-preview.warm-page-radius`, defaults to `20`, and is clamped to a safe upper bound so oversized sessions cannot request an unbounded resident page window by configuration mistake.
 - Residency is always calculated from the same current-page state, and chunks outside `current - radius` through `current + radius` are evicted from memory while remaining reloadable from the original source file.
 - Temporary paged-session storage is cleaned when the active oversized file is replaced, when the session is discarded, and when the application tears down the paged workflow at shutdown.
-- Large mode remains intentionally stream-safe rather than a byte-for-byte clone of the small-file renderer. `Raw JSON` stays limited to the current chunk, while regex search and outline/minimap stay disabled until a dedicated follow-up ticket changes that contract.
+- Large mode remains intentionally stream-safe rather than a byte-for-byte clone of the small-file renderer. The viewer stays on raw current-page chunks, while regex search and outline/minimap stay disabled until a dedicated follow-up ticket changes that contract.
