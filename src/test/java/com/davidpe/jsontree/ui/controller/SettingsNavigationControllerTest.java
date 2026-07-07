@@ -44,7 +44,8 @@ class SettingsNavigationControllerTest {
   @Test
   void settingsBackActionNavigatesToMainScreen() {
     RecordingUiFlowManager uiFlowManager = new RecordingUiFlowManager();
-    SettingsScreenController controller = new SettingsScreenController(uiFlowManager);
+    SettingsScreenController controller =
+        new SettingsScreenController(null, null, null, uiFlowManager);
 
     controller.backToMain();
 

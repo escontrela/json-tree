@@ -393,6 +393,28 @@
     -fx-font-weight: 400;
 }
 
+.settings-field-label {
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.settings-error-label {
+    -fx-text-fill: #9e281f;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.settings-warning-label {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.settings-warning-label.settings-warning-label-active {
+    -fx-text-fill: #9e281f;
+}
+
 .history-import-feedback {
     -fx-padding: 0 0 4 0;
 }
