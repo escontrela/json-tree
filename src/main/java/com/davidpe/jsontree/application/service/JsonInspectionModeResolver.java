@@ -7,6 +7,7 @@ import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,6 +15,7 @@ public class JsonInspectionModeResolver {
 
   private final LargePreviewSettingsService settingsService;
 
+  @Autowired
   public JsonInspectionModeResolver(LargePreviewSettingsService settingsService) {
     this.settingsService = settingsService;
   }

@@ -5,6 +5,7 @@ import com.davidpe.jsontree.application.port.in.SaveLargePreviewSettingsUseCase;
 import com.davidpe.jsontree.application.port.in.ViewLargePreviewSettingsUseCase;
 import com.davidpe.jsontree.application.port.out.LargePreviewSettingsStore;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -22,6 +23,7 @@ public class LargePreviewSettingsService
   private final LargePreviewSettingsSnapshot defaultSnapshot;
   private volatile LargePreviewSettingsSnapshot currentSnapshot;
 
+  @Autowired
   public LargePreviewSettingsService(
       LargePreviewSettingsStore settingsStore, LargePreviewProperties largePreviewProperties) {
     this.settingsStore = settingsStore;
@@ -70,7 +72,10 @@ public class LargePreviewSettingsService
 
   private LargePreviewSettingsSnapshot loadInitialSnapshot() {
     try {
-      return settingsStore.load().map(LargePreviewSettingsSnapshot::normalized).orElse(defaultSnapshot);
+      return settingsStore
+          .load()
+          .map(LargePreviewSettingsSnapshot::normalized)
+          .orElse(defaultSnapshot);
     } catch (IllegalStateException exception) {
       return defaultSnapshot;
     }
