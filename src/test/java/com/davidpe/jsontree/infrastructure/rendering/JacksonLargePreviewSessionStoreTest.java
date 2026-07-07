@@ -6,13 +6,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
+import com.davidpe.jsontree.application.port.out.LargePreviewSettingsStore;
+import com.davidpe.jsontree.application.service.LargePreviewSettingsService;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -101,6 +105,35 @@ class JacksonLargePreviewSessionStoreTest {
             - firstPage.trailingOverlapBytes(),
         secondPage.startingLogicalLine());
     assertTrue(firstChunk.endsWith(secondChunk.substring(0, Math.min(secondChunk.length(), 128))));
+  }
+
+  @Test
+  void usesUpdatedRuntimeChunkSizeForTheNextMaterializedSession() throws Exception {
+    Path jsonFile = Files.writeString(tempDir.resolve("next-load.json"), repeatedJson(420_000));
+    LargePreviewProperties properties = new LargePreviewProperties();
+    properties.setVisibleChunkBytes(150 * 1024);
+    properties.setChunkOverlapBytes(12 * 1024);
+    LargePreviewSettingsService settingsService =
+        new LargePreviewSettingsService(
+            new LargePreviewSettingsStore() {
+              @Override
+              public Optional<LargePreviewSettingsSnapshot> load() {
+                return Optional.empty();
+              }
+
+              @Override
+              public void save(LargePreviewSettingsSnapshot snapshot) {}
+            },
+            new LargePreviewSettingsSnapshot(1_048_576L, 150 * 1024));
+    JacksonLargePreviewSessionStore store =
+        new JacksonLargePreviewSessionStore(objectMapper, properties, settingsService, tempDir);
+
+    settingsService.saveAndApply(new LargePreviewSettingsSnapshot(1_048_576L, 64 * 1024));
+    LargePreviewMaterializationSnapshot snapshot =
+        store.materialize(
+            "session-next-load", LargePreviewSessionSource.local(jsonFile), descriptor -> {});
+
+    assertEquals(64 * 1024, snapshot.pages().getFirst().logicalLineCount());
   }
 
   private JacksonLargePreviewSessionStore storeWithChunkConfig(

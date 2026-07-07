@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.application.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import com.davidpe.jsontree.application.port.out.LargePreviewSettingsStore;
@@ -37,6 +38,37 @@ class LargePreviewSettingsServiceTest {
     assertEquals(new LargePreviewSettingsSnapshot(2_048L, 4_096), service.current());
   }
 
+  @Test
+  void saveAndApplyPersistsAndUpdatesRuntimeSnapshot() {
+    RecordingStore store = new RecordingStore(Optional.empty());
+    LargePreviewSettingsService service =
+        new LargePreviewSettingsService(store, new LargePreviewSettingsSnapshot(2_048L, 4_096));
+    LargePreviewSettingsSnapshot updatedSnapshot =
+        new LargePreviewSettingsSnapshot(8_192L, 16_384);
+
+    LargePreviewSettingsSnapshot savedSnapshot = service.saveAndApply(updatedSnapshot);
+
+    assertEquals(updatedSnapshot, savedSnapshot);
+    assertEquals(updatedSnapshot, service.current());
+    assertEquals(updatedSnapshot, store.savedSnapshot());
+  }
+
+  @Test
+  void reloadReflectsPersistedSettingsForANewRuntimeWindow() {
+    RecordingStore store =
+        new RecordingStore(Optional.of(new LargePreviewSettingsSnapshot(2_048L, 4_096)));
+    LargePreviewSettingsService service =
+        new LargePreviewSettingsService(store, new LargePreviewSettingsSnapshot(1_024L, 2_048));
+    LargePreviewSettingsSnapshot updatedSnapshot =
+        new LargePreviewSettingsSnapshot(8_192L, 16_384);
+
+    store.persistedSnapshot = Optional.of(updatedSnapshot);
+    LargePreviewSettingsSnapshot reloadedSnapshot = service.reload();
+
+    assertEquals(updatedSnapshot, reloadedSnapshot);
+    assertSame(reloadedSnapshot, service.current());
+  }
+
   private LargePreviewSettingsStore emptyStore() {
     return new LargePreviewSettingsStore() {
       @Override
@@ -71,5 +103,30 @@ class LargePreviewSettingsServiceTest {
       @Override
       public void save(LargePreviewSettingsSnapshot snapshot) {}
     };
+  }
+
+  private static final class RecordingStore implements LargePreviewSettingsStore {
+
+    private Optional<LargePreviewSettingsSnapshot> persistedSnapshot;
+    private LargePreviewSettingsSnapshot savedSnapshot;
+
+    private RecordingStore(Optional<LargePreviewSettingsSnapshot> persistedSnapshot) {
+      this.persistedSnapshot = persistedSnapshot;
+    }
+
+    @Override
+    public Optional<LargePreviewSettingsSnapshot> load() {
+      return persistedSnapshot;
+    }
+
+    @Override
+    public void save(LargePreviewSettingsSnapshot snapshot) {
+      savedSnapshot = snapshot;
+      persistedSnapshot = Optional.of(snapshot);
+    }
+
+    private LargePreviewSettingsSnapshot savedSnapshot() {
+      return savedSnapshot;
+    }
   }
 }

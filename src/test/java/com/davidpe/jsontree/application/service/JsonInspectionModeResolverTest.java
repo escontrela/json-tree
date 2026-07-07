@@ -51,6 +51,19 @@ class JsonInspectionModeResolverTest {
     assertEquals(JsonInspectionMode.LARGE_PREVIEW, mode);
   }
 
+  @Test
+  void usesUpdatedRuntimeThresholdForTheNextJsonLoad() {
+    LargePreviewSettingsService settingsService = settingsService(1024);
+    JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(settingsService);
+
+    assertEquals(JsonInspectionMode.LARGE_PREVIEW, resolver.resolve(1_500L));
+
+    settingsService.saveAndApply(new LargePreviewSettingsSnapshot(2_048L, 150 * 1024));
+
+    assertEquals(JsonInspectionMode.FULL, resolver.resolve(1_500L));
+    assertEquals(JsonInspectionMode.LARGE_PREVIEW, resolver.resolve(3_000L));
+  }
+
   private LargePreviewSettingsService settingsService(long fullRenderMaxBytes) {
     return new LargePreviewSettingsService(
         new LargePreviewSettingsStore() {

@@ -279,3 +279,12 @@
 - Residency is always calculated from the same current-page state, and chunks outside `current - radius` through `current + radius` are evicted from memory while remaining reloadable from the original source file.
 - Temporary paged-session storage is cleaned when the active oversized file is replaced, when the session is discarded, and when the application tears down the paged workflow at shutdown.
 - Large mode remains intentionally stream-safe rather than a byte-for-byte clone of the small-file renderer. The viewer stays on raw current-page chunks, while regex search and outline/minimap stay disabled until a dedicated follow-up ticket changes that contract.
+
+## Settings Screen
+
+- The top toolbar now exposes a dedicated `Settings` screen integrated through the normal `UiScreenId` and `UiFlowManager` flow instead of a modal dialog.
+- Settings currently edit two runtime values: the large-preview activation threshold and the byte-paged visible chunk size.
+- `Back` always discards unsaved form edits and returns to the main screen.
+- `Apply` persists the edited values to local file-based settings storage and updates the runtime snapshot used by the next JSON import or history reopen.
+- The currently opened document is not reprocessed in place after `Apply`; the new values start affecting the next load only.
+- The screen also shows the JVM startup memory reference and highlights the threshold advisory in red when the configured large-file threshold exceeds that startup reference.

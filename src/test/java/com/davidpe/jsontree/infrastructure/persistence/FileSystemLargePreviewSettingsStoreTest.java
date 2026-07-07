@@ -32,6 +32,15 @@ class FileSystemLargePreviewSettingsStoreTest {
   }
 
   @Test
+  void persistedSettingsRemainAvailableForANewStoreInstance() {
+    LargePreviewSettingsSnapshot snapshot = new LargePreviewSettingsSnapshot(8_388_608L, 262_144);
+
+    new FileSystemLargePreviewSettingsStore(properties()).save(snapshot);
+
+    assertEquals(snapshot, new FileSystemLargePreviewSettingsStore(properties()).load().orElseThrow());
+  }
+
+  @Test
   void fallsBackToEmptyWhenPersistedValuesAreInvalid() throws Exception {
     FileSystemLargePreviewSettingsStore store = new FileSystemLargePreviewSettingsStore(properties());
     Files.createDirectories(tempDir);
