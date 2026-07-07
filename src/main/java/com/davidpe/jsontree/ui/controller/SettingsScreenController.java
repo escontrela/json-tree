@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
+import com.davidpe.jsontree.application.port.in.SaveLargePreviewSettingsUseCase;
 import com.davidpe.jsontree.application.port.in.ViewLargePreviewSettingsUseCase;
 import com.davidpe.jsontree.application.service.ProcessMemoryReferenceService;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
@@ -18,16 +19,17 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 /**
- * Shell controller for the non-modal settings screen.
+ * Controller for the non-modal settings screen.
  *
- * <p>The initial ticket only wires navigation and layout shell actions. Runtime settings editing is
- * introduced in follow-up tickets.
+ * <p>The screen edits the runtime snapshot used by future JSON loads while keeping the currently
+ * opened document untouched.
  */
 @Component
 public class SettingsScreenController implements UiScreenController {
 
   private final UiFlowManager uiFlowManager;
   private final ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase;
+  private final SaveLargePreviewSettingsUseCase saveLargePreviewSettingsUseCase;
   private final ProcessMemoryReferenceService processMemoryReferenceService;
   private final SettingsFormStateResolver settingsFormStateResolver;
 
@@ -44,11 +46,13 @@ public class SettingsScreenController implements UiScreenController {
 
   public SettingsScreenController(
       ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase,
+      SaveLargePreviewSettingsUseCase saveLargePreviewSettingsUseCase,
       ProcessMemoryReferenceService processMemoryReferenceService,
       SettingsFormStateResolver settingsFormStateResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.uiFlowManager = uiFlowManager;
     this.viewLargePreviewSettingsUseCase = viewLargePreviewSettingsUseCase;
+    this.saveLargePreviewSettingsUseCase = saveLargePreviewSettingsUseCase;
     this.processMemoryReferenceService = processMemoryReferenceService;
     this.settingsFormStateResolver = settingsFormStateResolver;
   }
@@ -76,7 +80,14 @@ public class SettingsScreenController implements UiScreenController {
 
   @FXML
   void applySettings() {
-    // Later tickets wire runtime mutation and persistence into this action.
+    if (applyButton.isDisabled()) {
+      return;
+    }
+    saveLargePreviewSettingsUseCase.saveLargePreviewSettings(
+        new LargePreviewSettingsSnapshot(
+            Long.parseLong(largePreviewThresholdField.getText().trim()),
+            Integer.parseInt(viewerChunkBytesField.getText().trim())));
+    loadCurrentSettings();
   }
 
   private void loadCurrentSettings() {
