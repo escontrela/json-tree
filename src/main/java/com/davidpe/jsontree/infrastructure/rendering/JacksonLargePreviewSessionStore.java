@@ -4,8 +4,11 @@ import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapsho
 import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
+import com.davidpe.jsontree.application.port.out.LargePreviewSettingsStore;
 import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
+import com.davidpe.jsontree.application.service.LargePreviewSettingsService;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -34,23 +37,46 @@ import org.springframework.stereotype.Service;
 public class JacksonLargePreviewSessionStore implements LargePreviewSessionStorePort {
 
   private final LargePreviewProperties largePreviewProperties;
+  private final LargePreviewSettingsService largePreviewSettingsService;
   private final Path tempRootDirectory;
 
   public JacksonLargePreviewSessionStore(ObjectMapper objectMapper) {
-    this(objectMapper, new LargePreviewProperties());
+    this(objectMapper, createDefaultProperties());
+  }
+
+  private JacksonLargePreviewSessionStore(
+      ObjectMapper objectMapper, LargePreviewProperties largePreviewProperties) {
+    this(
+        objectMapper,
+        largePreviewProperties,
+        inMemorySettingsService(largePreviewProperties),
+        defaultTempRoot());
   }
 
   @Autowired
   public JacksonLargePreviewSessionStore(
-      ObjectMapper objectMapper, LargePreviewProperties largePreviewProperties) {
-    this(objectMapper, largePreviewProperties, defaultTempRoot());
+      ObjectMapper objectMapper,
+      LargePreviewProperties largePreviewProperties,
+      LargePreviewSettingsService largePreviewSettingsService) {
+    this(objectMapper, largePreviewProperties, largePreviewSettingsService, defaultTempRoot());
+  }
+
+  JacksonLargePreviewSessionStore(
+      ObjectMapper objectMapper, LargePreviewProperties largePreviewProperties, Path tempRootDirectory) {
+    this(
+        objectMapper,
+        largePreviewProperties,
+        inMemorySettingsService(largePreviewProperties),
+        tempRootDirectory);
   }
 
   JacksonLargePreviewSessionStore(
       ObjectMapper objectMapper,
       LargePreviewProperties largePreviewProperties,
+      LargePreviewSettingsService largePreviewSettingsService,
       Path tempRootDirectory) {
     this.largePreviewProperties = largePreviewProperties;
+    this.largePreviewSettingsService = largePreviewSettingsService;
     this.tempRootDirectory = tempRootDirectory.toAbsolutePath().normalize();
   }
 
@@ -115,7 +141,7 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
       Consumer<LargePreviewPageDescriptor> onPageAvailable)
       throws IOException {
     long fileSize = Files.size(source.path());
-    int visibleChunkBytes = Math.max(1024, largePreviewProperties.getVisibleChunkBytes());
+    int visibleChunkBytes = largePreviewSettingsService.current().viewerChunkBytes();
     int overlapBytes =
         Math.max(
             0, Math.min(largePreviewProperties.getChunkOverlapBytes(), visibleChunkBytes - 1024));
@@ -305,5 +331,27 @@ public class JacksonLargePreviewSessionStore implements LargePreviewSessionStore
 
   private static Path defaultTempRoot() {
     return Path.of(System.getProperty("java.io.tmpdir"));
+  }
+
+  private static LargePreviewProperties createDefaultProperties() {
+    return new LargePreviewProperties();
+  }
+
+  private static LargePreviewSettingsService inMemorySettingsService(
+      LargePreviewProperties properties) {
+    LargePreviewSettingsSnapshot defaults = LargePreviewSettingsSnapshot.defaultsFrom(properties);
+    return new LargePreviewSettingsService(
+        new LargePreviewSettingsStore() {
+          @Override
+          public Optional<LargePreviewSettingsSnapshot> load() {
+            return Optional.empty();
+          }
+
+          @Override
+          public void save(LargePreviewSettingsSnapshot snapshot) {
+            // No-op fallback for local default construction paths.
+          }
+        },
+        defaults);
   }
 }

@@ -3,19 +3,21 @@ package com.davidpe.jsontree.application.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
+import com.davidpe.jsontree.application.port.out.LargePreviewSettingsStore;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
-import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class JsonInspectionModeResolverTest {
 
   @Test
   void resolvesFullModeAtOrBelowThreshold() {
-    JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(properties(1024));
+    JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(settingsService(1024));
 
     JsonInspectionMode mode =
         resolver.resolve(
@@ -33,7 +35,7 @@ class JsonInspectionModeResolverTest {
 
   @Test
   void resolvesLargePreviewModeAboveThresholdForHistoryEntries() {
-    JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(properties(1024));
+    JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(settingsService(1024));
 
     JsonInspectionMode mode =
         resolver.resolve(
@@ -49,9 +51,17 @@ class JsonInspectionModeResolverTest {
     assertEquals(JsonInspectionMode.LARGE_PREVIEW, mode);
   }
 
-  private LargePreviewProperties properties(long fullRenderMaxBytes) {
-    LargePreviewProperties properties = new LargePreviewProperties();
-    properties.setFullRenderMaxBytes(fullRenderMaxBytes);
-    return properties;
+  private LargePreviewSettingsService settingsService(long fullRenderMaxBytes) {
+    return new LargePreviewSettingsService(
+        new LargePreviewSettingsStore() {
+          @Override
+          public Optional<LargePreviewSettingsSnapshot> load() {
+            return Optional.of(new LargePreviewSettingsSnapshot(fullRenderMaxBytes, 150 * 1024));
+          }
+
+          @Override
+          public void save(LargePreviewSettingsSnapshot snapshot) {}
+        },
+        new LargePreviewSettingsSnapshot(fullRenderMaxBytes, 150 * 1024));
   }
 }

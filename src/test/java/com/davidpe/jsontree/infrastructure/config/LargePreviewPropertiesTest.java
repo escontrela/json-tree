@@ -10,7 +10,7 @@ class LargePreviewPropertiesTest {
   void exposesSafeLargePreviewDefaults() {
     LargePreviewProperties properties = new LargePreviewProperties();
 
-    assertEquals(1_048_576L, properties.getFullRenderMaxBytes());
+    assertEquals(LargePreviewProperties.DEFAULT_FULL_RENDER_MAX_BYTES, properties.getFullRenderMaxBytes());
     assertEquals(400, properties.getPreviewMaxLines());
     assertEquals(400, properties.getPageLineCount());
     assertEquals(20, properties.getWarmPageRadius());
@@ -25,6 +25,9 @@ class LargePreviewPropertiesTest {
   @Test
   void clampsWarmPageRadiusToSafeBounds() {
     LargePreviewProperties properties = new LargePreviewProperties();
+
+    properties.setFullRenderMaxBytes(0L);
+    assertEquals(LargePreviewProperties.MIN_EDITABLE_BYTES, properties.getFullRenderMaxBytes());
 
     properties.setWarmPageRadius(-5);
     assertEquals(0, properties.getWarmPageRadius());

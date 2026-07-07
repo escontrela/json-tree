@@ -5,13 +5,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "json-tree.large-preview")
 public class LargePreviewProperties {
 
+  public static final long DEFAULT_FULL_RENDER_MAX_BYTES = 1_048_576L;
+  public static final int MIN_EDITABLE_BYTES = 1024;
   public static final int DEFAULT_WARM_PAGE_RADIUS = 20;
   public static final int MAX_WARM_PAGE_RADIUS = 200;
   public static final int DEFAULT_PAGE_INDEX_STRIDE_BYTES = 512 * 1024;
   public static final int DEFAULT_VISIBLE_CHUNK_BYTES = 150 * 1024;
   public static final int DEFAULT_CHUNK_OVERLAP_BYTES = 12 * 1024;
 
-  private long fullRenderMaxBytes = 1_048_576L;
+  private long fullRenderMaxBytes = DEFAULT_FULL_RENDER_MAX_BYTES;
   private int previewMaxLines = 400;
   private int pageLineCount = 400;
   private int warmPageRadius = DEFAULT_WARM_PAGE_RADIUS;
@@ -27,7 +29,7 @@ public class LargePreviewProperties {
   }
 
   public void setFullRenderMaxBytes(long fullRenderMaxBytes) {
-    this.fullRenderMaxBytes = fullRenderMaxBytes;
+    this.fullRenderMaxBytes = Math.max(MIN_EDITABLE_BYTES, fullRenderMaxBytes);
   }
 
   public int getPreviewMaxLines() {
@@ -83,7 +85,7 @@ public class LargePreviewProperties {
   }
 
   public void setPageIndexStrideBytes(int pageIndexStrideBytes) {
-    this.pageIndexStrideBytes = Math.max(1024, pageIndexStrideBytes);
+    this.pageIndexStrideBytes = Math.max(MIN_EDITABLE_BYTES, pageIndexStrideBytes);
   }
 
   public int getVisibleChunkBytes() {
@@ -91,11 +93,11 @@ public class LargePreviewProperties {
   }
 
   public void setVisibleChunkBytes(int visibleChunkBytes) {
-    this.visibleChunkBytes = Math.max(1024, visibleChunkBytes);
+    this.visibleChunkBytes = Math.max(MIN_EDITABLE_BYTES, visibleChunkBytes);
   }
 
   public int getChunkOverlapBytes() {
-    return Math.max(0, Math.min(chunkOverlapBytes, Math.max(0, visibleChunkBytes - 1024)));
+    return Math.max(0, Math.min(chunkOverlapBytes, Math.max(0, visibleChunkBytes - MIN_EDITABLE_BYTES)));
   }
 
   public void setChunkOverlapBytes(int chunkOverlapBytes) {

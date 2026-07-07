@@ -9,6 +9,7 @@ public class AppDataProperties {
     private Path rootDirectory = Path.of("app-data");
     private String historyDirectoryName = "history";
     private String metadataFileName = "metadata.json";
+    private String largePreviewSettingsFileName = "large-preview-settings.properties";
 
     public Path getRootDirectory() {
         return rootDirectory;
@@ -32,5 +33,13 @@ public class AppDataProperties {
 
     public void setMetadataFileName(String metadataFileName) {
         this.metadataFileName = metadataFileName;
+    }
+
+    public String getLargePreviewSettingsFileName() {
+        return largePreviewSettingsFileName;
+    }
+
+    public void setLargePreviewSettingsFileName(String largePreviewSettingsFileName) {
+        this.largePreviewSettingsFileName = largePreviewSettingsFileName;
     }
 }
