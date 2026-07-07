@@ -3,6 +3,7 @@ package com.davidpe.jsontree.application.service;
 import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -11,6 +12,7 @@ public class RawJsonPresentationService {
   private final ObjectMapper objectMapper;
   private final BestEffortJsonPrettyPrinter bestEffortJsonPrettyPrinter;
 
+  @Autowired
   public RawJsonPresentationService(
       ObjectMapper objectMapper, BestEffortJsonPrettyPrinter bestEffortJsonPrettyPrinter) {
     this.objectMapper = objectMapper;
@@ -156,12 +158,7 @@ public class RawJsonPresentationService {
   }
 
   private record SignificantCharacterScan(
-      int[] ordinalsByBoundary,
-      boolean[] significantByCharacter
-  ) {}
+      int[] ordinalsByBoundary, boolean[] significantByCharacter) {}
 
-  private record DisplayBoundaryScan(
-      int[] startBoundaryByOrdinal,
-      int[] endBoundaryByOrdinal
-  ) {}
+  private record DisplayBoundaryScan(int[] startBoundaryByOrdinal, int[] endBoundaryByOrdinal) {}
 }
