@@ -40,6 +40,8 @@ import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
 import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
+import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityResolver;
+import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityState;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
@@ -130,6 +132,8 @@ public class MainWindowController implements UiScreenController {
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
   private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
+  private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
+      new OutlinePanelVisibilityResolver();
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
@@ -287,6 +291,7 @@ public class MainWindowController implements UiScreenController {
   private ViewerVisualState currentState;
   private Instant currentLoadedAt;
   private String currentViewIdentity;
+  private String autoHiddenLargePreviewOutlineIdentity;
   private boolean windowMetricsLoggingAttached;
   private boolean showingRawJson = false;
   private RawJsonPresentation currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
@@ -656,6 +661,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     updateOutlineShell(result, document);
+    syncOutlinePanelVisibility(result);
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
@@ -1325,14 +1331,12 @@ public class MainWindowController implements UiScreenController {
       return;
     }
     boolean nextVisible = !outlineVBox.isVisible();
-    outlineVBox.setVisible(nextVisible);
-    outlineVBox.setManaged(nextVisible);
+    setOutlinePanelVisible(nextVisible);
     if (nextVisible) {
       resizeOutlineCanvas();
       scheduleOutlineViewportRefresh();
       return;
     }
-    hideOutlineViewportMarker();
   }
 
   private void hideSearchModal() {
@@ -1657,6 +1661,7 @@ public class MainWindowController implements UiScreenController {
     syncLargePreviewPageControls(result);
     applyLargePreviewDocumentScrollShell(result);
     updateOutlineShell(result, result.asciiTreeDocument());
+    syncOutlinePanelVisibility(result);
     renderRawJsonContent(
         workflowService.currentViewRawJson().orElse(result.asciiTreeDocument().content()));
     rawJsonButton.setText("Raw page");
@@ -1706,11 +1711,31 @@ public class MainWindowController implements UiScreenController {
     copyTreeButton.setDisable(false);
     rawJsonButton.setDisable(!presentation.rawJsonEnabled());
     searchButton.setDisable(!presentation.searchEnabled());
-    outlineToggleButton.setDisable(!presentation.outlineEnabled());
+    outlineToggleButton.setDisable(
+        result.usesLargePreview() ? false : !presentation.outlineEnabled());
     setValidationBadge(
         presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
     footerStatusLabel.setText(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
+  }
+
+  private void syncOutlinePanelVisibility(JsonViewerLoadResult result) {
+    OutlinePanelVisibilityState nextState =
+        outlinePanelVisibilityResolver.resolve(
+            outlineVBox.isVisible(),
+            result.usesLargePreview(),
+            currentViewIdentity(result),
+            autoHiddenLargePreviewOutlineIdentity);
+    autoHiddenLargePreviewOutlineIdentity = nextState.autoHiddenIdentity();
+    setOutlinePanelVisible(nextState.visible());
+  }
+
+  private void setOutlinePanelVisible(boolean visible) {
+    outlineVBox.setVisible(visible);
+    outlineVBox.setManaged(visible);
+    if (!visible) {
+      hideOutlineViewportMarker();
+    }
   }
 
   private void updateOutlineShell(JsonViewerLoadResult result, AsciiTreeDocument document) {

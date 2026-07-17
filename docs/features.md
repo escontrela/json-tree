@@ -220,6 +220,7 @@
 - `LARGE_PREVIEW` now stays fixed on the current page raw view. The app always attempts local Jackson pretty-print when the active chunk parses cleanly as standalone JSON.
 - A persisted `Pretty on large preview` setting can additionally enable a deterministic best-effort formatter for incomplete standalone chunks; when disabled, the old plain-raw fallback remains in place.
 - Regex search and the outline/minimap are intentionally disabled in this variant of `LARGE_PREVIEW`.
+- Because that outline rail is non-functional in byte-paged `LARGE_PREVIEW`, the right-side panel now starts hidden for large files. The `Outline` button stays available so the user can still reopen the unavailable shell manually if they want the extra context rail visible.
 - Even inside allowed modes, the viewer enforces `text-node-budget` guardrails in the syntax-highlighting path. If highlighting would create too many JavaFX text nodes, rendering degrades to simplified plain text instead of risking UI freezes or heap exhaustion.
 - The operational goal is resilience, not unlimited rendering. Large-preview support exists to keep oversized JSON inspectable without crashing the app, while ordinary small files keep the richer full-feature path.
 
