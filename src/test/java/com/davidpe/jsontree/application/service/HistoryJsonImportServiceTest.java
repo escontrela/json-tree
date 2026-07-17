@@ -35,8 +35,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class HistoryJsonImportServiceTest {
 
-  @TempDir
-  Path tempDir;
+  @TempDir Path tempDir;
 
   @Test
   void importsSelectedJsonIntoHistoryWithoutReplacingCurrentViewerSelection() throws IOException {
@@ -59,7 +58,8 @@ class HistoryJsonImportServiceTest {
   @Test
   void reportsCancelledWhenUserDismissesTheFilePicker() {
     HistoryJsonImportResult result =
-        new HistoryJsonImportService(Optional::<Path>empty, viewerWorkflowService(new InMemoryHistoryRepository()))
+        new HistoryJsonImportService(
+                Optional::<Path>empty, viewerWorkflowService(new InMemoryHistoryRepository()))
             .importFromDisk();
 
     assertFalse(result.successful());
@@ -86,8 +86,7 @@ class HistoryJsonImportServiceTest {
     InMemoryHistoryRepository historyRepository = new InMemoryHistoryRepository();
     HistoryJsonImportResult result =
         new HistoryJsonImportService(
-                () -> Optional.of(invalidJson),
-                viewerWorkflowService(historyRepository))
+                () -> Optional.of(invalidJson), viewerWorkflowService(historyRepository))
             .importFromDisk();
 
     assertFalse(result.successful());
@@ -115,20 +114,21 @@ class HistoryJsonImportServiceTest {
     Files.writeString(largeJson, "{\"payload\":\"012345678901234567890123456789\"}");
     InMemoryHistoryRepository historyRepository = new InMemoryHistoryRepository();
     TrackingRendererPort rendererPort = new TrackingRendererPort();
-    JsonViewerWorkflowService workflowService = viewerWorkflowService(historyRepository, rendererPort, 8L);
+    JsonViewerWorkflowService workflowService =
+        viewerWorkflowService(historyRepository, rendererPort, 8L);
 
     HistoryJsonImportResult result =
-        new HistoryJsonImportService(() -> Optional.of(largeJson), workflowService).importFromDisk();
+        new HistoryJsonImportService(() -> Optional.of(largeJson), workflowService)
+            .importFromDisk();
 
     assertTrue(result.successful());
     assertTrue(rendererPort.largePreviewUsed);
   }
 
-  private JsonViewerWorkflowService viewerWorkflowService(InMemoryHistoryRepository historyRepository) {
+  private JsonViewerWorkflowService viewerWorkflowService(
+      InMemoryHistoryRepository historyRepository) {
     return viewerWorkflowService(
-        historyRepository,
-        new JacksonAsciiTreeFormatter(new ObjectMapper()),
-        Long.MAX_VALUE);
+        historyRepository, new JacksonAsciiTreeFormatter(new ObjectMapper()), Long.MAX_VALUE);
   }
 
   private JsonViewerWorkflowService viewerWorkflowService(
@@ -144,9 +144,8 @@ class HistoryJsonImportServiceTest {
         rendererPort,
         new JsonInspectionModeResolver(properties),
         new LargePreviewSessionService(
-            new NoOpLargePreviewSessionStore(),
-            2,
-            new DirectExecutorService()),
+            new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
+        new AsciiTreeFullRenderGuard(properties),
         fixedClock());
   }
 
@@ -229,8 +228,7 @@ class HistoryJsonImportServiceTest {
     }
 
     @Override
-    public void deleteSessionStorage(Path sessionStoragePath) {
-    }
+    public void deleteSessionStorage(Path sessionStoragePath) {}
   }
 
   private static final class DirectExecutorService extends AbstractExecutorService {

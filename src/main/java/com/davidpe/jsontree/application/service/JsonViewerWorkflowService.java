@@ -21,6 +21,7 @@ import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,12 +59,30 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   private final AsciiTreeRendererPort asciiTreeRendererPort;
   private final JsonInspectionModeResolver inspectionModeResolver;
   private final LargePreviewSessionService largePreviewSessionService;
+  private final AsciiTreeFullRenderGuard asciiTreeFullRenderGuard;
   private final Clock clock;
 
   private JsonViewerLoadResult currentView;
 
   @Autowired
   /** Creates the workflow service with the default system clock. */
+  public JsonViewerWorkflowService(
+      JsonValidationPort validationPort,
+      JsonHistoryRepository jsonHistoryRepository,
+      AsciiTreeRendererPort asciiTreeRendererPort,
+      JsonInspectionModeResolver inspectionModeResolver,
+      LargePreviewSessionService largePreviewSessionService,
+      AsciiTreeFullRenderGuard asciiTreeFullRenderGuard) {
+    this(
+        validationPort,
+        jsonHistoryRepository,
+        asciiTreeRendererPort,
+        inspectionModeResolver,
+        largePreviewSessionService,
+        asciiTreeFullRenderGuard,
+        Clock.systemDefaultZone());
+  }
+
   public JsonViewerWorkflowService(
       JsonValidationPort validationPort,
       JsonHistoryRepository jsonHistoryRepository,
@@ -76,6 +95,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         asciiTreeRendererPort,
         inspectionModeResolver,
         largePreviewSessionService,
+        new AsciiTreeFullRenderGuard(new LargePreviewProperties()),
         Clock.systemDefaultZone());
   }
 
@@ -85,12 +105,14 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       AsciiTreeRendererPort asciiTreeRendererPort,
       JsonInspectionModeResolver inspectionModeResolver,
       LargePreviewSessionService largePreviewSessionService,
+      AsciiTreeFullRenderGuard asciiTreeFullRenderGuard,
       Clock clock) {
     this.validationPort = validationPort;
     this.jsonHistoryRepository = jsonHistoryRepository;
     this.asciiTreeRendererPort = asciiTreeRendererPort;
     this.inspectionModeResolver = inspectionModeResolver;
     this.largePreviewSessionService = largePreviewSessionService;
+    this.asciiTreeFullRenderGuard = asciiTreeFullRenderGuard;
     this.clock = clock;
   }
 
@@ -155,7 +177,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     AsciiTreeDocument asciiTreeDocument = renderDocument(importResult.path(), inspectionMode);
-    ImportedJsonFile historyEntry = createHistoryEntry(importResult, asciiTreeDocument);
+    ImportedJsonFile historyEntry = createHistoryEntry(importResult, asciiTreeDocument.lineCount());
     jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
     return HistoryJsonImportResult.imported(historyEntry);
   }
@@ -189,15 +211,12 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     LargePreviewPagedSession largePreviewSession = null;
 
     if (validationResult.valid()) {
-      if (inspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
-        LargePreviewPageLoadResult pageLoadResult =
-            largePreviewSessionService.openSession(sourceFor(importResult, null));
-        asciiTreeDocument = toAsciiTreeDocument(pageLoadResult);
-        largePreviewSession = pageLoadResult.session();
-      } else {
-        asciiTreeDocument = renderDocument(importResult.path(), inspectionMode);
-      }
-      historyEntry = createHistoryEntry(importResult, asciiTreeDocument);
+      RenderableLoadState renderableLoadState =
+          prepareRenderableLoadState(importResult, null, inspectionMode);
+      inspectionMode = renderableLoadState.inspectionMode();
+      asciiTreeDocument = renderableLoadState.document();
+      largePreviewSession = renderableLoadState.largePreviewSession();
+      historyEntry = createHistoryEntry(importResult, renderableLoadState.historyLineCount());
       jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
     }
 
@@ -249,17 +268,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
     JsonValidationResult validationResult =
         new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);
-    AsciiTreeDocument asciiTreeDocument;
-    LargePreviewPagedSession largePreviewSession = null;
-    if (inspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
-      LargePreviewPageLoadResult pageLoadResult =
-          largePreviewSessionService.openSession(
-              LargePreviewSessionSource.history(storedJsonPath.get(), storedName));
-      asciiTreeDocument = toAsciiTreeDocument(pageLoadResult);
-      largePreviewSession = pageLoadResult.session();
-    } else {
-      asciiTreeDocument = renderDocument(storedJsonPath.get(), inspectionMode);
-    }
+    RenderableLoadState renderableLoadState =
+        prepareRenderableLoadState(importResult, historyEntry.get(), inspectionMode);
+    inspectionMode = renderableLoadState.inspectionMode();
+    AsciiTreeDocument asciiTreeDocument = renderableLoadState.document();
+    LargePreviewPagedSession largePreviewSession = renderableLoadState.largePreviewSession();
     JsonViewerLoadResult loadResult =
         new JsonViewerLoadResult(
             importResult,
@@ -385,15 +398,14 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
   }
 
-  private ImportedJsonFile createHistoryEntry(
-      JsonImportResult importResult, AsciiTreeDocument asciiTreeDocument) {
+  private ImportedJsonFile createHistoryEntry(JsonImportResult importResult, int lineCount) {
     Instant importedAt = Instant.now(clock);
     return new ImportedJsonFile(
         buildStoredName(importedAt, importResult.fileName()),
         importResult.fileName(),
         importedAt,
         importResult.sizeBytes(),
-        asciiTreeDocument.lineCount(),
+        lineCount,
         true,
         false);
   }
@@ -442,12 +454,35 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         : asciiTreeRendererPort.render(path);
   }
 
+  private RenderableLoadState prepareRenderableLoadState(
+      JsonImportResult importResult,
+      ImportedJsonFile historyEntry,
+      JsonInspectionMode requestedInspectionMode) {
+    if (requestedInspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
+      return openLargePreviewState(importResult, historyEntry);
+    }
+
+    AsciiTreeDocument fullDocument = renderDocument(importResult.path(), JsonInspectionMode.FULL);
+    if (!asciiTreeFullRenderGuard.exceedsBudget(fullDocument)) {
+      return RenderableLoadState.full(fullDocument);
+    }
+
+    RenderableLoadState promotedState = openLargePreviewState(importResult, historyEntry);
+    return promotedState.withHistoryLineCount(fullDocument.lineCount());
+  }
+
+  private RenderableLoadState openLargePreviewState(
+      JsonImportResult importResult, ImportedJsonFile historyEntry) {
+    LargePreviewPageLoadResult pageLoadResult =
+        largePreviewSessionService.openSession(sourceFor(importResult, historyEntry));
+    AsciiTreeDocument document = toAsciiTreeDocument(pageLoadResult);
+    return RenderableLoadState.largePreview(document, pageLoadResult.session());
+  }
+
   private AsciiTreeDocument toAsciiTreeDocument(LargePreviewPageLoadResult pageLoadResult) {
     String chunkContent = pageLoadResult.page().content();
     return new AsciiTreeDocument(
-        "root",
-        chunkContent,
-        chunkContent.isEmpty() ? 0 : chunkContent.split("\\R", -1).length);
+        "root", chunkContent, chunkContent.isEmpty() ? 0 : chunkContent.split("\\R", -1).length);
   }
 
   private LargePreviewSessionSource sourceFor(
@@ -479,5 +514,27 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return inspectionMode == JsonInspectionMode.LARGE_PREVIEW
         ? JsonViewerCapabilities.largePreview()
         : JsonViewerCapabilities.full();
+  }
+
+  private record RenderableLoadState(
+      JsonInspectionMode inspectionMode,
+      AsciiTreeDocument document,
+      LargePreviewPagedSession largePreviewSession,
+      int historyLineCount) {
+
+    private static RenderableLoadState full(AsciiTreeDocument document) {
+      return new RenderableLoadState(JsonInspectionMode.FULL, document, null, document.lineCount());
+    }
+
+    private static RenderableLoadState largePreview(
+        AsciiTreeDocument document, LargePreviewPagedSession largePreviewSession) {
+      return new RenderableLoadState(
+          JsonInspectionMode.LARGE_PREVIEW, document, largePreviewSession, document.lineCount());
+    }
+
+    private RenderableLoadState withHistoryLineCount(int nextHistoryLineCount) {
+      return new RenderableLoadState(
+          inspectionMode, document, largePreviewSession, nextHistoryLineCount);
+    }
   }
 }

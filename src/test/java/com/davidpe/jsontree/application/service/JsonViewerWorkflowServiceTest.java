@@ -27,6 +27,7 @@ import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -208,6 +209,108 @@ class JsonViewerWorkflowServiceTest {
     assertEquals(0, renderer.fullRenderCount);
     assertEquals(0, renderer.largePreviewRenderCount);
     assertTrue(result.hasLargePreviewSession());
+    assertEquals(1, largePreviewStore.materializeCalls);
+  }
+
+  @Test
+  void promotesFullModeToLargePreviewWhenFullRenderWouldExceedBudget() throws IOException {
+    TrackingRendererPort renderer =
+        new TrackingRendererPort(
+            new AsciiTreeDocument(
+                "root",
+                """
+                root
+                ├─ [0]
+                │  ├─ id: "TZJHLljE"
+                │  ├─ rated: "FALSE"
+                │  ├─ created_at: "1.50421E+12"
+                │  ├─ last_move_at: "1.50421E+12"
+                │  ├─ turns: "13"
+                │  └─ victory_status: "outoftime"
+                └─ [1]""",
+                9));
+    TrackingLargePreviewSessionStore largePreviewStore = new TrackingLargePreviewSessionStore();
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            new InMemoryHistoryRepository(),
+            renderer,
+            inspectionModeResolver(2_048_576L),
+            largePreviewSessionService(largePreviewStore),
+            new AsciiTreeFullRenderGuard(12),
+            Clock.systemUTC());
+    Path importedFile = Files.writeString(tempDir.resolve("borderline.json"), "{\"id\":1}");
+
+    JsonViewerLoadResult result =
+        workflowService.loadImportedFile(
+            new JsonImportResult(
+                importedFile,
+                "borderline.json",
+                1_050_131L,
+                true,
+                true,
+                true,
+                JsonDocumentSourceKind.LOCAL_FILE));
+
+    assertEquals(
+        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        result.inspectionMode());
+    assertTrue(result.hasLargePreviewSession());
+    assertFalse(result.capabilities().searchAvailable());
+    assertEquals(1, renderer.fullRenderCount);
+    assertEquals(1, largePreviewStore.materializeCalls);
+  }
+
+  @Test
+  void promotesHistoryReopenToLargePreviewWhenFullRenderWouldExceedBudget() throws IOException {
+    TrackingRendererPort renderer =
+        new TrackingRendererPort(
+            new AsciiTreeDocument(
+                "root",
+                """
+                root
+                ├─ [0]
+                │  ├─ id: "TZJHLljE"
+                │  ├─ rated: "FALSE"
+                │  ├─ created_at: "1.50421E+12"
+                │  ├─ last_move_at: "1.50421E+12"
+                │  ├─ turns: "13"
+                │  └─ victory_status: "outoftime"
+                └─ [1]""",
+                9));
+    TrackingLargePreviewSessionStore largePreviewStore = new TrackingLargePreviewSessionStore();
+    InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+    ImportedJsonFile historyEntry =
+        new ImportedJsonFile(
+            "2026-07-17_01-15-17_borderline.json",
+            "borderline.json",
+            Instant.parse("2026-07-17T01:15:17Z"),
+            1_050_131L,
+            28136,
+            true,
+            false);
+    repository.entry = historyEntry;
+    repository.storedJson = "{\"id\":1}";
+    repository.storedJsonPath =
+        Files.writeString(tempDir.resolve(historyEntry.storedName()), repository.storedJson);
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            repository,
+            renderer,
+            inspectionModeResolver(2_048_576L),
+            largePreviewSessionService(largePreviewStore),
+            new AsciiTreeFullRenderGuard(12),
+            Clock.systemUTC());
+
+    JsonViewerLoadResult result =
+        workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
+
+    assertEquals(
+        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        result.inspectionMode());
+    assertTrue(result.hasLargePreviewSession());
+    assertEquals(1, renderer.fullRenderCount);
     assertEquals(1, largePreviewStore.materializeCalls);
   }
 
@@ -466,13 +569,22 @@ class JsonViewerWorkflowServiceTest {
 
   private static final class TrackingRendererPort implements AsciiTreeRendererPort {
 
+    private final AsciiTreeDocument fullRenderDocument;
     private int fullRenderCount;
     private int largePreviewRenderCount;
+
+    private TrackingRendererPort() {
+      this(new AsciiTreeDocument("root", "root\n├─ full: true", 2));
+    }
+
+    private TrackingRendererPort(AsciiTreeDocument fullRenderDocument) {
+      this.fullRenderDocument = fullRenderDocument;
+    }
 
     @Override
     public AsciiTreeDocument render(Path jsonFilePath) {
       fullRenderCount++;
-      return new AsciiTreeDocument("root", "root\n├─ full: true", 2);
+      return fullRenderDocument;
     }
 
     @Override

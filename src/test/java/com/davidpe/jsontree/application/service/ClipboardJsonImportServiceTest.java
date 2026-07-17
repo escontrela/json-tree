@@ -38,8 +38,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class ClipboardJsonImportServiceTest {
 
-  @TempDir
-  java.nio.file.Path tempDir;
+  @TempDir java.nio.file.Path tempDir;
 
   @Test
   void importsValidClipboardJsonIntoViewerWorkflow() {
@@ -125,7 +124,8 @@ class ClipboardJsonImportServiceTest {
     assertTrue(first.successful());
     assertTrue(second.successful());
     assertEquals(expectedClipboardFileName(), first.loadResult().importResult().fileName());
-    assertEquals(expectedClipboardCollisionFileName(), second.loadResult().importResult().fileName());
+    assertEquals(
+        expectedClipboardCollisionFileName(), second.loadResult().importResult().fileName());
   }
 
   @Test
@@ -163,9 +163,8 @@ class ClipboardJsonImportServiceTest {
         renderSimpleAsciiTree(),
         inspectionModeResolver(),
         new LargePreviewSessionService(
-            new NoOpLargePreviewSessionStore(),
-            2,
-            new DirectExecutorService()),
+            new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
+        new AsciiTreeFullRenderGuard(new LargePreviewProperties()),
         fixedClock());
   }
 
@@ -200,8 +199,7 @@ class ClipboardJsonImportServiceTest {
   private ClipboardPort readableClipboard(String text) {
     return new ClipboardPort() {
       @Override
-      public void copy(String text) {
-      }
+      public void copy(String text) {}
 
       @Override
       public Optional<String> readText() {
@@ -213,8 +211,7 @@ class ClipboardJsonImportServiceTest {
   private ClipboardPort emptyClipboard() {
     return new ClipboardPort() {
       @Override
-      public void copy(String text) {
-      }
+      public void copy(String text) {}
 
       @Override
       public Optional<String> readText() {
@@ -226,8 +223,7 @@ class ClipboardJsonImportServiceTest {
   private ClipboardPort failingClipboard() {
     return new ClipboardPort() {
       @Override
-      public void copy(String text) {
-      }
+      public void copy(String text) {}
 
       @Override
       public Optional<String> readText() {
@@ -259,8 +255,7 @@ class ClipboardJsonImportServiceTest {
     }
 
     @Override
-    public void save(ImportedJsonFile importedJsonFile, String jsonContent) {
-    }
+    public void save(ImportedJsonFile importedJsonFile, String jsonContent) {}
 
     @Override
     public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
@@ -268,8 +263,7 @@ class ClipboardJsonImportServiceTest {
     }
 
     @Override
-    public void deleteByStoredName(String storedName) {
-    }
+    public void deleteByStoredName(String storedName) {}
   }
 
   private static final class NoOpLargePreviewSessionStore implements LargePreviewSessionStorePort {
@@ -288,8 +282,7 @@ class ClipboardJsonImportServiceTest {
     }
 
     @Override
-    public void deleteSessionStorage(Path sessionStoragePath) {
-    }
+    public void deleteSessionStorage(Path sessionStoragePath) {}
   }
 
   private static final class DirectExecutorService extends AbstractExecutorService {
