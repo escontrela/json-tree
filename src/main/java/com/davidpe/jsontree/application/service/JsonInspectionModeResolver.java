@@ -45,7 +45,7 @@ public class JsonInspectionModeResolver {
 
   public JsonInspectionMode resolve(long sizeBytes) {
     LargePreviewSettingsSnapshot settingsSnapshot = settingsService.current();
-    return sizeBytes > settingsSnapshot.largePreviewThresholdBytes()
+    return sizeBytes >= settingsSnapshot.largePreviewThresholdBytes()
         ? JsonInspectionMode.LARGE_PREVIEW
         : JsonInspectionMode.FULL;
   }

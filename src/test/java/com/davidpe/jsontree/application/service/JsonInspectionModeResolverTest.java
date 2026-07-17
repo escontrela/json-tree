@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class JsonInspectionModeResolverTest {
 
   @Test
-  void resolvesFullModeAtOrBelowThreshold() {
+  void resolvesFullModeBelowThreshold() {
     JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(settingsService(1024));
 
     JsonInspectionMode mode =
@@ -24,13 +24,31 @@ class JsonInspectionModeResolverTest {
             new JsonImportResult(
                 Path.of("/tmp/small.json"),
                 "small.json",
-                1024,
+                1023,
                 true,
                 true,
                 true,
                 JsonDocumentSourceKind.LOCAL_FILE));
 
     assertEquals(JsonInspectionMode.FULL, mode);
+  }
+
+  @Test
+  void resolvesLargePreviewModeAtThreshold() {
+    JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(settingsService(1024));
+
+    JsonInspectionMode mode =
+        resolver.resolve(
+            new JsonImportResult(
+                Path.of("/tmp/exact-threshold.json"),
+                "exact-threshold.json",
+                1024,
+                true,
+                true,
+                true,
+                JsonDocumentSourceKind.LOCAL_FILE));
+
+    assertEquals(JsonInspectionMode.LARGE_PREVIEW, mode);
   }
 
   @Test
