@@ -19,7 +19,7 @@ public class RawJsonPresentationService {
     this.bestEffortJsonPrettyPrinter = bestEffortJsonPrettyPrinter;
   }
 
-  public RawJsonPresentationService(ObjectMapper objectMapper) {
+  RawJsonPresentationService(ObjectMapper objectMapper) {
     this(objectMapper, new BestEffortJsonPrettyPrinter());
   }
 
