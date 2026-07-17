@@ -132,6 +132,7 @@
                                     <Insets bottom="32.0" left="32.0" right="32.0" top="32.0" />
                                 </padding>
                                 <Region fx:id="largePreviewTopSpacer" managed="false" visible="false" />
+                                <StackPane fx:id="viewerDocumentHost" managed="false" visible="false" />
                                 <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false" />
                                 <TextFlow fx:id="rawJsonContentFlow" managed="false" styleClass="raw-json-content" visible="false" />
                                 <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true" />

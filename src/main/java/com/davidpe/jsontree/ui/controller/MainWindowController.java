@@ -44,6 +44,8 @@ import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityResolver;
 import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityState;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
+import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
+import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
@@ -132,6 +134,7 @@ public class MainWindowController implements UiScreenController {
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
   private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
+  private final RichTextViewerFactory richTextViewerFactory;
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
@@ -156,6 +159,7 @@ public class MainWindowController implements UiScreenController {
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
       LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
+      RichTextViewerFactory richTextViewerFactory,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
@@ -177,6 +181,7 @@ public class MainWindowController implements UiScreenController {
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
     this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
+    this.richTextViewerFactory = richTextViewerFactory;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -231,6 +236,8 @@ public class MainWindowController implements UiScreenController {
   @FXML private VBox viewerContentBox;
 
   @FXML private Region largePreviewTopSpacer;
+
+  @FXML private StackPane viewerDocumentHost;
 
   @FXML private TextFlow treeContentFlow;
 
@@ -304,6 +311,7 @@ public class MainWindowController implements UiScreenController {
   private long viewerWorkflowLoadSequence;
   private LargePreviewViewportState currentLargePreviewViewportState =
       LargePreviewViewportState.inactive();
+  private RichTextViewerSurface richTextViewerSurface;
   private List<Region> largePreviewLoaderSquares = List.of();
   private LargePreviewLoadingAffordance largePreviewLoadingAffordance;
   private PauseTransition largePreviewLoaderRevealTransition;
@@ -313,6 +321,8 @@ public class MainWindowController implements UiScreenController {
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
+    richTextViewerSurface = richTextViewerFactory.create();
+    viewerDocumentHost.getChildren().setAll(richTextViewerSurface.view());
     fileWarningIconLabel.setGraphic(LargePreviewWarningIconFactory.create(16.0));
     configureWindowMetricsLogging();
     rootPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleGlobalKeyPressed);
