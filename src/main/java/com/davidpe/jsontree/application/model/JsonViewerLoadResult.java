@@ -11,7 +11,8 @@ public record JsonViewerLoadResult(
         AsciiTreeDocument asciiTreeDocument,
         ImportedJsonFile historyEntry,
         JsonInspectionMode inspectionMode,
-        JsonViewerCapabilities capabilities
+        JsonViewerCapabilities capabilities,
+        LargePreviewPagedSession largePreviewSession
 ) {
 
     public boolean hasRenderableTree() {
@@ -20,5 +21,21 @@ public record JsonViewerLoadResult(
 
     public boolean usesLargePreview() {
         return inspectionMode == JsonInspectionMode.LARGE_PREVIEW;
+    }
+
+    public boolean hasLargePreviewSession() {
+        return largePreviewSession != null;
+    }
+
+    public JsonViewerLoadResult withLargePreviewSession(LargePreviewPagedSession nextLargePreviewSession) {
+        return new JsonViewerLoadResult(
+                importResult,
+                validationResult,
+                asciiTreeDocument,
+                historyEntry,
+                inspectionMode,
+                capabilities,
+                nextLargePreviewSession
+        );
     }
 }

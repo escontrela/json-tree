@@ -16,6 +16,9 @@ class AppDataPropertiesTest {
         assertEquals(Path.of("app-data"), properties.getRootDirectory());
         assertEquals("history", properties.getHistoryDirectoryName());
         assertEquals("metadata.json", properties.getMetadataFileName());
+        assertEquals(
+                "large-preview-settings.properties",
+                properties.getLargePreviewSettingsFileName());
     }
 
     @Test
@@ -26,9 +29,11 @@ class AppDataPropertiesTest {
         properties.setRootDirectory(Path.of("custom-data"));
         properties.setHistoryDirectoryName("imports");
         properties.setMetadataFileName("history-metadata.json");
+        properties.setLargePreviewSettingsFileName("preview.properties");
 
         assertEquals(Path.of("custom-data"), properties.getRootDirectory());
         assertEquals("imports", properties.getHistoryDirectoryName());
         assertEquals("history-metadata.json", properties.getMetadataFileName());
+        assertEquals("preview.properties", properties.getLargePreviewSettingsFileName());
     }
 }

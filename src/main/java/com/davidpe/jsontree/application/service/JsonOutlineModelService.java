@@ -3,6 +3,7 @@ package com.davidpe.jsontree.application.service;
 import com.davidpe.jsontree.application.model.JsonOutlineEntry;
 import com.davidpe.jsontree.application.model.JsonOutlineEntryKind;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -67,6 +68,14 @@ public class JsonOutlineModelService {
 
     int maxDepth = entries.stream().mapToInt(JsonOutlineEntry::depth).max().orElse(0);
     return entries.isEmpty() ? JsonOutlineModel.empty() : new JsonOutlineModel(entries, maxDepth);
+  }
+
+  public JsonOutlineModel buildFromLargePreviewDigest(LargePreviewOutlineDigest digest) {
+    if (digest == null || digest.emptyDigest()) {
+      return JsonOutlineModel.empty();
+    }
+    return new JsonOutlineModel(
+        digest.entries().stream().map(entry -> entry.outlineEntry()).toList(), digest.maxDepth());
   }
 
   private void appendChildren(JsonNode node, int depth, List<JsonOutlineEntry> entries) {

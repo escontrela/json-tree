@@ -3,15 +3,24 @@ package com.davidpe.jsontree.application.service;
 import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class RawJsonPresentationService {
 
   private final ObjectMapper objectMapper;
+  private final BestEffortJsonPrettyPrinter bestEffortJsonPrettyPrinter;
 
-  public RawJsonPresentationService(ObjectMapper objectMapper) {
+  @Autowired
+  public RawJsonPresentationService(
+      ObjectMapper objectMapper, BestEffortJsonPrettyPrinter bestEffortJsonPrettyPrinter) {
     this.objectMapper = objectMapper;
+    this.bestEffortJsonPrettyPrinter = bestEffortJsonPrettyPrinter;
+  }
+
+  RawJsonPresentationService(ObjectMapper objectMapper) {
+    this(objectMapper, new BestEffortJsonPrettyPrinter());
   }
 
   public RawJsonPresentation present(String rawJson) {
@@ -20,12 +29,36 @@ public class RawJsonPresentationService {
     }
 
     try {
-      String prettyJson =
-          objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectMapper.readTree(rawJson));
-      return new RawJsonPresentation(prettyJson, buildBoundaryMap(rawJson, prettyJson));
+      return prettyPrintedPresentation(rawJson);
     } catch (JsonProcessingException exception) {
       return new RawJsonPresentation(rawJson, identityBoundaries(rawJson.length()));
     }
+  }
+
+  public RawJsonPresentation presentLargePreviewChunk(
+      String rawJson, boolean prettyOnLargePreviewEnabled) {
+    if (rawJson == null || rawJson.isEmpty()) {
+      return new RawJsonPresentation("", new int[] {0});
+    }
+
+    try {
+      return prettyPrintedPresentation(rawJson);
+    } catch (JsonProcessingException exception) {
+      if (!prettyOnLargePreviewEnabled) {
+        return new RawJsonPresentation(rawJson, identityBoundaries(rawJson.length()));
+      }
+      String formattedChunk = bestEffortJsonPrettyPrinter.prettyPrint(rawJson);
+      return new RawJsonPresentation(formattedChunk, buildBoundaryMap(rawJson, formattedChunk));
+    }
+  }
+
+  private RawJsonPresentation prettyPrintedPresentation(String rawJson)
+      throws JsonProcessingException {
+    String prettyJson =
+        objectMapper
+            .writerWithDefaultPrettyPrinter()
+            .writeValueAsString(objectMapper.readTree(rawJson));
+    return new RawJsonPresentation(prettyJson, buildBoundaryMap(rawJson, prettyJson));
   }
 
   private int[] buildBoundaryMap(String source, String display) {
@@ -125,12 +158,7 @@ public class RawJsonPresentationService {
   }
 
   private record SignificantCharacterScan(
-      int[] ordinalsByBoundary,
-      boolean[] significantByCharacter
-  ) {}
+      int[] ordinalsByBoundary, boolean[] significantByCharacter) {}
 
-  private record DisplayBoundaryScan(
-      int[] startBoundaryByOrdinal,
-      int[] endBoundaryByOrdinal
-  ) {}
+  private record DisplayBoundaryScan(int[] startBoundaryByOrdinal, int[] endBoundaryByOrdinal) {}
 }

@@ -6,7 +6,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.HistoryJsonImportResult;
 import com.davidpe.jsontree.application.model.HistoryJsonImportStatus;
+import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
+import com.davidpe.jsontree.application.model.LargePreviewPageContent;
+import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
+import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
 import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
+import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
@@ -23,13 +28,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class HistoryJsonImportServiceTest {
 
-  @TempDir
-  Path tempDir;
+  @TempDir Path tempDir;
 
   @Test
   void importsSelectedJsonIntoHistoryWithoutReplacingCurrentViewerSelection() throws IOException {
@@ -52,7 +58,8 @@ class HistoryJsonImportServiceTest {
   @Test
   void reportsCancelledWhenUserDismissesTheFilePicker() {
     HistoryJsonImportResult result =
-        new HistoryJsonImportService(Optional::<Path>empty, viewerWorkflowService(new InMemoryHistoryRepository()))
+        new HistoryJsonImportService(
+                Optional::<Path>empty, viewerWorkflowService(new InMemoryHistoryRepository()))
             .importFromDisk();
 
     assertFalse(result.successful());
@@ -79,8 +86,7 @@ class HistoryJsonImportServiceTest {
     InMemoryHistoryRepository historyRepository = new InMemoryHistoryRepository();
     HistoryJsonImportResult result =
         new HistoryJsonImportService(
-                () -> Optional.of(invalidJson),
-                viewerWorkflowService(historyRepository))
+                () -> Optional.of(invalidJson), viewerWorkflowService(historyRepository))
             .importFromDisk();
 
     assertFalse(result.successful());
@@ -108,20 +114,21 @@ class HistoryJsonImportServiceTest {
     Files.writeString(largeJson, "{\"payload\":\"012345678901234567890123456789\"}");
     InMemoryHistoryRepository historyRepository = new InMemoryHistoryRepository();
     TrackingRendererPort rendererPort = new TrackingRendererPort();
-    JsonViewerWorkflowService workflowService = viewerWorkflowService(historyRepository, rendererPort, 8L);
+    JsonViewerWorkflowService workflowService =
+        viewerWorkflowService(historyRepository, rendererPort, 8L);
 
     HistoryJsonImportResult result =
-        new HistoryJsonImportService(() -> Optional.of(largeJson), workflowService).importFromDisk();
+        new HistoryJsonImportService(() -> Optional.of(largeJson), workflowService)
+            .importFromDisk();
 
     assertTrue(result.successful());
     assertTrue(rendererPort.largePreviewUsed);
   }
 
-  private JsonViewerWorkflowService viewerWorkflowService(InMemoryHistoryRepository historyRepository) {
+  private JsonViewerWorkflowService viewerWorkflowService(
+      InMemoryHistoryRepository historyRepository) {
     return viewerWorkflowService(
-        historyRepository,
-        new JacksonAsciiTreeFormatter(new ObjectMapper()),
-        Long.MAX_VALUE);
+        historyRepository, new JacksonAsciiTreeFormatter(new ObjectMapper()), Long.MAX_VALUE);
   }
 
   private JsonViewerWorkflowService viewerWorkflowService(
@@ -136,6 +143,9 @@ class HistoryJsonImportServiceTest {
         historyRepository,
         rendererPort,
         new JsonInspectionModeResolver(properties),
+        new LargePreviewSessionService(
+            new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
+        new AsciiTreeFullRenderGuard(properties),
         fixedClock());
   }
 
@@ -198,6 +208,62 @@ class HistoryJsonImportServiceTest {
     public AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
       largePreviewUsed = true;
       return new AsciiTreeDocument("root", "root\n├─ preview: true", 2);
+    }
+  }
+
+  private static final class NoOpLargePreviewSessionStore implements LargePreviewSessionStorePort {
+
+    @Override
+    public LargePreviewMaterializationSnapshot materialize(
+        String sessionId,
+        LargePreviewSessionSource source,
+        java.util.function.Consumer<LargePreviewPageDescriptor> onPageAvailable) {
+      throw new IllegalStateException(
+          "Large preview sessions are not part of this history import test.");
+    }
+
+    @Override
+    public Optional<LargePreviewPageContent> readPage(LargePreviewPageDescriptor descriptor) {
+      return Optional.empty();
+    }
+
+    @Override
+    public void deleteSessionStorage(Path sessionStoragePath) {}
+  }
+
+  private static final class DirectExecutorService extends AbstractExecutorService {
+
+    private boolean shutdown;
+
+    @Override
+    public void shutdown() {
+      shutdown = true;
+    }
+
+    @Override
+    public List<Runnable> shutdownNow() {
+      shutdown = true;
+      return List.of();
+    }
+
+    @Override
+    public boolean isShutdown() {
+      return shutdown;
+    }
+
+    @Override
+    public boolean isTerminated() {
+      return shutdown;
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) {
+      return shutdown;
+    }
+
+    @Override
+    public void execute(Runnable command) {
+      command.run();
     }
   }
 }

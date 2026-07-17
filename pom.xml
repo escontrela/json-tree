@@ -107,6 +107,11 @@
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.davidpe.jsontree.bootstrap.JsonTreeLauncher</mainClass>
+                    <options>
+                        <option>-Xms512m</option>
+                        <option>-Xmx2g</option>
+                        <option>-XX:+UseG1GC</option>
+                    </options>
                 </configuration>
             </plugin>
             <plugin>

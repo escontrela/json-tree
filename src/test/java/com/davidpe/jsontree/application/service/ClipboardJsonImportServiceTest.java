@@ -7,10 +7,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
 import com.davidpe.jsontree.application.model.ClipboardJsonImportStatus;
+import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
+import com.davidpe.jsontree.application.model.LargePreviewPageContent;
+import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
+import com.davidpe.jsontree.application.model.LargePreviewSessionSource;
 import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
+import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
@@ -26,13 +31,14 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.AbstractExecutorService;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 class ClipboardJsonImportServiceTest {
 
-  @TempDir
-  java.nio.file.Path tempDir;
+  @TempDir java.nio.file.Path tempDir;
 
   @Test
   void importsValidClipboardJsonIntoViewerWorkflow() {
@@ -118,7 +124,8 @@ class ClipboardJsonImportServiceTest {
     assertTrue(first.successful());
     assertTrue(second.successful());
     assertEquals(expectedClipboardFileName(), first.loadResult().importResult().fileName());
-    assertEquals(expectedClipboardCollisionFileName(), second.loadResult().importResult().fileName());
+    assertEquals(
+        expectedClipboardCollisionFileName(), second.loadResult().importResult().fileName());
   }
 
   @Test
@@ -155,6 +162,9 @@ class ClipboardJsonImportServiceTest {
         new InMemoryHistoryRepository(),
         renderSimpleAsciiTree(),
         inspectionModeResolver(),
+        new LargePreviewSessionService(
+            new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
+        new AsciiTreeFullRenderGuard(new LargePreviewProperties()),
         fixedClock());
   }
 
@@ -189,8 +199,7 @@ class ClipboardJsonImportServiceTest {
   private ClipboardPort readableClipboard(String text) {
     return new ClipboardPort() {
       @Override
-      public void copy(String text) {
-      }
+      public void copy(String text) {}
 
       @Override
       public Optional<String> readText() {
@@ -202,8 +211,7 @@ class ClipboardJsonImportServiceTest {
   private ClipboardPort emptyClipboard() {
     return new ClipboardPort() {
       @Override
-      public void copy(String text) {
-      }
+      public void copy(String text) {}
 
       @Override
       public Optional<String> readText() {
@@ -215,8 +223,7 @@ class ClipboardJsonImportServiceTest {
   private ClipboardPort failingClipboard() {
     return new ClipboardPort() {
       @Override
-      public void copy(String text) {
-      }
+      public void copy(String text) {}
 
       @Override
       public Optional<String> readText() {
@@ -248,8 +255,7 @@ class ClipboardJsonImportServiceTest {
     }
 
     @Override
-    public void save(ImportedJsonFile importedJsonFile, String jsonContent) {
-    }
+    public void save(ImportedJsonFile importedJsonFile, String jsonContent) {}
 
     @Override
     public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
@@ -257,7 +263,61 @@ class ClipboardJsonImportServiceTest {
     }
 
     @Override
-    public void deleteByStoredName(String storedName) {
+    public void deleteByStoredName(String storedName) {}
+  }
+
+  private static final class NoOpLargePreviewSessionStore implements LargePreviewSessionStorePort {
+
+    @Override
+    public LargePreviewMaterializationSnapshot materialize(
+        String sessionId,
+        LargePreviewSessionSource source,
+        java.util.function.Consumer<LargePreviewPageDescriptor> onPageAvailable) {
+      throw new IllegalStateException("Large preview should not be used in this clipboard test.");
+    }
+
+    @Override
+    public Optional<LargePreviewPageContent> readPage(LargePreviewPageDescriptor descriptor) {
+      return Optional.empty();
+    }
+
+    @Override
+    public void deleteSessionStorage(Path sessionStoragePath) {}
+  }
+
+  private static final class DirectExecutorService extends AbstractExecutorService {
+
+    private boolean shutdown;
+
+    @Override
+    public void shutdown() {
+      shutdown = true;
+    }
+
+    @Override
+    public List<Runnable> shutdownNow() {
+      shutdown = true;
+      return List.of();
+    }
+
+    @Override
+    public boolean isShutdown() {
+      return shutdown;
+    }
+
+    @Override
+    public boolean isTerminated() {
+      return shutdown;
+    }
+
+    @Override
+    public boolean awaitTermination(long timeout, TimeUnit unit) {
+      return shutdown;
+    }
+
+    @Override
+    public void execute(Runnable command) {
+      command.run();
     }
   }
 }

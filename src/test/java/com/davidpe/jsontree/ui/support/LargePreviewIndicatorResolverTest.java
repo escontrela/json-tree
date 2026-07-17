@@ -74,7 +74,8 @@ class LargePreviewIndicatorResolverTest {
         new AsciiTreeDocument("root", "root\n└─ large: true", 2),
         null,
         JsonInspectionMode.LARGE_PREVIEW,
-        JsonViewerCapabilities.largePreview());
+        JsonViewerCapabilities.largePreview(),
+        null);
   }
 
   private JsonViewerLoadResult smallViewResult() {
@@ -91,6 +92,7 @@ class LargePreviewIndicatorResolverTest {
         new AsciiTreeDocument("root", "root\n└─ small: true", 2),
         null,
         JsonInspectionMode.FULL,
-        JsonViewerCapabilities.full());
+        JsonViewerCapabilities.full(),
+        null);
   }
 }

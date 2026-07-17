@@ -41,13 +41,14 @@ class ViewerCapabilityPresentationResolverTest {
 
     assertFalse(presentation.rawJsonEnabled());
     assertFalse(presentation.searchEnabled());
-    assertTrue(presentation.outlineEnabled());
+    assertFalse(presentation.outlineEnabled());
     assertEquals("Copy preview", presentation.copyButtonText());
     assertEquals("Preview", presentation.validationBadgeText());
     assertEquals("status-accent", presentation.validationBadgeStyleClass());
-    assertEquals(" • bounded large preview", presentation.fileMetaSuffix());
+    assertEquals(" • byte-paged large preview", presentation.fileMetaSuffix());
     assertEquals("PREVIEW", presentation.statusState());
-    assertTrue(presentation.outlineStateMessage().contains("bounded outline minimap"));
+    assertTrue(presentation.outlineStateMessage().contains("disables the outline"));
+    assertTrue(presentation.footerStatus().contains("current large-file page"));
   }
 
   @Test
@@ -85,7 +86,8 @@ class ViewerCapabilityPresentationResolverTest {
         new AsciiTreeDocument("root", "root\n└─ name: \"small\"", 12),
         null,
         JsonInspectionMode.FULL,
-        JsonViewerCapabilities.full());
+        JsonViewerCapabilities.full(),
+        null);
   }
 
   private JsonViewerLoadResult largePreviewResult() {
@@ -102,7 +104,8 @@ class ViewerCapabilityPresentationResolverTest {
         new AsciiTreeDocument("root", "root\n... preview truncated after 400 lines", 400),
         null,
         JsonInspectionMode.LARGE_PREVIEW,
-        JsonViewerCapabilities.largePreview());
+        JsonViewerCapabilities.largePreview(),
+        null);
   }
 
   private JsonViewerLoadResult unreadableFullResult() {
@@ -120,6 +123,7 @@ class ViewerCapabilityPresentationResolverTest {
         null,
         null,
         JsonInspectionMode.FULL,
-        JsonViewerCapabilities.full());
+        JsonViewerCapabilities.full(),
+        null);
   }
 }

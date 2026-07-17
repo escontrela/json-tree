@@ -7,6 +7,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonOutlineEntryKind;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigest;
+import com.davidpe.jsontree.application.model.LargePreviewOutlineDigestEntry;
+import com.davidpe.jsontree.application.model.JsonOutlineEntry;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -90,5 +93,25 @@ class JsonOutlineModelServiceTest {
     assertEquals(JsonOutlineEntryKind.ARRAY, model.entries().get(3).kind());
     assertEquals(JsonOutlineEntryKind.VALUE, model.entries().get(4).kind());
     assertEquals(JsonOutlineEntryKind.OBJECT, model.entries().get(5).kind());
+  }
+
+  @Test
+  void adaptsLargePreviewDigestIntoOutlineModel() {
+    JsonOutlineModel model =
+        service.buildFromLargePreviewDigest(
+            new LargePreviewOutlineDigest(
+                java.util.List.of(
+                    new LargePreviewOutlineDigestEntry(
+                        0, new JsonOutlineEntry(0, 18, JsonOutlineEntryKind.OBJECT, 3)),
+                    new LargePreviewOutlineDigestEntry(
+                        0, new JsonOutlineEntry(1, 16, JsonOutlineEntryKind.ARRAY, 2)),
+                    new LargePreviewOutlineDigestEntry(
+                        1, new JsonOutlineEntry(2, 10, JsonOutlineEntryKind.VALUE, 0))),
+                2));
+
+    assertFalse(model.emptyModel());
+    assertEquals(3, model.totalEntries());
+    assertEquals(2, model.maxDepth());
+    assertEquals(JsonOutlineEntryKind.ARRAY, model.entries().get(1).kind());
   }
 }

@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Priority?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+
+<BorderPane fx:id="rootPane" prefHeight="874.0" prefWidth="1114.0" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.SettingsScreenController">
+    <top>
+        <VBox spacing="0.0" styleClass="workspace-header">
+            <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="header-bar">
+                <VBox spacing="8.0">
+                    <Label styleClass="eyebrow-label" text="Runtime configuration" />
+                    <Label styleClass="app-title" text="Settings" />
+                    <Label styleClass="hero-support" text="Tune large-preview behavior without mixing configuration controls into the active JSON viewer." wrapText="true" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <VBox alignment="CENTER_RIGHT" spacing="12.0">
+                    <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="&lt;&lt; Back" />
+                    <Label styleClass="hero-meta" text="Non-modal workspace screen" />
+                </VBox>
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="24.0" styleClass="file-bar">
+                <VBox spacing="6.0">
+                    <Label styleClass="eyebrow-label" text="Large preview settings" />
+                    <Label styleClass="file-name" text="Prepare threshold and chunk configuration" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+            </HBox>
+        </VBox>
+    </top>
+    <center>
+        <VBox spacing="0.0" styleClass="main-content-shell">
+            <padding>
+                <Insets bottom="0.0" left="24.0" right="24.0" top="0.0" />
+            </padding>
+            <StackPane styleClass="workspace-overlay-shell">
+                <padding>
+                    <Insets bottom="24.0" left="0.0" right="0.0" top="24.0" />
+                </padding>
+                <VBox spacing="20.0" styleClass="viewer-content settings-screen-shell">
+                    <padding>
+                        <Insets bottom="32.0" left="32.0" right="32.0" top="32.0" />
+                    </padding>
+                    <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-card-header">
+                        <VBox spacing="6.0">
+                            <Label styleClass="eyebrow-label" text="Session settings" />
+                            <Label styleClass="viewer-card-title" text="Large preview configuration" />
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
+                            <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="Back" />
+                            <Button fx:id="applyButton" mnemonicParsing="false" onAction="#applySettings" styleClass="primary-button" text="Apply" />
+                        </HBox>
+                    </HBox>
+                    <Region styleClass="viewer-divider" />
+                    <HBox spacing="20.0">
+                        <VBox spacing="16.0" styleClass="rail-card settings-card" HBox.hgrow="ALWAYS">
+                            <padding>
+                                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                            </padding>
+                            <Label styleClass="eyebrow-label" text="Threshold" />
+                            <Label styleClass="viewer-card-title" text="Large JSON activation size" />
+                            <Label styleClass="viewer-card-meta" text="This shell reserves the primary field used to decide when the app switches from FULL to LARGE_PREVIEW." wrapText="true" />
+                            <Label styleClass="settings-field-label" text="Large preview threshold (bytes)" />
+                            <TextField fx:id="largePreviewThresholdField" promptText="1048576" />
+                            <Label fx:id="thresholdErrorLabel" managed="false" styleClass="settings-error-label" visible="false" wrapText="true" />
+                        </VBox>
+                        <VBox spacing="16.0" styleClass="rail-card settings-card" HBox.hgrow="ALWAYS">
+                            <padding>
+                                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                            </padding>
+                            <Label styleClass="eyebrow-label" text="Chunk size" />
+                            <Label styleClass="viewer-card-title" text="Byte-paged viewer chunk size" />
+                            <Label styleClass="viewer-card-meta" text="This shell reserves the second numeric field used by the byte-paged LARGE_PREVIEW workflow." wrapText="true" />
+                            <Label styleClass="settings-field-label" text="Viewer chunk size (bytes)" />
+                            <TextField fx:id="viewerChunkBytesField" promptText="153600" />
+                            <Label fx:id="chunkErrorLabel" managed="false" styleClass="settings-error-label" visible="false" wrapText="true" />
+                        </VBox>
+                    </HBox>
+                    <VBox spacing="12.0" styleClass="rail-card settings-card">
+                        <padding>
+                            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                        </padding>
+                        <Label styleClass="eyebrow-label" text="Raw large preview" />
+                        <Label styleClass="viewer-card-title" text="Pretty on large preview" />
+                        <Label styleClass="viewer-card-meta" text="When enabled, invalid standalone chunks fall back to a deterministic best-effort formatter instead of staying minified." wrapText="true" />
+                        <CheckBox fx:id="prettyLargePreviewCheckBox" mnemonicParsing="false" styleClass="settings-check-box" text="Use best-effort pretty fallback for large preview raw chunks" />
+                    </VBox>
+                    <VBox spacing="12.0" styleClass="rail-card settings-card">
+                        <padding>
+                            <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                        </padding>
+                        <Label styleClass="eyebrow-label" text="Runtime reference" />
+                        <Label styleClass="viewer-card-title" text="Process memory reference" />
+                        <Label fx:id="memoryReferenceLabel" styleClass="viewer-card-meta" text="Startup JVM reference: --" wrapText="true" />
+                        <Label fx:id="memoryWarningLabel" styleClass="viewer-card-meta settings-warning-label" text="Large preview threshold stays within the startup JVM memory reference." wrapText="true" />
+                    </VBox>
+                </VBox>
+            </StackPane>
+        </VBox>
+    </center>
+</BorderPane>

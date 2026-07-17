@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import com.davidpe.jsontree.application.model.JsonSearchMatch;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.model.RawJsonPresentation;
+import com.davidpe.jsontree.application.service.BestEffortJsonPrettyPrinter;
 import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
@@ -14,7 +15,7 @@ class SearchMatchProjectorTest {
 
   private final SearchMatchProjector projector = new SearchMatchProjector();
   private final RawJsonPresentationService rawJsonPresentationService =
-      new RawJsonPresentationService(new ObjectMapper());
+      new RawJsonPresentationService(new ObjectMapper(), new BestEffortJsonPrettyPrinter());
 
   @Test
   void projectsRawRangesFromSearchSessionIndexes() {
@@ -22,9 +23,7 @@ class SearchMatchProjectorTest {
         new JsonSearchSession(
             "file:/sample.json",
             "David|admin",
-            List.of(
-                new JsonSearchMatch(9, 14, "David"),
-                new JsonSearchMatch(26, 31, "admin")),
+            List.of(new JsonSearchMatch(9, 14, "David"), new JsonSearchMatch(26, 31, "admin")),
             1);
 
     List<SearchHighlightRange> ranges = projector.rawRanges(session);
@@ -40,12 +39,11 @@ class SearchMatchProjectorTest {
         new JsonSearchSession(
             "file:/sample.json",
             "David|admin",
-            List.of(
-                new JsonSearchMatch(9, 14, "David"),
-                new JsonSearchMatch(26, 31, "admin")),
+            List.of(new JsonSearchMatch(9, 14, "David"), new JsonSearchMatch(26, 31, "admin")),
             0);
 
-    String asciiContent = """
+    String asciiContent =
+        """
         root
         ├─ name: "David"
         └─ role: "admin"

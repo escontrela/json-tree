@@ -95,6 +95,10 @@
     -fx-border-color: #d6e5f8;
 }
 
+.viewer-shell.viewer-large-preview-waiting {
+    -fx-border-color: #a9c7ef;
+}
+
 .viewer-shell.viewer-invalid {
     -fx-background-color: #fff7f7;
     -fx-border-color: #c23b32;
@@ -124,6 +128,33 @@
     -fx-border-color: transparent;
     -fx-border-width: 0;
     -fx-spacing: 20;
+}
+
+.large-preview-loader-overlay {
+    -fx-background-color: transparent;
+}
+
+.large-preview-loader {
+    -fx-alignment: center;
+    -fx-background-color: rgba(255, 255, 255, 0.94);
+    -fx-border-color: #d6e5f8;
+    -fx-border-width: 1;
+    -fx-background-radius: 999;
+    -fx-border-radius: 999;
+    -fx-padding: 8 12 8 12;
+    -fx-effect: dropshadow(gaussian, rgba(15, 23, 42, 0.10), 12, 0.16, 0, 4);
+}
+
+.large-preview-loader-square {
+    -fx-min-width: 8;
+    -fx-pref-width: 8;
+    -fx-max-width: 8;
+    -fx-min-height: 8;
+    -fx-pref-height: 8;
+    -fx-max-height: 8;
+    -fx-background-color: #1c69d4;
+    -fx-background-radius: 2;
+    -fx-opacity: 0.24;
 }
 
 .scroll-pane,
@@ -302,6 +333,30 @@
     -fx-padding: 18 20 18 20;
 }
 
+.large-preview-page-strip {
+    -fx-alignment: center-right;
+    -fx-background-color: #f7f9fb;
+    -fx-border-color: #d6dde6;
+    -fx-border-width: 1;
+    -fx-padding: 6 8 6 8;
+}
+
+.large-preview-page-button {
+    -fx-padding: 8 12 8 12;
+}
+
+.large-preview-page-label {
+    -fx-text-fill: #1a2129;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.large-preview-page-meta {
+    -fx-text-fill: #6a7683;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+}
+
 .workspace-overlay-shell {
     -fx-alignment: top-center;
 }
@@ -336,6 +391,34 @@
     -fx-text-fill: #7c8794;
     -fx-font-size: 12px;
     -fx-font-weight: 400;
+}
+
+.settings-field-label {
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.settings-error-label {
+    -fx-text-fill: #9e281f;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.settings-warning-label {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.settings-warning-label.settings-warning-label-active {
+    -fx-text-fill: #9e281f;
+}
+
+.settings-check-box {
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 13px;
+    -fx-font-weight: 600;
 }
 
 .history-import-feedback {

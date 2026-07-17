@@ -11,16 +11,16 @@ public class ViewerCapabilityPresentationResolver {
       return new ViewerCapabilityPresentation(
           false,
           false,
-          true,
+          false,
           "Copy preview",
           "Preview",
           "status-accent",
-          " • bounded large preview",
-          "Showing bounded large preview for oversized JSON",
+          " • byte-paged large preview",
+          "Showing the current large-file page as a raw byte chunk",
           "PREVIEW",
-          "Preview outline",
-          "Large preview mode uses a bounded outline minimap derived from the visible preview.",
-          "Raw JSON and regex search stay disabled until a smaller file is loaded.");
+          "Outline unavailable",
+          "Large preview disables the outline and minimap while the viewer stays focused on the active page chunk.",
+          "Large preview stays locked to the active page raw view. Regex search stays disabled.");
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;

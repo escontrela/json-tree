@@ -5,6 +5,7 @@ import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.application.model.LargePreviewViewerPageResult;
 import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
@@ -27,12 +28,20 @@ import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
+import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
+import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
+import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationStateResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewViewportNavigationResolver;
+import com.davidpe.jsontree.ui.support.LargePreviewViewportState;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
 import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
+import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityResolver;
+import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityState;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
@@ -42,13 +51,18 @@ import com.davidpe.jsontree.ui.support.TextFlowRenderOutcome;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
-import java.text.CharacterIterator;
-import java.text.StringCharacterIterator;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.OptionalInt;
+import java.util.concurrent.CompletableFuture;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
@@ -66,6 +80,7 @@ import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -87,6 +102,9 @@ public class MainWindowController implements UiScreenController {
   private static final int INLINE_HISTORY_MAX_VISIBLE_ENTRIES = 10;
   private static final int FILE_NAME_COMPACT_LENGTH_THRESHOLD = 22;
   private static final String FILE_NAME_COMPACT_STYLE = "-fx-font-size: 12px;";
+  private static final Duration LARGE_PREVIEW_LOADER_REVEAL_DELAY = Duration.ofMillis(120);
+  private static final Duration LARGE_PREVIEW_LOADER_FRAME_INTERVAL = Duration.ofMillis(110);
+  private static final double LARGE_PREVIEW_LOGICAL_LINE_HEIGHT = 20.0;
 
   private static final DateTimeFormatter FILE_TIME_FORMATTER =
       DateTimeFormatter.ofPattern("MMM d, yyyy HH:mm:ss")
@@ -111,7 +129,11 @@ public class MainWindowController implements UiScreenController {
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
+  private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
+  private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
+  private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
+      new OutlinePanelVisibilityResolver();
 
   public MainWindowController(
       AsciiTreeSyntaxHighlighter syntaxHighlighter,
@@ -131,6 +153,8 @@ public class MainWindowController implements UiScreenController {
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
+      LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
+      LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       @Lazy UiFlowManager uiFlowManager) {
     this.syntaxHighlighter = syntaxHighlighter;
@@ -150,6 +174,8 @@ public class MainWindowController implements UiScreenController {
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
+    this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
+    this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.uiFlowManager = uiFlowManager;
   }
@@ -204,9 +230,33 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private VBox viewerContentBox;
 
+  @FXML private Region largePreviewTopSpacer;
+
   @FXML private TextFlow treeContentFlow;
 
   @FXML private TextFlow rawJsonContentFlow;
+
+  @FXML private Region largePreviewBottomSpacer;
+
+  @FXML private StackPane largePreviewLoaderOverlay;
+
+  @FXML private Region largePreviewLoaderSquareOne;
+
+  @FXML private Region largePreviewLoaderSquareTwo;
+
+  @FXML private Region largePreviewLoaderSquareThree;
+
+  @FXML private Region largePreviewLoaderSquareFour;
+
+  @FXML private HBox largePreviewPageControls;
+
+  @FXML private Button largePreviewPreviousButton;
+
+  @FXML private Button largePreviewNextButton;
+
+  @FXML private Label largePreviewCurrentPageLabel;
+
+  @FXML private Label largePreviewTotalPagesLabel;
 
   @FXML private Button rawJsonButton;
 
@@ -241,6 +291,7 @@ public class MainWindowController implements UiScreenController {
   private ViewerVisualState currentState;
   private Instant currentLoadedAt;
   private String currentViewIdentity;
+  private String autoHiddenLargePreviewOutlineIdentity;
   private boolean windowMetricsLoggingAttached;
   private boolean showingRawJson = false;
   private RawJsonPresentation currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
@@ -248,6 +299,16 @@ public class MainWindowController implements UiScreenController {
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentOutlineSourceIdentity;
   private boolean outlineViewportRefreshPending;
+  private boolean suppressLargePreviewScrollHandling;
+  private boolean largePreviewPageLoadInFlight;
+  private long viewerWorkflowLoadSequence;
+  private LargePreviewViewportState currentLargePreviewViewportState =
+      LargePreviewViewportState.inactive();
+  private List<Region> largePreviewLoaderSquares = List.of();
+  private LargePreviewLoadingAffordance largePreviewLoadingAffordance;
+  private PauseTransition largePreviewLoaderRevealTransition;
+  private Timeline largePreviewLoaderAnimationTimeline;
+  private long currentLargePreviewLoaderRequestSequence;
 
   @FXML
   public void initialize() {
@@ -285,9 +346,25 @@ public class MainWindowController implements UiScreenController {
                     historyListView.getSelectionModel().clearSelection();
                   });
             });
+    configureLargePreviewLoadingAffordance();
     configureOutlineShell();
     showEmptyViewer();
     refreshInlineHistory();
+  }
+
+  private void configureLargePreviewLoadingAffordance() {
+    largePreviewLoaderSquares =
+        List.of(
+            largePreviewLoaderSquareOne,
+            largePreviewLoaderSquareTwo,
+            largePreviewLoaderSquareThree,
+            largePreviewLoaderSquareFour);
+    largePreviewLoadingAffordance =
+        new LargePreviewLoadingAffordance(
+            this::showLargePreviewLoaderOverlay,
+            this::hideLargePreviewLoaderOverlay,
+            this::applyLargePreviewLoaderFrame);
+    hideLargePreviewLoaderOverlay();
   }
 
   private void configureWindowMetricsLogging() {
@@ -340,7 +417,12 @@ public class MainWindowController implements UiScreenController {
     outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
     viewerScrollPane
         .vvalueProperty()
-        .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
+        .addListener(
+            (unused, oldValue, newValue) -> {
+              scheduleOutlineViewportRefresh();
+              handleViewerScrollValueChanged(newValue.doubleValue());
+            });
+    viewerScrollPane.addEventFilter(ScrollEvent.SCROLL, this::handleLargePreviewScrollPaging);
     viewerScrollPane
         .viewportBoundsProperty()
         .addListener((unused, oldValue, newValue) -> scheduleOutlineViewportRefresh());
@@ -376,6 +458,8 @@ public class MainWindowController implements UiScreenController {
             + " • "
             + document.lineCount()
             + " viewer lines");
+    outlineCanvas.setManaged(true);
+    outlineCanvas.setVisible(true);
     outlineStateLabel.setManaged(false);
     outlineStateLabel.setVisible(false);
     outlineViewportMarker.setManaged(false);
@@ -392,6 +476,8 @@ public class MainWindowController implements UiScreenController {
       String title, String stateMessage, String metaMessage, String previewStateClass) {
     viewerAidTitleLabel.setText(title);
     viewerAidMetaLabel.setText(metaMessage);
+    outlineCanvas.setManaged(true);
+    outlineCanvas.setVisible(true);
     outlineStateLabel.setText(stateMessage);
     outlineStateLabel.setManaged(true);
     outlineStateLabel.setVisible(true);
@@ -408,7 +494,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void refreshOutlineCanvas() {
-    if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel()) {
+    if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel() || !outlineCanvas.isVisible()) {
       currentOutlineLayout = OutlineMinimapLayout.empty();
       drawOutlineShellPlaceholder();
       hideOutlineViewportMarker();
@@ -450,6 +536,27 @@ public class MainWindowController implements UiScreenController {
 
   private void handleOutlineInteraction(MouseEvent event) {
     if (currentState != ViewerVisualState.VALID || currentOutlineLayout.emptyLayout()) {
+      return;
+    }
+
+    if (largePreviewPageLoadInFlight) {
+      event.consume();
+      return;
+    }
+
+    java.util.Optional<JsonViewerLoadResult> currentView = workflowService.currentView();
+    if (currentView.isPresent() && currentView.get().usesLargePreview()) {
+      double contentHeight = viewerContentBox.getLayoutBounds().getHeight();
+      double viewportHeight = viewerScrollPane.getViewportBounds().getHeight();
+      largePreviewViewportNavigationResolver
+          .resolveForOutlinePointer(
+              currentView.get(),
+              event.getY(),
+              outlinePreviewShell.getHeight(),
+              viewportHeight,
+              contentHeight)
+          .ifPresent(targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
+      event.consume();
       return;
     }
 
@@ -534,9 +641,16 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void renderAsciiTree(JsonViewerLoadResult result) {
+    renderAsciiTree(result, 0.0);
+  }
+
+  private void renderAsciiTree(JsonViewerLoadResult result, double targetVerticalScrollValue) {
     AsciiTreeDocument document = result.asciiTreeDocument();
+    syncLargePreviewViewportState(result, targetVerticalScrollValue);
     applyCapabilityPresentation(result);
+    syncLargePreviewPageControls(result);
     resetViewModeIfNeeded();
+    applyLargePreviewDocumentScrollShell(result);
     TextFlowRenderOutcome renderOutcome =
         syntaxHighlighter.appendHighlightedContent(
         treeContentFlow, document, currentAsciiHighlightRanges(document));
@@ -547,8 +661,8 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     updateOutlineShell(result, document);
-    viewerScrollPane.setHvalue(0);
-    viewerScrollPane.setVvalue(0);
+    syncOutlinePanelVisibility(result);
+    setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
     if (renderOutcome.guardrailApplied()) {
@@ -557,7 +671,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showEmptyViewer() {
+    cancelLargePreviewLoadingAffordance();
     resetOutlineModel();
+    clearLargePreviewViewportState();
+    hideLargePreviewPageControls();
+    hideLargePreviewDocumentScrollShell();
     currentLoadedAt = null;
     currentViewIdentity = null;
     resetToolbarForNonRenderableState();
@@ -585,6 +703,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showDraggingState() {
+    cancelLargePreviewLoadingAffordance();
     showFileWarningIcon(false);
     emptyStateLabel.setText("Release to inspect this JSON file");
     showOutlineShellState(
@@ -599,7 +718,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showLoadingState(String fileName) {
+    cancelLargePreviewLoadingAffordance();
     resetOutlineModel();
+    clearLargePreviewViewportState();
+    hideLargePreviewPageControls();
+    hideLargePreviewDocumentScrollShell();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
     resetToolbarForNonRenderableState();
@@ -630,7 +753,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   public void showInvalidState(String message) {
+    cancelLargePreviewLoadingAffordance();
     resetOutlineModel();
+    clearLargePreviewViewportState();
+    hideLargePreviewPageControls();
+    hideLargePreviewDocumentScrollShell();
     resetToolbarForNonRenderableState();
     showOutlineShellState(
         "Outline unavailable",
@@ -723,10 +850,7 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
-    showLoadingState(jsonPath.getFileName().toString());
-    JsonViewerLoadResult result =
-        workflowService.loadImportedFile(importJsonUseCase.importFile(jsonPath));
-    presentLoadResult(result);
+    loadImportedFileAsync(importJsonUseCase.importFile(jsonPath));
     event.setDropCompleted(true);
     event.consume();
   }
@@ -763,6 +887,59 @@ public class MainWindowController implements UiScreenController {
     workflowService.currentView().ifPresentOrElse(this::presentLoadResult, this::showEmptyViewer);
   }
 
+  private void loadImportedFileAsync(com.davidpe.jsontree.domain.model.JsonImportResult importResult) {
+    showLoadingState(importResult.fileName());
+    beginLargePreviewLoadingAffordance();
+    long requestSequence = ++viewerWorkflowLoadSequence;
+    CompletableFuture
+        .supplyAsync(() -> workflowService.loadImportedFile(importResult))
+        .whenComplete(
+            (result, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleImportedFileLoadResult(
+                            requestSequence, importResult.fileName(), result, throwable)));
+  }
+
+  private void handleImportedFileLoadResult(
+      long requestSequence,
+      String fileName,
+      JsonViewerLoadResult result,
+      Throwable throwable) {
+    if (requestSequence != viewerWorkflowLoadSequence) {
+      return;
+    }
+    cancelLargePreviewLoadingAffordance();
+    if (throwable != null || result == null) {
+      showInvalidState("Unable to load JSON file: " + fileName);
+      footerStatusLabel.setText("JSON load failed");
+      return;
+    }
+    presentLoadResult(result);
+  }
+
+  private void handleHistoryReopenResult(
+      long requestSequence,
+      String fileName,
+      java.util.Optional<JsonViewerLoadResult> result,
+      Throwable throwable) {
+    if (requestSequence != viewerWorkflowLoadSequence) {
+      return;
+    }
+    cancelLargePreviewLoadingAffordance();
+    if (throwable != null) {
+      showInvalidState("Unable to reopen history snapshot: " + fileName);
+      footerStatusLabel.setText("History reopen failed");
+      return;
+    }
+    result.ifPresentOrElse(
+        this::presentLoadResult,
+        () -> {
+          showInvalidState("Stored history snapshot is no longer available.");
+          footerStatusLabel.setText("History snapshot unavailable");
+        });
+  }
+
   private void presentLoadResult(JsonViewerLoadResult result) {
     updateFileSummary(result);
     searchWorkflowService.clearIfSourceChanged(currentViewIdentity(result));
@@ -776,6 +953,10 @@ public class MainWindowController implements UiScreenController {
 
     JsonValidationResult validationResult = result.validationResult();
     if (validationResult.status() == JsonValidationStatus.VALID && result.hasRenderableTree()) {
+      if (result.usesLargePreview()) {
+        renderLargePreviewRawChunk(result, 0.0);
+        return;
+      }
       renderAsciiTree(result);
       return;
     }
@@ -813,25 +994,12 @@ public class MainWindowController implements UiScreenController {
   }
 
   private String formatFileMeta(long sizeBytes, JsonDocumentSourceKind sourceKind) {
-    String meta = formatBytes(sizeBytes);
+    String meta = ByteSizeFormatter.format(sizeBytes);
     return switch (sourceKind) {
       case HISTORY -> meta + " • reopened from history";
       case CLIPBOARD -> meta + " • clipboard import";
       case LOCAL_FILE -> meta + " • local import";
     };
-  }
-
-  private String formatBytes(long bytes) {
-    if (bytes < 1024) {
-      return bytes + " B";
-    }
-    CharacterIterator iterator = new StringCharacterIterator("KMGTPE");
-    double scaled = bytes;
-    while (scaled >= 1024 && iterator.current() != 'E') {
-      scaled /= 1024;
-      iterator.next();
-    }
-    return String.format(java.util.Locale.ROOT, "%.1f %cB", scaled, iterator.current());
   }
 
   private String composeValidationMessage(JsonValidationResult validationResult) {
@@ -909,7 +1077,7 @@ public class MainWindowController implements UiScreenController {
             : "--";
     setStatusRailValues(
         state,
-        formatBytes(result.importResult().sizeBytes()),
+        ByteSizeFormatter.format(result.importResult().sizeBytes()),
         lines,
         sourceLabel(result.importResult().sourceKind()));
   }
@@ -954,7 +1122,20 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void reopenHistoryEntry(ImportedJsonFile entry) {
-    workflowService.reopenHistoryEntry(entry.storedName()).ifPresent(this::presentLoadResult);
+    showLoadingState(entry.originalName());
+    fileMetaLabel.setText("Preparing JSON preview from history");
+    fileSourceValueLabel.setText("History");
+    setStatusRailValues("LOADING", "--", "--", "History");
+    beginLargePreviewLoadingAffordance();
+    long requestSequence = ++viewerWorkflowLoadSequence;
+    CompletableFuture
+        .supplyAsync(() -> workflowService.reopenHistoryEntry(entry.storedName()))
+        .whenComplete(
+            (result, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleHistoryReopenResult(
+                            requestSequence, entry.originalName(), result, throwable)));
   }
 
   private final class InlineHistoryListCell extends ListCell<ImportedJsonFile> {
@@ -990,7 +1171,7 @@ public class MainWindowController implements UiScreenController {
       metaLabel.setText(
           FILE_TIME_FORMATTER.format(item.importedAt())
               + " • "
-              + formatBytes(item.sizeBytes())
+              + ByteSizeFormatter.format(item.sizeBytes())
               + " • "
               + item.lineCount()
               + " lines");
@@ -1002,6 +1183,9 @@ public class MainWindowController implements UiScreenController {
   @FXML
   void toggleRawJson() {
     if (rawJsonButton.isDisable()) {
+      return;
+    }
+    if (workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()) {
       return;
     }
     if (showingRawJson) {
@@ -1041,6 +1225,21 @@ public class MainWindowController implements UiScreenController {
   @FXML
   void openHistory() {
     uiFlowManager.show(UiScreenId.HISTORY);
+  }
+
+  @FXML
+  void openSettings() {
+    uiFlowManager.show(UiScreenId.SETTINGS);
+  }
+
+  @FXML
+  void showPreviousLargePreviewPage() {
+    navigateLargePreviewByStep(-1);
+  }
+
+  @FXML
+  void showNextLargePreviewPage() {
+    navigateLargePreviewByStep(1);
   }
 
   @FXML
@@ -1132,14 +1331,12 @@ public class MainWindowController implements UiScreenController {
       return;
     }
     boolean nextVisible = !outlineVBox.isVisible();
-    outlineVBox.setVisible(nextVisible);
-    outlineVBox.setManaged(nextVisible);
+    setOutlinePanelVisible(nextVisible);
     if (nextVisible) {
       resizeOutlineCanvas();
       scheduleOutlineViewportRefresh();
       return;
     }
-    hideOutlineViewportMarker();
   }
 
   private void hideSearchModal() {
@@ -1152,27 +1349,41 @@ public class MainWindowController implements UiScreenController {
       resetOutlineModel();
       return;
     }
-    if (currentViewIdentity.equals(currentOutlineSourceIdentity)) {
-      return;
-    }
-
-    currentOutlineModel =
-        workflowService
-            .currentView()
-            .filter(result -> result.capabilities().outlineAvailable())
-            .map(this::outlineModelForCurrentView)
-            .orElse(JsonOutlineModel.empty());
-    currentOutlineSourceIdentity = currentViewIdentity;
+    workflowService
+        .currentView()
+        .filter(result -> result.capabilities().outlineAvailable())
+        .ifPresentOrElse(
+            result -> {
+              String outlineIdentity = outlineIdentity(result);
+              if (outlineIdentity.equals(currentOutlineSourceIdentity)) {
+                return;
+              }
+              currentOutlineModel = outlineModelForCurrentView(result);
+              currentOutlineSourceIdentity = outlineIdentity;
+            },
+            this::resetOutlineModel);
   }
 
   private JsonOutlineModel outlineModelForCurrentView(JsonViewerLoadResult result) {
     if (result.usesLargePreview()) {
-      return outlineModelService.buildFromAsciiPreview(result.asciiTreeDocument());
+      return workflowService
+          .currentLargePreviewOutlineDigest()
+          .map(outlineModelService::buildFromLargePreviewDigest)
+          .orElseGet(() -> outlineModelService.buildFromAsciiPreview(result.asciiTreeDocument()));
     }
     return workflowService
         .currentViewRawJson()
         .map(outlineModelService::buildFromRawJson)
         .orElse(JsonOutlineModel.empty());
+  }
+
+  private String outlineIdentity(JsonViewerLoadResult result) {
+    if (result.usesLargePreview() && result.hasLargePreviewSession()) {
+      return result.largePreviewSession().sessionId()
+          + ":digest:"
+          + result.largePreviewSession().outlineDigestReady();
+    }
+    return currentViewIdentity;
   }
 
   private void resetOutlineModel() {
@@ -1187,6 +1398,10 @@ public class MainWindowController implements UiScreenController {
         .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
         .ifPresent(
             result -> {
+              if (result.usesLargePreview() && result.hasRenderableTree()) {
+                renderLargePreviewRawChunk(result, viewerScrollPane.getVvalue());
+                return;
+              }
               if (showingRawJson) {
                 if (result.capabilities().rawJsonAvailable()) {
                   workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
@@ -1201,17 +1416,326 @@ public class MainWindowController implements UiScreenController {
             });
   }
 
+  private void handleViewerScrollValueChanged(double verticalScrollValue) {
+    if (suppressLargePreviewScrollHandling || showingRawJson) {
+      return;
+    }
+    if (workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()) {
+      return;
+    }
+    workflowService
+        .currentView()
+        .ifPresent(
+            result -> {
+              largePreviewViewportNavigationResolver
+                  .resolveForScroll(result, verticalScrollValue)
+                  .ifPresent(
+                      targetViewportState ->
+                          navigateLargePreviewToState(targetViewportState, true));
+            });
+  }
+
+  private void navigateLargePreviewToState(
+      LargePreviewViewportState targetViewportState, boolean viewerScrollAlreadyApplied) {
+    if (largePreviewPageLoadInFlight || targetViewportState == null || !targetViewportState.active()) {
+      return;
+    }
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasLargePreviewSession)
+        .ifPresent(
+            result -> {
+              currentLargePreviewViewportState = targetViewportState;
+              syncLargePreviewPageControls(result);
+              if (targetViewportState.currentPageIndex()
+                  != result.largePreviewSession().currentPageIndex()) {
+                requestLargePreviewPage(result, targetViewportState);
+                return;
+              }
+              if (!viewerScrollAlreadyApplied) {
+                setViewerScrollPosition(0.0, targetViewportState.globalScrollValue());
+              }
+              scheduleOutlineViewportRefresh();
+            });
+  }
+
+  private void requestLargePreviewPage(
+      JsonViewerLoadResult result, LargePreviewViewportState targetViewportState) {
+    if (largePreviewPageLoadInFlight) {
+      return;
+    }
+    largePreviewPageLoadInFlight = true;
+    beginLargePreviewLoadingAffordance();
+    String sessionId = result.largePreviewSession().sessionId();
+    CompletableFuture
+        .supplyAsync(
+            () -> workflowService.loadLargePreviewPage(sessionId, targetViewportState.currentPageIndex()))
+        .whenComplete(
+            (pageResult, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleLargePreviewPageResult(
+                            sessionId, pageResult, throwable, targetViewportState)));
+  }
+
+  private void handleLargePreviewPageResult(
+      String expectedSessionId,
+      java.util.Optional<LargePreviewViewerPageResult> pageResult,
+      Throwable throwable,
+      LargePreviewViewportState targetViewportState) {
+    cancelLargePreviewLoadingAffordance();
+    largePreviewPageLoadInFlight = false;
+    if (throwable != null || pageResult == null || pageResult.isEmpty()) {
+      return;
+    }
+
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasLargePreviewSession)
+        .filter(result -> result.largePreviewSession().sessionId().equals(expectedSessionId))
+        .ifPresent(unused -> presentLargePreviewPage(pageResult.get(), targetViewportState));
+  }
+
+  private void presentLargePreviewPage(
+      LargePreviewViewerPageResult pageResult, LargePreviewViewportState targetViewportState) {
+    updateFileSummary(pageResult.loadResult());
+    syncStatusRail(pageResult.loadResult());
+    renderLargePreviewRawChunk(pageResult.loadResult(), 0.0);
+  }
+
+  private void showLargePreviewLoaderOverlay() {
+    largePreviewLoaderOverlay.setManaged(true);
+    largePreviewLoaderOverlay.setVisible(true);
+    if (!viewerShell.getStyleClass().contains("viewer-large-preview-waiting")) {
+      viewerShell.getStyleClass().add("viewer-large-preview-waiting");
+    }
+  }
+
+  private void hideLargePreviewLoaderOverlay() {
+    largePreviewLoaderOverlay.setManaged(false);
+    largePreviewLoaderOverlay.setVisible(false);
+    viewerShell.getStyleClass().remove("viewer-large-preview-waiting");
+    applyLargePreviewLoaderFrame(-1);
+  }
+
+  private void applyLargePreviewLoaderFrame(int activeFrameIndex) {
+    for (int index = 0; index < largePreviewLoaderSquares.size(); index++) {
+      Region square = largePreviewLoaderSquares.get(index);
+      int distance = activeFrameIndex < 0 ? -1 : Math.floorMod(index - activeFrameIndex, 4);
+      double opacity =
+          switch (distance) {
+            case 0 -> 1.0;
+            case 1 -> 0.68;
+            case 2 -> 0.42;
+            case 3 -> 0.24;
+            default -> 0.24;
+          };
+      double scale =
+          switch (distance) {
+            case 0 -> 1.0;
+            case 1 -> 0.96;
+            case 2 -> 0.92;
+            case 3 -> 0.88;
+            default -> 0.88;
+          };
+      square.setOpacity(opacity);
+      square.setScaleX(scale);
+      square.setScaleY(scale);
+    }
+  }
+
+  private void cancelLargePreviewLoadingAffordance() {
+    if (largePreviewLoaderRevealTransition != null) {
+      largePreviewLoaderRevealTransition.stop();
+    }
+    if (largePreviewLoaderAnimationTimeline != null) {
+      largePreviewLoaderAnimationTimeline.stop();
+    }
+    if (largePreviewLoadingAffordance != null) {
+      largePreviewLoadingAffordance.completeRequest();
+    }
+  }
+
+  private void beginLargePreviewLoadingAffordance() {
+    cancelLargePreviewLoadingAffordance();
+    currentLargePreviewLoaderRequestSequence = largePreviewLoadingAffordance.beginRequest();
+    largePreviewLoaderRevealTransition =
+        new PauseTransition(
+            javafx.util.Duration.millis(LARGE_PREVIEW_LOADER_REVEAL_DELAY.toMillis()));
+    largePreviewLoaderRevealTransition.setOnFinished(
+        unused -> {
+          largePreviewLoadingAffordance.revealIfPending(currentLargePreviewLoaderRequestSequence);
+          if (!largePreviewLoadingAffordance.visible()) {
+            return;
+          }
+          largePreviewLoaderAnimationTimeline =
+              new Timeline(
+                  new KeyFrame(
+                      javafx.util.Duration.millis(
+                          LARGE_PREVIEW_LOADER_FRAME_INTERVAL.toMillis()),
+                      event ->
+                          largePreviewLoadingAffordance.advanceFrame(
+                              currentLargePreviewLoaderRequestSequence)));
+          largePreviewLoaderAnimationTimeline.setCycleCount(Animation.INDEFINITE);
+          largePreviewLoaderAnimationTimeline.playFromStart();
+        });
+    largePreviewLoaderRevealTransition.playFromStart();
+  }
+
+  private void syncLargePreviewViewportState(
+      JsonViewerLoadResult result, double targetVerticalScrollValue) {
+    currentLargePreviewViewportState =
+        (result.hasLargePreviewSession()
+                ? largePreviewViewportNavigationResolver.resolveForPage(
+                    result, result.largePreviewSession().currentPageIndex())
+                : java.util.Optional.<LargePreviewViewportState>empty())
+            .orElseGet(largePreviewViewportNavigationResolver::inactive);
+  }
+
+  private void clearLargePreviewViewportState() {
+    currentLargePreviewViewportState = largePreviewViewportNavigationResolver.inactive();
+  }
+
+  private void navigateLargePreviewByStep(int pageDelta) {
+    if (largePreviewPageLoadInFlight) {
+      return;
+    }
+    if (!currentLargePreviewViewportState.active()) {
+      return;
+    }
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasLargePreviewSession)
+        .flatMap(
+            result ->
+                largePreviewViewportNavigationResolver.resolveForRelativePage(
+                    result, currentLargePreviewViewportState, pageDelta))
+        .ifPresent(targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
+  }
+
+  private void syncLargePreviewPageControls(JsonViewerLoadResult result) {
+    LargePreviewPageNavigationState navigationState =
+        result.usesLargePreview() && currentLargePreviewViewportState.active()
+            ? new LargePreviewPageNavigationState(
+                true,
+                currentLargePreviewViewportState.currentPageNumber(),
+                currentLargePreviewViewportState.totalPages(),
+                currentLargePreviewViewportState.previousEnabled(),
+                currentLargePreviewViewportState.nextEnabled())
+            : largePreviewPageNavigationStateResolver.resolve(result);
+    if (!navigationState.visible()) {
+      hideLargePreviewPageControls();
+      return;
+    }
+
+    applyLargePreviewPageNavigationState(navigationState);
+  }
+
+  private void applyLargePreviewPageNavigationState(
+      LargePreviewPageNavigationState navigationState) {
+    largePreviewPageControls.setManaged(true);
+    largePreviewPageControls.setVisible(true);
+    largePreviewCurrentPageLabel.setText("Page " + navigationState.currentPageNumber());
+    largePreviewTotalPagesLabel.setText("of " + navigationState.totalPages());
+    largePreviewPreviousButton.setDisable(!navigationState.previousEnabled());
+    largePreviewNextButton.setDisable(!navigationState.nextEnabled());
+  }
+
+  private void hideLargePreviewPageControls() {
+    largePreviewPageControls.setManaged(false);
+    largePreviewPageControls.setVisible(false);
+    largePreviewCurrentPageLabel.setText("Page 1");
+    largePreviewTotalPagesLabel.setText("of 1");
+    largePreviewPreviousButton.setDisable(true);
+    largePreviewNextButton.setDisable(true);
+  }
+
+  private void applyLargePreviewDocumentScrollShell(JsonViewerLoadResult result) {
+    hideLargePreviewDocumentScrollShell();
+  }
+
+  private void renderLargePreviewRawChunk(
+      JsonViewerLoadResult result, double targetVerticalScrollValue) {
+    syncLargePreviewViewportState(result, targetVerticalScrollValue);
+    applyCapabilityPresentation(result);
+    syncLargePreviewPageControls(result);
+    applyLargePreviewDocumentScrollShell(result);
+    updateOutlineShell(result, result.asciiTreeDocument());
+    syncOutlinePanelVisibility(result);
+    renderRawJsonContent(
+        workflowService.currentViewRawJson().orElse(result.asciiTreeDocument().content()));
+    rawJsonButton.setText("Raw page");
+    setViewerScrollPosition(0.0, targetVerticalScrollValue);
+    applyState(ViewerVisualState.VALID);
+    scheduleOutlineViewportRefresh();
+  }
+
+  private void handleLargePreviewScrollPaging(ScrollEvent event) {
+    // Large-preview paging is explicit through the page controls. Vertical scroll remains local to
+    // the currently visible chunk, so the event is intentionally left untouched here.
+  }
+
+  private void showLargePreviewSpacer(Region spacer, double height) {
+    spacer.setManaged(true);
+    spacer.setVisible(true);
+    spacer.setMouseTransparent(true);
+    spacer.setMinHeight(height);
+    spacer.setPrefHeight(height);
+    spacer.setMaxHeight(height);
+  }
+
+  private void hideLargePreviewDocumentScrollShell() {
+    viewerContentBox.setSpacing(18.0);
+    hideLargePreviewSpacer(largePreviewTopSpacer);
+    hideLargePreviewSpacer(largePreviewBottomSpacer);
+  }
+
+  private void hideLargePreviewSpacer(Region spacer) {
+    spacer.setManaged(false);
+    spacer.setVisible(false);
+    spacer.setMinHeight(0.0);
+    spacer.setPrefHeight(0.0);
+    spacer.setMaxHeight(0.0);
+  }
+
+  private void setViewerScrollPosition(double horizontalScrollValue, double verticalScrollValue) {
+    suppressLargePreviewScrollHandling = true;
+    viewerScrollPane.setHvalue(clamp(horizontalScrollValue));
+    viewerScrollPane.setVvalue(clamp(verticalScrollValue));
+    Platform.runLater(() -> suppressLargePreviewScrollHandling = false);
+  }
+
   private void applyCapabilityPresentation(JsonViewerLoadResult result) {
     ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
     copyTreeButton.setText(presentation.copyButtonText());
     copyTreeButton.setDisable(false);
     rawJsonButton.setDisable(!presentation.rawJsonEnabled());
     searchButton.setDisable(!presentation.searchEnabled());
-    outlineToggleButton.setDisable(!presentation.outlineEnabled());
+    outlineToggleButton.setDisable(
+        result.usesLargePreview() ? false : !presentation.outlineEnabled());
     setValidationBadge(
         presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
     footerStatusLabel.setText(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
+  }
+
+  private void syncOutlinePanelVisibility(JsonViewerLoadResult result) {
+    OutlinePanelVisibilityState nextState =
+        outlinePanelVisibilityResolver.resolve(
+            outlineVBox.isVisible(),
+            result.usesLargePreview(),
+            currentViewIdentity(result),
+            autoHiddenLargePreviewOutlineIdentity);
+    autoHiddenLargePreviewOutlineIdentity = nextState.autoHiddenIdentity();
+    setOutlinePanelVisible(nextState.visible());
+  }
+
+  private void setOutlinePanelVisible(boolean visible) {
+    outlineVBox.setVisible(visible);
+    outlineVBox.setManaged(visible);
+    if (!visible) {
+      hideOutlineViewportMarker();
+    }
   }
 
   private void updateOutlineShell(JsonViewerLoadResult result, AsciiTreeDocument document) {
@@ -1274,7 +1798,17 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void renderRawJsonContent(String rawJson) {
-    currentRawJsonPresentation = rawJsonPresentationService.present(rawJson);
+    boolean prettyLargePreviewEnabled =
+        workflowService
+            .currentView()
+            .filter(JsonViewerLoadResult::usesLargePreview)
+            .filter(JsonViewerLoadResult::hasLargePreviewSession)
+            .map(result -> result.largePreviewSession().prettyOnLargePreviewEnabled())
+            .orElse(false);
+    currentRawJsonPresentation =
+        prettyLargePreviewEnabled
+            ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
+            : rawJsonPresentationService.present(rawJson);
     TextFlowRenderOutcome renderOutcome =
         searchTextFlowHighlighter.appendHighlightedText(
         rawJsonContentFlow,
