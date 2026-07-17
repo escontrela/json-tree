@@ -28,6 +28,7 @@ import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
+import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
@@ -48,8 +49,6 @@ import com.davidpe.jsontree.ui.support.TextFlowRenderOutcome;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
-import java.text.CharacterIterator;
-import java.text.StringCharacterIterator;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -989,25 +988,12 @@ public class MainWindowController implements UiScreenController {
   }
 
   private String formatFileMeta(long sizeBytes, JsonDocumentSourceKind sourceKind) {
-    String meta = formatBytes(sizeBytes);
+    String meta = ByteSizeFormatter.format(sizeBytes);
     return switch (sourceKind) {
       case HISTORY -> meta + " • reopened from history";
       case CLIPBOARD -> meta + " • clipboard import";
       case LOCAL_FILE -> meta + " • local import";
     };
-  }
-
-  private String formatBytes(long bytes) {
-    if (bytes < 1024) {
-      return bytes + " B";
-    }
-    CharacterIterator iterator = new StringCharacterIterator("KMGTPE");
-    double scaled = bytes;
-    while (scaled >= 1024 && iterator.current() != 'E') {
-      scaled /= 1024;
-      iterator.next();
-    }
-    return String.format(java.util.Locale.ROOT, "%.1f %cB", scaled, iterator.current());
   }
 
   private String composeValidationMessage(JsonValidationResult validationResult) {
@@ -1085,7 +1071,7 @@ public class MainWindowController implements UiScreenController {
             : "--";
     setStatusRailValues(
         state,
-        formatBytes(result.importResult().sizeBytes()),
+        ByteSizeFormatter.format(result.importResult().sizeBytes()),
         lines,
         sourceLabel(result.importResult().sourceKind()));
   }
@@ -1179,7 +1165,7 @@ public class MainWindowController implements UiScreenController {
       metaLabel.setText(
           FILE_TIME_FORMATTER.format(item.importedAt())
               + " • "
-              + formatBytes(item.sizeBytes())
+              + ByteSizeFormatter.format(item.sizeBytes())
               + " • "
               + item.lineCount()
               + " lines");

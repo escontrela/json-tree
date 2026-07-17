@@ -14,11 +14,10 @@ import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
+import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
-import java.text.CharacterIterator;
-import java.text.StringCharacterIterator;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -267,19 +266,6 @@ public class HistoryScreenController implements UiScreenController {
     onShow();
   }
 
-  private String formatBytes(long bytes) {
-    if (bytes < 1024) {
-      return bytes + " B";
-    }
-    CharacterIterator iterator = new StringCharacterIterator("KMGTPE");
-    double scaled = bytes;
-    while (scaled >= 1024 && iterator.current() != 'E') {
-      scaled /= 1024;
-      iterator.next();
-    }
-    return String.format(Locale.ROOT, "%.1f %cB", scaled, iterator.current());
-  }
-
   private final class HistoryEntryListCell extends ListCell<ImportedJsonFile> {
 
     private final Label titleLabel = new Label();
@@ -349,7 +335,7 @@ public class HistoryScreenController implements UiScreenController {
       metaLabel.setText(
           HISTORY_TIME_FORMATTER.format(item.importedAt())
               + " • "
-              + formatBytes(item.sizeBytes())
+              + ByteSizeFormatter.format(item.sizeBytes())
               + " • "
               + (item.valid() ? "VALID" : "INVALID"));
       HistoryFavoritePresentation favoritePresentation =

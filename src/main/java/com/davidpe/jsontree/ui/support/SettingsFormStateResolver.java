@@ -2,9 +2,6 @@ package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
-import java.text.CharacterIterator;
-import java.text.StringCharacterIterator;
-import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
@@ -35,7 +32,7 @@ public class SettingsFormStateResolver {
         safeText(thresholdText),
         safeText(chunkText),
         prettyLargePreviewSelected,
-        "Startup JVM reference: " + formatBytes(startupMaxMemoryBytes),
+        "Startup JVM reference: " + ByteSizeFormatter.format(startupMaxMemoryBytes),
         warningActive
             ? "Large preview threshold exceeds the startup JVM memory reference."
             : "Large preview threshold stays within the startup JVM memory reference.",
@@ -80,20 +77,6 @@ public class SettingsFormStateResolver {
   private String safeText(String value) {
     return value == null ? "" : value;
   }
-
-  private String formatBytes(long bytes) {
-    if (bytes < 1024L) {
-      return bytes + " B";
-    }
-    CharacterIterator iterator = new StringCharacterIterator("KMGTPE");
-    double scaled = bytes;
-    while (scaled >= 1024.0 && iterator.current() != 'E') {
-      scaled /= 1024.0;
-      iterator.next();
-    }
-    return String.format(Locale.ROOT, "%.1f %cB", scaled, iterator.current());
-  }
-
   private record ParsedLong(boolean valid, long value, String errorText) {
 
     private static ParsedLong valid(long value) {
