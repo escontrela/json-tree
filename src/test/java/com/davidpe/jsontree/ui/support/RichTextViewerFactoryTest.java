@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import javafx.scene.Scene;
+import javafx.scene.layout.StackPane;
 import org.junit.jupiter.api.Test;
 
 class RichTextViewerFactoryTest {
@@ -72,6 +75,27 @@ class RichTextViewerFactoryTest {
           assertIterableEquals(
               List.of("tree-key", "search-match", "search-match-active"),
               surface.styleClassesAt(5));
+        });
+  }
+
+  @Test
+  void viewerSurfaceExpandsToTheAvailableParentSpace() {
+    JavaFxThreadTestSupport.runOnFxThread(
+        () -> {
+          RichTextViewerSurface surface = new RichTextViewerFactory().create();
+          StackPane parent = new StackPane(surface.view());
+          parent.setPrefSize(640, 320);
+          Scene scene = new Scene(parent, 640, 320);
+
+          surface.showText("root\n└─ id: 1", "tree-content");
+          parent.applyCss();
+          parent.layout();
+
+          assertEquals(Double.MAX_VALUE, surface.view().getMaxWidth());
+          assertEquals(Double.MAX_VALUE, surface.view().getMaxHeight());
+          assertTrue(surface.view().getLayoutBounds().getWidth() > 600.0);
+          assertTrue(surface.view().getLayoutBounds().getHeight() > 280.0);
+          assertNotNull(scene.getRoot());
         });
   }
 }

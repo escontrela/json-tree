@@ -3,6 +3,7 @@ package com.davidpe.jsontree.ui.support;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import javafx.geometry.Pos;
 import javafx.scene.layout.StackPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
@@ -27,12 +28,16 @@ public final class RichTextViewerSurface {
     this.codeArea.setEditable(false);
     this.codeArea.setWrapText(false);
     this.codeArea.setFocusTraversable(true);
+    this.codeArea.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     this.codeArea.getStyleClass().add("rich-text-viewer");
 
     VirtualizedScrollPane<CodeArea> scrollPane = new VirtualizedScrollPane<>(codeArea);
+    scrollPane.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     scrollPane.getStyleClass().add("rich-text-viewer-scroll");
 
     this.container = new StackPane(scrollPane);
+    this.container.setAlignment(Pos.TOP_LEFT);
+    this.container.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     this.container.getStyleClass().add("rich-text-viewer-shell");
     this.container.setManaged(false);
     this.container.setVisible(false);

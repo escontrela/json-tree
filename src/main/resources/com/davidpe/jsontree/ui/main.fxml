@@ -124,7 +124,7 @@
                     <padding>
                         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
                     </padding>
-                    <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="viewer-scroll-pane" vbarPolicy="AS_NEEDED">
+                    <ScrollPane fx:id="viewerScrollPane" fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="viewer-scroll-pane" vbarPolicy="AS_NEEDED">
                         <content>
                             <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
                                 <padding>
