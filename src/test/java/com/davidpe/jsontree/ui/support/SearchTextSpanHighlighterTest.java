@@ -8,13 +8,13 @@ import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class SearchTextFlowHighlighterTest {
+class SearchTextSpanHighlighterTest {
 
   @Test
   void keepsNormalHighlightingWithinBudget() {
-    SearchTextFlowHighlighter highlighter = new SearchTextFlowHighlighter();
+    SearchTextSpanHighlighter highlighter = new SearchTextSpanHighlighter();
 
-    TextFlowRenderPlan renderPlan =
+    ViewerTextRenderPlan renderPlan =
         highlighter.buildRenderPlan(
             "alpha beta gamma",
             List.of(new SearchHighlightRange(6, 10, true)),
@@ -29,10 +29,10 @@ class SearchTextFlowHighlighterTest {
   void fallsBackToSinglePlainTextNodeWhenBudgetWouldBeExceeded() {
     LargePreviewProperties properties = new LargePreviewProperties();
     properties.setTextNodeBudget(2);
-    SearchTextFlowHighlighter highlighter = new SearchTextFlowHighlighter(properties);
+    SearchTextSpanHighlighter highlighter = new SearchTextSpanHighlighter(properties);
     String content = "alpha beta gamma delta";
 
-    TextFlowRenderPlan renderPlan =
+    ViewerTextRenderPlan renderPlan =
         highlighter.buildRenderPlan(
             content,
             List.of(
@@ -49,9 +49,9 @@ class SearchTextFlowHighlighterTest {
 
   @Test
   void normalizesOverlappingHighlightRangesBeforeRendering() {
-    SearchTextFlowHighlighter highlighter = new SearchTextFlowHighlighter();
+    SearchTextSpanHighlighter highlighter = new SearchTextSpanHighlighter();
 
-    TextFlowRenderPlan renderPlan =
+    ViewerTextRenderPlan renderPlan =
         highlighter.buildRenderPlan(
             "alpha beta gamma",
             List.of(

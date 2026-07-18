@@ -68,10 +68,10 @@ public final class RichTextViewerSurface {
   }
 
   public void showStyledText(
-      List<TextFlowRenderFragment> fragments, String contentStyleClass) {
+      List<ViewerTextRenderFragment> fragments, String contentStyleClass) {
     StringBuilder contentBuilder = new StringBuilder();
     StyleSpansBuilder<Collection<String>> spansBuilder = new StyleSpansBuilder<>();
-    for (TextFlowRenderFragment fragment : fragments) {
+    for (ViewerTextRenderFragment fragment : fragments) {
       String fragmentText = fragment.text() == null ? "" : fragment.text();
       if (fragmentText.isEmpty()) {
         continue;
@@ -135,7 +135,7 @@ public final class RichTextViewerSurface {
     codeArea.setStyleSpans(0, spansBuilder.create());
   }
 
-  private Collection<String> resolveStyleClasses(TextFlowRenderFragment fragment) {
+  private Collection<String> resolveStyleClasses(ViewerTextRenderFragment fragment) {
     java.util.ArrayList<String> styleClasses = new java.util.ArrayList<>();
     if (fragment.styleClass() != null && !fragment.styleClass().isBlank()) {
       styleClasses.add(fragment.styleClass());

@@ -52,7 +52,7 @@ class AsciiTreeSyntaxHighlighterTest {
         AsciiTreeSyntaxHighlighter guardedHighlighter = new AsciiTreeSyntaxHighlighter(properties);
         AsciiTreeDocument document = new AsciiTreeDocument("root", "root\n├─ a: 1\n└─ b: 2", 3);
 
-        TextFlowRenderPlan renderPlan = guardedHighlighter.buildRenderPlan(document, List.of());
+        ViewerTextRenderPlan renderPlan = guardedHighlighter.buildRenderPlan(document, List.of());
 
         assertTrue(renderPlan.guardrailApplied());
         assertEquals(1, renderPlan.fragments().size());
@@ -63,7 +63,7 @@ class AsciiTreeSyntaxHighlighterTest {
     void normalizesOverlappingInactiveAndActiveHighlightRanges() {
         AsciiTreeDocument document = new AsciiTreeDocument("root", "root\n└─ name: \"David\"", 2);
 
-        TextFlowRenderPlan renderPlan = highlighter.buildRenderPlan(
+        ViewerTextRenderPlan renderPlan = highlighter.buildRenderPlan(
                 document,
                 List.of(
                         new SearchHighlightRange(10, 17, false),
@@ -71,23 +71,23 @@ class AsciiTreeSyntaxHighlighterTest {
         );
 
         String renderedText = renderPlan.fragments().stream()
-                .map(TextFlowRenderFragment::text)
+                .map(ViewerTextRenderFragment::text)
                 .reduce("", String::concat);
 
         assertEquals(document.content(), renderedText);
         assertTrue(renderPlan.fragments().stream()
-                .filter(TextFlowRenderFragment::highlighted)
-                .anyMatch(TextFlowRenderFragment::activeHighlight));
+                .filter(ViewerTextRenderFragment::highlighted)
+                .anyMatch(ViewerTextRenderFragment::activeHighlight));
         assertEquals(
                 9,
                 renderPlan.fragments().stream()
-                        .filter(TextFlowRenderFragment::highlighted)
+                        .filter(ViewerTextRenderFragment::highlighted)
                         .mapToInt(fragment -> fragment.text().length())
                         .sum());
         assertEquals(
                 6,
                 renderPlan.fragments().stream()
-                        .filter(TextFlowRenderFragment::activeHighlight)
+                        .filter(ViewerTextRenderFragment::activeHighlight)
                         .mapToInt(fragment -> fragment.text().length())
                         .sum());
     }

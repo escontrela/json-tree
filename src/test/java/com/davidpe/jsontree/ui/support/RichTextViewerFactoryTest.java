@@ -63,9 +63,9 @@ class RichTextViewerFactoryTest {
 
           surface.showStyledText(
               List.of(
-                  new TextFlowRenderFragment("root", "tree-structure", "#1a2129", false, false),
-                  new TextFlowRenderFragment("\n", "tree-default", "#2d333a", false, false),
-                  new TextFlowRenderFragment("name", "tree-key", "#2d333a", true, true)),
+                  new ViewerTextRenderFragment("root", "tree-structure", "#1a2129", false, false),
+                  new ViewerTextRenderFragment("\n", "tree-default", "#2d333a", false, false),
+                  new ViewerTextRenderFragment("name", "tree-key", "#2d333a", true, true)),
               "tree-content");
 
           assertIterableEquals(List.of("tree-structure"), surface.styleClassesAt(0));

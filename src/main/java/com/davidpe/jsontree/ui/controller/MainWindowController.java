@@ -48,8 +48,8 @@ import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
-import com.davidpe.jsontree.ui.support.TextFlowRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
@@ -648,7 +648,7 @@ public class MainWindowController implements UiScreenController {
 
   private void renderAsciiTree(JsonViewerLoadResult result, double targetVerticalScrollValue) {
     AsciiTreeDocument document = result.asciiTreeDocument();
-    TextFlowRenderPlan renderPlan =
+    ViewerTextRenderPlan renderPlan =
         viewerTextRenderPlanFactory.buildAsciiPlan(document, currentAsciiHighlightRanges(document));
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
     applyCapabilityPresentation(result);
@@ -1802,7 +1802,7 @@ public class MainWindowController implements UiScreenController {
         prettyLargePreviewEnabled
             ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
             : rawJsonPresentationService.present(rawJson);
-    TextFlowRenderPlan renderPlan =
+    ViewerTextRenderPlan renderPlan =
         viewerTextRenderPlanFactory.buildRawPlan(
             currentRawJsonPresentation.content(), currentRawHighlightRanges());
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "raw-json-content");

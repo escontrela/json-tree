@@ -15,23 +15,23 @@ public class ViewerTextRenderPlanFactory {
   private static final String RAW_JSON_BASE_COLOR = "#2d333a";
 
   private final AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter;
-  private final SearchTextFlowHighlighter searchTextFlowHighlighter;
+  private final SearchTextSpanHighlighter searchTextSpanHighlighter;
 
   public ViewerTextRenderPlanFactory(
       AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter,
-      SearchTextFlowHighlighter searchTextFlowHighlighter) {
+      SearchTextSpanHighlighter searchTextSpanHighlighter) {
     this.asciiTreeSyntaxHighlighter = asciiTreeSyntaxHighlighter;
-    this.searchTextFlowHighlighter = searchTextFlowHighlighter;
+    this.searchTextSpanHighlighter = searchTextSpanHighlighter;
   }
 
-  public TextFlowRenderPlan buildAsciiPlan(
+  public ViewerTextRenderPlan buildAsciiPlan(
       AsciiTreeDocument document, List<SearchHighlightRange> highlightRanges) {
     return asciiTreeSyntaxHighlighter.buildRenderPlan(document, highlightRanges);
   }
 
-  public TextFlowRenderPlan buildRawPlan(
+  public ViewerTextRenderPlan buildRawPlan(
       String content, List<SearchHighlightRange> highlightRanges) {
-    return searchTextFlowHighlighter.buildRenderPlan(
+    return searchTextSpanHighlighter.buildRenderPlan(
         content, highlightRanges, RAW_JSON_BASE_STYLE_CLASS, RAW_JSON_BASE_COLOR);
   }
 }

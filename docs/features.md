@@ -33,7 +33,7 @@
 ## ASCII Syntax Highlighting
 
 - The viewer highlights structural labels, keys, strings, numbers, booleans, nulls, and array counts with distinct colors in the dark theme.
-- Highlighting is applied per text segment inside a monospace `TextFlow`, preserving ASCII alignment.
+- Highlighting is applied per text segment inside the shared monospace `RichTextFX` viewer, preserving ASCII alignment without recreating large node trees.
 - If a tree line cannot be tokenized cleanly, the fallback segment remains readable with the default tree color.
 
 ## Local History Snapshots
@@ -126,6 +126,12 @@
 - The active-search strip shows `current / total` when matches exist and disables navigation controls coherently for zero or one occurrence.
 - Moving between matches rerenders the current viewer and scrolls the active highlighted fragment into view; clearing the session hides the strip and restores the viewer to its unhighlighted state.
 
+## RichTextFX Viewer Runtime
+
+- The main viewer now uses one shared read-only `RichTextFX` surface for ASCII tree, raw JSON, and large-preview chunk rendering instead of maintaining parallel `TextFlow` scene graphs.
+- Syntax coloring, raw-view highlighting, and active search emphasis now flow through virtualized style spans, preserving monospace alignment while avoiding the old medium-file node explosion path.
+- Large-preview behavior stays on the existing bounded chunk strategy, so oversized files still avoid full viewer materialization while reusing the same viewer pipeline as small files.
+
 ## Outline Minimap Shell
 
 - The right rail outline panel now exposes a dedicated minimap preview shell instead of only a text placeholder.
@@ -214,7 +220,7 @@
 
 ## Large Preview Mode
 
-- The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating JavaFX `TextFlow`, using `json-tree.large-preview.full-render-max-bytes` as an inclusive primary gate.
+- The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating the shared viewer surface, using `json-tree.large-preview.full-render-max-bytes` as an inclusive primary gate.
 - Oversized files now stay on a byte-paginated path: the large session builds an offset index first, then loads bounded chunks directly from the original file on demand instead of materializing a full ASCII tree in memory.
 - The visible chunk is capped by byte budget rather than line budget, so huge payloads remain inspectable without pretending that the full document is currently expanded or resident.
 - `LARGE_PREVIEW` now stays fixed on the current page raw view. The app always attempts local Jackson pretty-print when the active chunk parses cleanly as standalone JSON.

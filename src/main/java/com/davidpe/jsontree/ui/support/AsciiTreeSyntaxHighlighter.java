@@ -6,9 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -38,42 +35,14 @@ public class AsciiTreeSyntaxHighlighter {
     this.highlightRangeNormalizer = highlightRangeNormalizer;
   }
 
-  public TextFlow highlight(AsciiTreeDocument document) {
-    TextFlow textFlow = new TextFlow();
-    textFlow.getStyleClass().add("tree-content");
-    textFlow.getStyleClass().add("tree-content-flow");
-
-    appendHighlightedContent(textFlow, document);
-    return textFlow;
-  }
-
-  public TextFlowRenderOutcome appendHighlightedContent(TextFlow textFlow, AsciiTreeDocument document) {
-    return appendHighlightedContent(textFlow, document, List.of());
-  }
-
-  public TextFlowRenderOutcome appendHighlightedContent(
-      TextFlow textFlow,
-      AsciiTreeDocument document,
-      List<SearchHighlightRange> highlightRanges
-  ) {
-    textFlow.getChildren().clear();
-    TextFlowRenderPlan renderPlan = buildRenderPlan(document, highlightRanges);
-    for (TextFlowRenderFragment fragment : renderPlan.fragments()) {
-      textFlow.getChildren().add(renderFragment(fragment));
-    }
-    return renderPlan.guardrailApplied()
-        ? TextFlowRenderOutcome.guardrailTriggered()
-        : TextFlowRenderOutcome.normalOutcome();
-  }
-
-  public TextFlowRenderPlan buildRenderPlan(
+  public ViewerTextRenderPlan buildRenderPlan(
       AsciiTreeDocument document, List<SearchHighlightRange> highlightRanges) {
     if (document.content().isEmpty()) {
-      return TextFlowRenderPlan.normal(List.of());
+      return ViewerTextRenderPlan.normal(List.of());
     }
     List<SearchHighlightRange> orderedRanges = highlightRangeNormalizer.normalize(highlightRanges);
 
-    List<TextFlowRenderFragment> fragments = new ArrayList<>();
+    List<ViewerTextRenderFragment> fragments = new ArrayList<>();
     int cursor = 0;
     int rangeIndex = 0;
     int lineStart = 0;
@@ -147,7 +116,7 @@ public class AsciiTreeSyntaxHighlighter {
         lineStart = index + 1;
       }
     }
-    return TextFlowRenderPlan.normal(fragments);
+    return ViewerTextRenderPlan.normal(fragments);
   }
 
   private StyledSegment sliceSegment(
@@ -164,33 +133,14 @@ public class AsciiTreeSyntaxHighlighter {
         segment.colorHex());
   }
 
-  private Text renderFragment(TextFlowRenderFragment fragment) {
-    Text node = new Text(fragment.text());
-    node.getStyleClass().add(fragment.styleClass());
-    if (fragment.highlighted()) {
-      node.getStyleClass().add("search-match");
-      if (fragment.activeHighlight()) {
-        node.getStyleClass().add("search-match-active");
-        node.setFill(Color.web("#1c69d4"));
-        node.setStyle("-fx-font-weight: 700;");
-      } else {
-        node.setFill(Color.web("#355c8a"));
-      }
-      node.setUnderline(true);
-      return node;
-    }
-    node.setFill(Color.web(fragment.colorHex()));
-    return node;
-  }
-
-  private TextFlowRenderFragment fragmentForSegment(
+  private ViewerTextRenderFragment fragmentForSegment(
       StyledSegment segment, boolean highlighted, boolean activeHighlight) {
-    return new TextFlowRenderFragment(
+    return new ViewerTextRenderFragment(
         segment.text(), segment.styleClass(), segment.colorHex(), highlighted, activeHighlight);
   }
 
   private boolean appendFragment(
-      List<TextFlowRenderFragment> fragments, TextFlowRenderFragment fragment) {
+      List<ViewerTextRenderFragment> fragments, ViewerTextRenderFragment fragment) {
     if (fragments.size() >= textNodeBudget) {
       return true;
     }
@@ -198,9 +148,9 @@ public class AsciiTreeSyntaxHighlighter {
     return false;
   }
 
-  private TextFlowRenderPlan applyPlainTextFallback(
+  private ViewerTextRenderPlan applyPlainTextFallback(
       String content, String baseStyleClass, String baseColorHex) {
-    return TextFlowRenderPlan.guardrailFallback(content, baseStyleClass, baseColorHex);
+    return ViewerTextRenderPlan.guardrailFallback(content, baseStyleClass, baseColorHex);
   }
 
   List<StyledSegment> tokenize(AsciiTreeDocument document) {
