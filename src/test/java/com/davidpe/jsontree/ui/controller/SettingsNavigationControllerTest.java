@@ -40,7 +40,6 @@ class SettingsNavigationControllerTest {
             null,
             null,
             null,
-            null,
             uiFlowManager);
 
     controller.openSettings();

@@ -48,9 +48,8 @@ import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
-import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
 import com.davidpe.jsontree.ui.support.TextFlowRenderPlan;
-import com.davidpe.jsontree.ui.support.TextFlowRenderOutcome;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
@@ -111,7 +110,6 @@ public class MainWindowController implements UiScreenController {
           .withLocale(Locale.ROOT)
           .withZone(ZoneId.systemDefault());
 
-  private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
   private final ImportClipboardJsonUseCase importClipboardJsonUseCase;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
@@ -125,19 +123,18 @@ public class MainWindowController implements UiScreenController {
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
   private final SearchMatchProjector searchMatchProjector;
-  private final SearchTextFlowHighlighter searchTextFlowHighlighter;
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
   private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
+  private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final RichTextViewerFactory richTextViewerFactory;
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
   public MainWindowController(
-      AsciiTreeSyntaxHighlighter syntaxHighlighter,
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
@@ -150,16 +147,15 @@ public class MainWindowController implements UiScreenController {
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
       SearchMatchProjector searchMatchProjector,
-      SearchTextFlowHighlighter searchTextFlowHighlighter,
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
       LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
+      ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
       RichTextViewerFactory richTextViewerFactory,
       @Lazy UiFlowManager uiFlowManager) {
-    this.syntaxHighlighter = syntaxHighlighter;
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
@@ -172,13 +168,13 @@ public class MainWindowController implements UiScreenController {
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
     this.searchMatchProjector = searchMatchProjector;
-    this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
     this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
+    this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
     this.richTextViewerFactory = richTextViewerFactory;
     this.uiFlowManager = uiFlowManager;
   }
@@ -653,7 +649,7 @@ public class MainWindowController implements UiScreenController {
   private void renderAsciiTree(JsonViewerLoadResult result, double targetVerticalScrollValue) {
     AsciiTreeDocument document = result.asciiTreeDocument();
     TextFlowRenderPlan renderPlan =
-        syntaxHighlighter.buildRenderPlan(document, currentAsciiHighlightRanges(document));
+        viewerTextRenderPlanFactory.buildAsciiPlan(document, currentAsciiHighlightRanges(document));
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
@@ -1806,13 +1802,19 @@ public class MainWindowController implements UiScreenController {
         prettyLargePreviewEnabled
             ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
             : rawJsonPresentationService.present(rawJson);
-    richTextViewerSurface.showText(currentRawJsonPresentation.content(), "raw-json-content");
+    TextFlowRenderPlan renderPlan =
+        viewerTextRenderPlanFactory.buildRawPlan(
+            currentRawJsonPresentation.content(), currentRawHighlightRanges());
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "raw-json-content");
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
+    if (renderPlan.guardrailApplied()) {
+      footerStatusLabel.setText("Render budget guard active • showing simplified raw JSON");
+    }
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {
