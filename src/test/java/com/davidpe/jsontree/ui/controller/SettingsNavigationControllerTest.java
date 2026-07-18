@@ -11,7 +11,9 @@ import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenFactory;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
+import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
 import com.davidpe.jsontree.ui.support.SettingsFormStateResolver;
+import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
 import org.junit.jupiter.api.Test;
 
 class SettingsNavigationControllerTest {
@@ -42,6 +44,8 @@ class SettingsNavigationControllerTest {
             null,
             new TypewriterLabelRevealService(),
             null,
+            new ZoomActionAvailabilityResolver(),
+            new NoOpZoomWindowCoordinator(),
             uiFlowManager);
 
     controller.openSettings();
@@ -108,5 +112,11 @@ class SettingsNavigationControllerTest {
     private boolean invoked() {
       return invoked;
     }
+  }
+
+  private static final class NoOpZoomWindowCoordinator implements ZoomWindowCoordinator {
+
+    @Override
+    public void openOrFocus() {}
   }
 }

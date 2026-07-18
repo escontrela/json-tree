@@ -24,6 +24,7 @@ import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
+import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
@@ -53,6 +54,7 @@ import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
+import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -133,6 +135,8 @@ public class MainWindowController implements UiScreenController {
   private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final RichTextViewerFactory richTextViewerFactory;
   private final TypewriterLabelRevealService typewriterLabelRevealService;
+  private final ZoomActionAvailabilityResolver zoomActionAvailabilityResolver;
+  private final ZoomWindowCoordinator zoomWindowCoordinator;
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
@@ -158,6 +162,8 @@ public class MainWindowController implements UiScreenController {
       ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
       TypewriterLabelRevealService typewriterLabelRevealService,
       RichTextViewerFactory richTextViewerFactory,
+      ZoomActionAvailabilityResolver zoomActionAvailabilityResolver,
+      ZoomWindowCoordinator zoomWindowCoordinator,
       @Lazy UiFlowManager uiFlowManager) {
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importJsonUseCase = importJsonUseCase;
@@ -180,6 +186,8 @@ public class MainWindowController implements UiScreenController {
     this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
     this.typewriterLabelRevealService = typewriterLabelRevealService;
     this.richTextViewerFactory = richTextViewerFactory;
+    this.zoomActionAvailabilityResolver = zoomActionAvailabilityResolver;
+    this.zoomWindowCoordinator = zoomWindowCoordinator;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -266,6 +274,8 @@ public class MainWindowController implements UiScreenController {
   @FXML private Button copyTreeButton;
 
   @FXML private Button outlineToggleButton;
+
+  @FXML private Button zoomButton;
 
   @FXML private Button previousSearchButton;
 
@@ -1353,6 +1363,17 @@ public class MainWindowController implements UiScreenController {
     }
   }
 
+  @FXML
+  void openZoomViewer() {
+    if (workflowService == null) {
+      return;
+    }
+    if (workflowService.currentView().filter(zoomActionAvailabilityResolver::shouldEnable).isEmpty()) {
+      return;
+    }
+    zoomWindowCoordinator.openOrFocus();
+  }
+
   private void hideSearchModal() {
     searchModalCard.setManaged(false);
     searchModalCard.setVisible(false);
@@ -1725,6 +1746,7 @@ public class MainWindowController implements UiScreenController {
     copyTreeButton.setDisable(false);
     rawJsonButton.setDisable(!presentation.rawJsonEnabled());
     searchButton.setDisable(!presentation.searchEnabled());
+    zoomButton.setDisable(!zoomActionAvailabilityResolver.shouldEnable(result));
     outlineToggleButton.setDisable(
         result.usesLargePreview() ? false : !presentation.outlineEnabled());
     setValidationBadge(
@@ -1773,6 +1795,7 @@ public class MainWindowController implements UiScreenController {
     copyTreeButton.setDisable(true);
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
+    zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
   }
 
