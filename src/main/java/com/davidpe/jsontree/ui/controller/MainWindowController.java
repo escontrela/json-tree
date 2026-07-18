@@ -421,6 +421,7 @@ public class MainWindowController implements UiScreenController {
     outlinePreviewShell.heightProperty().addListener(resizeListener);
     outlinePreviewShell.setOnMousePressed(this::handleOutlineInteraction);
     outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
+    richTextViewerSurface.addViewportChangeListener(this::scheduleOutlineViewportRefresh);
     viewerScrollPane
         .vvalueProperty()
         .addListener(
@@ -566,12 +567,13 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
-    double contentHeight = viewerContentBox.getLayoutBounds().getHeight();
-    double viewportHeight = viewerScrollPane.getViewportBounds().getHeight();
     double scrollValue =
         outlineScrollMapper.scrollValueForPointer(
-            event.getY(), outlinePreviewShell.getHeight(), viewportHeight, contentHeight);
-    viewerScrollPane.setVvalue(scrollValue);
+            event.getY(),
+            outlinePreviewShell.getHeight(),
+            nonLargeViewportHeight(),
+            nonLargeContentHeight());
+    richTextViewerSurface.scrollToVerticalValue(scrollValue);
     event.consume();
   }
 
@@ -594,11 +596,17 @@ public class MainWindowController implements UiScreenController {
     }
 
     OutlineViewportProjection projection =
-        outlineViewportProjector.project(
-            viewerScrollPane.getVvalue(),
-            outlineCanvas.getHeight(),
-            viewerScrollPane.getViewportBounds().getHeight(),
-            viewerContentBox.getLayoutBounds().getHeight());
+        workflowService.currentView().filter(result -> !result.usesLargePreview()).isPresent()
+            ? outlineViewportProjector.project(
+                richTextViewerSurface.verticalScrollValue(),
+                outlineCanvas.getHeight(),
+                nonLargeViewportHeight(),
+                nonLargeContentHeight())
+            : outlineViewportProjector.project(
+                viewerScrollPane.getVvalue(),
+                outlineCanvas.getHeight(),
+                viewerScrollPane.getViewportBounds().getHeight(),
+                viewerContentBox.getLayoutBounds().getHeight());
     if (!projection.visible()) {
       hideOutlineViewportMarker();
       return;
@@ -609,6 +617,14 @@ public class MainWindowController implements UiScreenController {
         10.0, 1.0 + projection.y(), markerWidth, projection.height());
     outlineViewportMarker.setManaged(false);
     outlineViewportMarker.setVisible(true);
+  }
+
+  private double nonLargeViewportHeight() {
+    return richTextViewerSurface.viewportHeight();
+  }
+
+  private double nonLargeContentHeight() {
+    return richTextViewerSurface.totalContentHeightEstimate();
   }
 
   private void hideOutlineViewportMarker() {
