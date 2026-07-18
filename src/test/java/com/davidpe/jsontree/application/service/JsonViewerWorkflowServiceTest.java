@@ -213,7 +213,8 @@ class JsonViewerWorkflowServiceTest {
   }
 
   @Test
-  void promotesFullModeToLargePreviewWhenFullRenderWouldExceedBudget() throws IOException {
+  void keepsFullModeWhenSizeIsBelowThresholdEvenIfLegacyRenderGuardWouldTrip()
+      throws IOException {
     TrackingRendererPort renderer =
         new TrackingRendererPort(
             new AsciiTreeDocument(
@@ -253,16 +254,17 @@ class JsonViewerWorkflowServiceTest {
                 JsonDocumentSourceKind.LOCAL_FILE));
 
     assertEquals(
-        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
         result.inspectionMode());
-    assertTrue(result.hasLargePreviewSession());
-    assertFalse(result.capabilities().searchAvailable());
+    assertFalse(result.hasLargePreviewSession());
+    assertTrue(result.capabilities().searchAvailable());
     assertEquals(1, renderer.fullRenderCount);
-    assertEquals(1, largePreviewStore.materializeCalls);
+    assertEquals(0, largePreviewStore.materializeCalls);
   }
 
   @Test
-  void promotesHistoryReopenToLargePreviewWhenFullRenderWouldExceedBudget() throws IOException {
+  void keepsHistoryReopenInFullModeWhenSizeIsBelowThresholdEvenIfLegacyRenderGuardWouldTrip()
+      throws IOException {
     TrackingRendererPort renderer =
         new TrackingRendererPort(
             new AsciiTreeDocument(
@@ -307,11 +309,12 @@ class JsonViewerWorkflowServiceTest {
         workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
 
     assertEquals(
-        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
         result.inspectionMode());
-    assertTrue(result.hasLargePreviewSession());
+    assertFalse(result.hasLargePreviewSession());
+    assertTrue(result.capabilities().outlineAvailable());
     assertEquals(1, renderer.fullRenderCount);
-    assertEquals(1, largePreviewStore.materializeCalls);
+    assertEquals(0, largePreviewStore.materializeCalls);
   }
 
   @Test

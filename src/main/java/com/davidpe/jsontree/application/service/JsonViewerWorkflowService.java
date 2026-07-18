@@ -463,12 +463,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     AsciiTreeDocument fullDocument = renderDocument(importResult.path(), JsonInspectionMode.FULL);
-    if (!asciiTreeFullRenderGuard.exceedsBudget(fullDocument)) {
-      return RenderableLoadState.full(fullDocument);
-    }
-
-    RenderableLoadState promotedState = openLargePreviewState(importResult, historyEntry);
-    return promotedState.withHistoryLineCount(fullDocument.lineCount());
+    return RenderableLoadState.full(fullDocument);
   }
 
   private RenderableLoadState openLargePreviewState(

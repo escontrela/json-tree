@@ -131,6 +131,7 @@
 - The main viewer now uses one shared read-only `RichTextFX` surface for ASCII tree, raw JSON, and large-preview chunk rendering instead of maintaining parallel `TextFlow` scene graphs.
 - Syntax coloring, raw-view highlighting, and active search emphasis now flow through virtualized style spans, preserving monospace alignment while avoiding the old medium-file node explosion path.
 - Large-preview behavior stays on the existing bounded chunk strategy, so oversized files still avoid full viewer materialization while reusing the same viewer pipeline as small files.
+- Large-preview activation now depends strictly on the configured size threshold; files at or below that threshold stay in `FULL` mode and are no longer re-promoted by the legacy full-render guard.
 
 ## Outline Minimap Shell
 
