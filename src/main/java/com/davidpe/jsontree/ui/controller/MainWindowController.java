@@ -49,6 +49,7 @@ import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
+import com.davidpe.jsontree.ui.support.TextFlowRenderPlan;
 import com.davidpe.jsontree.ui.support.TextFlowRenderOutcome;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
@@ -651,12 +652,14 @@ public class MainWindowController implements UiScreenController {
 
   private void renderAsciiTree(JsonViewerLoadResult result, double targetVerticalScrollValue) {
     AsciiTreeDocument document = result.asciiTreeDocument();
+    TextFlowRenderPlan renderPlan =
+        syntaxHighlighter.buildRenderPlan(document, currentAsciiHighlightRanges(document));
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
     resetViewModeIfNeeded();
     applyLargePreviewDocumentScrollShell(result);
-    richTextViewerSurface.showText(document.content(), "tree-content");
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
@@ -665,6 +668,9 @@ public class MainWindowController implements UiScreenController {
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
+    if (renderPlan.guardrailApplied()) {
+      footerStatusLabel.setText("Render budget guard active • showing simplified tree");
+    }
   }
 
   public void showEmptyViewer() {

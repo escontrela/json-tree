@@ -59,6 +59,39 @@ class AsciiTreeSyntaxHighlighterTest {
         assertEquals(document.content(), renderPlan.fragments().getFirst().text());
     }
 
+    @Test
+    void normalizesOverlappingInactiveAndActiveHighlightRanges() {
+        AsciiTreeDocument document = new AsciiTreeDocument("root", "root\n└─ name: \"David\"", 2);
+
+        TextFlowRenderPlan renderPlan = highlighter.buildRenderPlan(
+                document,
+                List.of(
+                        new SearchHighlightRange(10, 17, false),
+                        new SearchHighlightRange(13, 19, true))
+        );
+
+        String renderedText = renderPlan.fragments().stream()
+                .map(TextFlowRenderFragment::text)
+                .reduce("", String::concat);
+
+        assertEquals(document.content(), renderedText);
+        assertTrue(renderPlan.fragments().stream()
+                .filter(TextFlowRenderFragment::highlighted)
+                .anyMatch(TextFlowRenderFragment::activeHighlight));
+        assertEquals(
+                9,
+                renderPlan.fragments().stream()
+                        .filter(TextFlowRenderFragment::highlighted)
+                        .mapToInt(fragment -> fragment.text().length())
+                        .sum());
+        assertEquals(
+                6,
+                renderPlan.fragments().stream()
+                        .filter(TextFlowRenderFragment::activeHighlight)
+                        .mapToInt(fragment -> fragment.text().length())
+                        .sum());
+    }
+
     private AsciiTreeSyntaxHighlighter.StyledSegment findSegment(
             List<AsciiTreeSyntaxHighlighter.StyledSegment> segments,
             String text

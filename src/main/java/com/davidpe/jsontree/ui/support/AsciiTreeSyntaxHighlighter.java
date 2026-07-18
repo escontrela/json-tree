@@ -3,7 +3,6 @@ package com.davidpe.jsontree.ui.support;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,13 +21,21 @@ public class AsciiTreeSyntaxHighlighter {
       Pattern.compile("^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$");
 
   private final int textNodeBudget;
+  private final SearchHighlightRangeNormalizer highlightRangeNormalizer;
 
   public AsciiTreeSyntaxHighlighter() {
-    this(new LargePreviewProperties());
+    this(new LargePreviewProperties(), new SearchHighlightRangeNormalizer());
   }
 
   public AsciiTreeSyntaxHighlighter(LargePreviewProperties largePreviewProperties) {
+    this(largePreviewProperties, new SearchHighlightRangeNormalizer());
+  }
+
+  AsciiTreeSyntaxHighlighter(
+      LargePreviewProperties largePreviewProperties,
+      SearchHighlightRangeNormalizer highlightRangeNormalizer) {
     this.textNodeBudget = Math.max(1, largePreviewProperties.getTextNodeBudget());
+    this.highlightRangeNormalizer = highlightRangeNormalizer;
   }
 
   public TextFlow highlight(AsciiTreeDocument document) {
@@ -59,15 +66,12 @@ public class AsciiTreeSyntaxHighlighter {
         : TextFlowRenderOutcome.normalOutcome();
   }
 
-  TextFlowRenderPlan buildRenderPlan(
+  public TextFlowRenderPlan buildRenderPlan(
       AsciiTreeDocument document, List<SearchHighlightRange> highlightRanges) {
     if (document.content().isEmpty()) {
       return TextFlowRenderPlan.normal(List.of());
     }
-    List<SearchHighlightRange> orderedRanges =
-        highlightRanges.stream()
-            .sorted(Comparator.comparingInt(SearchHighlightRange::startIndex))
-            .toList();
+    List<SearchHighlightRange> orderedRanges = highlightRangeNormalizer.normalize(highlightRanges);
 
     List<TextFlowRenderFragment> fragments = new ArrayList<>();
     int cursor = 0;

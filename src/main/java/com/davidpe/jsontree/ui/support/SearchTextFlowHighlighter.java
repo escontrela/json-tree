@@ -1,7 +1,6 @@
 package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
-import java.util.Comparator;
 import java.util.List;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
@@ -14,13 +13,21 @@ public class SearchTextFlowHighlighter {
   private static final String INACTIVE_HIGHLIGHT_COLOR = "#355c8a";
   private static final String ACTIVE_HIGHLIGHT_COLOR = "#1c69d4";
   private final int textNodeBudget;
+  private final SearchHighlightRangeNormalizer highlightRangeNormalizer;
 
   public SearchTextFlowHighlighter() {
-    this(new LargePreviewProperties());
+    this(new LargePreviewProperties(), new SearchHighlightRangeNormalizer());
   }
 
   public SearchTextFlowHighlighter(LargePreviewProperties largePreviewProperties) {
+    this(largePreviewProperties, new SearchHighlightRangeNormalizer());
+  }
+
+  SearchTextFlowHighlighter(
+      LargePreviewProperties largePreviewProperties,
+      SearchHighlightRangeNormalizer highlightRangeNormalizer) {
     this.textNodeBudget = Math.max(1, largePreviewProperties.getTextNodeBudget());
+    this.highlightRangeNormalizer = highlightRangeNormalizer;
   }
 
   public TextFlowRenderOutcome appendHighlightedText(
@@ -50,10 +57,7 @@ public class SearchTextFlowHighlighter {
       return TextFlowRenderPlan.normal(List.of());
     }
 
-    List<SearchHighlightRange> orderedRanges =
-        highlightRanges.stream()
-            .sorted(Comparator.comparingInt(SearchHighlightRange::startIndex))
-            .toList();
+    List<SearchHighlightRange> orderedRanges = highlightRangeNormalizer.normalize(highlightRanges);
 
     List<TextFlowRenderFragment> fragments = new java.util.ArrayList<>();
     int cursor = 0;

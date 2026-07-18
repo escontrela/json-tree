@@ -1,9 +1,11 @@
 package com.davidpe.jsontree.ui.support;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RichTextViewerFactoryTest {
@@ -50,6 +52,26 @@ class RichTextViewerFactoryTest {
 
           surface.hide();
           assertFalse(surface.view().isVisible());
+        });
+  }
+
+  @Test
+  void appliesStyleSpansToRichTextContent() {
+    JavaFxThreadTestSupport.runOnFxThread(
+        () -> {
+          RichTextViewerSurface surface = new RichTextViewerFactory().create();
+
+          surface.showStyledText(
+              List.of(
+                  new TextFlowRenderFragment("root", "tree-structure", "#1a2129", false, false),
+                  new TextFlowRenderFragment("\n", "tree-default", "#2d333a", false, false),
+                  new TextFlowRenderFragment("name", "tree-key", "#2d333a", true, true)),
+              "tree-content");
+
+          assertIterableEquals(List.of("tree-structure"), surface.styleClassesAt(0));
+          assertIterableEquals(
+              List.of("tree-key", "search-match", "search-match-active"),
+              surface.styleClassesAt(5));
         });
   }
 }

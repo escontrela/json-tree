@@ -669,33 +669,42 @@
     -fx-font-weight: 400;
 }
 
-.text.tree-prefix {
+.text.tree-prefix,
+.rich-text-viewer .tree-prefix {
     -fx-fill: #87919d;
 }
 
 .text.tree-default,
-.text.tree-key {
+.rich-text-viewer .tree-default,
+.text.tree-key,
+.rich-text-viewer .tree-key {
     -fx-fill: #2d333a;
 }
 
-.text.tree-structure {
+.text.tree-structure,
+.rich-text-viewer .tree-structure {
     -fx-fill: #1a2129;
 }
 
 .text.tree-array-count,
-.text.tree-number {
+.rich-text-viewer .tree-array-count,
+.text.tree-number,
+.rich-text-viewer .tree-number {
     -fx-fill: #1c69d4;
 }
 
-.text.tree-string {
+.text.tree-string,
+.rich-text-viewer .tree-string {
     -fx-fill: #0066b1;
 }
 
-.text.tree-boolean {
+.text.tree-boolean,
+.rich-text-viewer .tree-boolean {
     -fx-fill: #bb7d00;
 }
 
-.text.tree-null {
+.text.tree-null,
+.rich-text-viewer .tree-null {
     -fx-fill: #c23b32;
 }
 
@@ -704,6 +713,17 @@
     -fx-font-size: 14px;
 }
 
-.text.raw-json-text {
+.text.raw-json-text,
+.rich-text-viewer .raw-json-text {
     -fx-fill: #2d333a;
+}
+
+.rich-text-viewer .search-match {
+    -fx-fill: #355c8a;
+    -fx-underline: true;
+}
+
+.rich-text-viewer .search-match-active {
+    -fx-fill: #1c69d4;
+    -fx-font-weight: 700;
 }

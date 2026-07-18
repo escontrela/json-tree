@@ -46,4 +46,24 @@ class SearchTextFlowHighlighterTest {
     assertEquals(1, renderPlan.fragments().size());
     assertEquals(content, renderPlan.fragments().getFirst().text());
   }
+
+  @Test
+  void normalizesOverlappingHighlightRangesBeforeRendering() {
+    SearchTextFlowHighlighter highlighter = new SearchTextFlowHighlighter();
+
+    TextFlowRenderPlan renderPlan =
+        highlighter.buildRenderPlan(
+            "alpha beta gamma",
+            List.of(
+                new SearchHighlightRange(6, 10, false),
+                new SearchHighlightRange(8, 14, true)),
+            "raw-json-text",
+            "#2d333a");
+
+    assertFalse(renderPlan.guardrailApplied());
+    assertEquals("be", renderPlan.fragments().get(1).text());
+    assertFalse(renderPlan.fragments().get(1).activeHighlight());
+    assertEquals("ta gam", renderPlan.fragments().get(2).text());
+    assertTrue(renderPlan.fragments().get(2).activeHighlight());
+  }
 }
