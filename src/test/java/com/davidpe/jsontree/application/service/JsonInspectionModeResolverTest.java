@@ -34,7 +34,7 @@ class JsonInspectionModeResolverTest {
   }
 
   @Test
-  void resolvesLargePreviewModeAtThreshold() {
+  void resolvesFullModeAtThreshold() {
     JsonInspectionModeResolver resolver = new JsonInspectionModeResolver(settingsService(1024));
 
     JsonInspectionMode mode =
@@ -48,7 +48,7 @@ class JsonInspectionModeResolverTest {
                 true,
                 JsonDocumentSourceKind.LOCAL_FILE));
 
-    assertEquals(JsonInspectionMode.LARGE_PREVIEW, mode);
+    assertEquals(JsonInspectionMode.FULL, mode);
   }
 
   @Test

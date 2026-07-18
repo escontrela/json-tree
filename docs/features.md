@@ -220,7 +220,7 @@
 
 ## Large Preview Mode
 
-- The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating the shared viewer surface, using `json-tree.large-preview.full-render-max-bytes` as an inclusive primary gate.
+- The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating the shared viewer surface, using `json-tree.large-preview.full-render-max-bytes` as a strict `>` primary gate.
 - Oversized files now stay on a byte-paginated path: the large session builds an offset index first, then loads bounded chunks directly from the original file on demand instead of materializing a full ASCII tree in memory.
 - The visible chunk is capped by byte budget rather than line budget, so huge payloads remain inspectable without pretending that the full document is currently expanded or resident.
 - `LARGE_PREVIEW` now stays fixed on the current page raw view. The app always attempts local Jackson pretty-print when the active chunk parses cleanly as standalone JSON.
