@@ -476,6 +476,24 @@
     -fx-font-size: 14px;
 }
 
+.rich-text-viewer-shell,
+.rich-text-viewer-scroll,
+.rich-text-viewer {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.rich-text-viewer {
+    -fx-font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+    -fx-font-size: 14px;
+    -fx-highlight-fill: #d6e5f8;
+    -fx-highlight-text-fill: #1f242a;
+}
+
+.rich-text-viewer .content {
+    -fx-background-color: #ffffff;
+}
+
 .status-pill {
     -fx-background-color: #ffffff;
     -fx-border-color: #c7ced7;

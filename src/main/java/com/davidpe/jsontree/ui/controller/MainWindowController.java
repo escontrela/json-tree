@@ -68,7 +68,6 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
-import javafx.geometry.Bounds;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
@@ -90,8 +89,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.stage.Window;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -239,10 +236,6 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private StackPane viewerDocumentHost;
 
-  @FXML private TextFlow treeContentFlow;
-
-  @FXML private TextFlow rawJsonContentFlow;
-
   @FXML private Region largePreviewBottomSpacer;
 
   @FXML private StackPane largePreviewLoaderOverlay;
@@ -322,6 +315,8 @@ public class MainWindowController implements UiScreenController {
   public void initialize() {
     rootPane.getProperties().put("controller", this);
     richTextViewerSurface = richTextViewerFactory.create();
+    viewerDocumentHost.setManaged(true);
+    viewerDocumentHost.setVisible(true);
     viewerDocumentHost.getChildren().setAll(richTextViewerSurface.view());
     fileWarningIconLabel.setGraphic(LargePreviewWarningIconFactory.create(16.0));
     configureWindowMetricsLogging();
@@ -661,13 +656,8 @@ public class MainWindowController implements UiScreenController {
     syncLargePreviewPageControls(result);
     resetViewModeIfNeeded();
     applyLargePreviewDocumentScrollShell(result);
-    TextFlowRenderOutcome renderOutcome =
-        syntaxHighlighter.appendHighlightedContent(
-        treeContentFlow, document, currentAsciiHighlightRanges(document));
-    treeContentFlow.setManaged(true);
-    treeContentFlow.setVisible(true);
-    rawJsonContentFlow.setManaged(false);
-    rawJsonContentFlow.setVisible(false);
+    richTextViewerSurface.showText(document.content(), "tree-content");
+    richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     updateOutlineShell(result, document);
@@ -675,9 +665,6 @@ public class MainWindowController implements UiScreenController {
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
-    if (renderOutcome.guardrailApplied()) {
-      footerStatusLabel.setText("Render budget guard active • showing simplified tree");
-    }
   }
 
   public void showEmptyViewer() {
@@ -695,9 +682,8 @@ public class MainWindowController implements UiScreenController {
     fileLoadedAtValueLabel.setText("Not loaded");
     fileSourceValueLabel.setText("Waiting for import");
     showOutlineEmptyShell();
-    treeContentFlow.getChildren().clear();
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
+    richTextViewerSurface.clear();
+    richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     emptyStateLabel.setText("Drop a JSON anywhere in the window");
@@ -750,9 +736,8 @@ public class MainWindowController implements UiScreenController {
     footerStatusLabel.setText("Parsing JSON");
     setStatusRailValues("LOADING", "--", "--", "Local file");
     emptyStateLabel.setText("Loading JSON preview...");
-    treeContentFlow.getChildren().clear();
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
+    richTextViewerSurface.clear();
+    richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     searchWorkflowService.clear();
@@ -780,9 +765,8 @@ public class MainWindowController implements UiScreenController {
       statusStateValueLabel.setText("INVALID");
     }
     emptyStateLabel.setText(message);
-    treeContentFlow.getChildren().clear();
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
+    richTextViewerSurface.clear();
+    richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     searchWorkflowService.clear();
@@ -1216,9 +1200,6 @@ public class MainWindowController implements UiScreenController {
     if (!showingRawJson) {
       return;
     }
-    rawJsonContentFlow.getChildren().clear();
-    rawJsonContentFlow.setManaged(false);
-    rawJsonContentFlow.setVisible(false);
     rawJsonButton.setText("Raw JSON");
     showingRawJson = false;
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
@@ -1819,25 +1800,13 @@ public class MainWindowController implements UiScreenController {
         prettyLargePreviewEnabled
             ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
             : rawJsonPresentationService.present(rawJson);
-    TextFlowRenderOutcome renderOutcome =
-        searchTextFlowHighlighter.appendHighlightedText(
-        rawJsonContentFlow,
-        currentRawJsonPresentation.content(),
-        currentRawHighlightRanges(),
-        "raw-json-text",
-        "#2d333a");
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
-    rawJsonContentFlow.setManaged(true);
-    rawJsonContentFlow.setVisible(true);
+    richTextViewerSurface.showText(currentRawJsonPresentation.content(), "raw-json-content");
+    richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
-    if (renderOutcome.guardrailApplied()) {
-      footerStatusLabel.setText("Render budget guard active • showing simplified raw JSON");
-    }
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {
@@ -1867,34 +1836,24 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void scrollActiveHighlightIntoView() {
-    TextFlow activeFlow = showingRawJson ? rawJsonContentFlow : treeContentFlow;
-    activeFlow.getChildren().stream()
-        .filter(Text.class::isInstance)
-        .map(Text.class::cast)
-        .filter(text -> text.getStyleClass().contains("search-match-active"))
+    if (showingRawJson) {
+      currentRawHighlightRanges().stream()
+          .filter(SearchHighlightRange::active)
+          .findFirst()
+          .ifPresent(range -> richTextViewerSurface.scrollToOffset(range.startIndex()));
+      return;
+    }
+
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasRenderableTree)
+        .map(JsonViewerLoadResult::asciiTreeDocument)
+        .map(this::currentAsciiHighlightRanges)
+        .stream()
+        .flatMap(List::stream)
+        .filter(SearchHighlightRange::active)
         .findFirst()
-        .ifPresent(this::scrollTextIntoView);
-  }
-
-  private void scrollTextIntoView(Text textNode) {
-    viewerContentBox.applyCss();
-    viewerContentBox.layout();
-
-    Bounds nodeBounds =
-        viewerContentBox.sceneToLocal(textNode.localToScene(textNode.getBoundsInLocal()));
-    Bounds viewportBounds = viewerScrollPane.getViewportBounds();
-    Bounds contentBounds = viewerContentBox.getLayoutBounds();
-
-    double maxHorizontalOffset =
-        Math.max(1.0, contentBounds.getWidth() - viewportBounds.getWidth());
-    double maxVerticalOffset =
-        Math.max(1.0, contentBounds.getHeight() - viewportBounds.getHeight());
-
-    double targetX = Math.max(0.0, nodeBounds.getMinX() - (viewportBounds.getWidth() * 0.2));
-    double targetY = Math.max(0.0, nodeBounds.getMinY() - (viewportBounds.getHeight() * 0.2));
-
-    viewerScrollPane.setHvalue(clamp(targetX / maxHorizontalOffset));
-    viewerScrollPane.setVvalue(clamp(targetY / maxVerticalOffset));
+        .ifPresent(range -> richTextViewerSurface.scrollToOffset(range.startIndex()));
   }
 
   private double clamp(double value) {

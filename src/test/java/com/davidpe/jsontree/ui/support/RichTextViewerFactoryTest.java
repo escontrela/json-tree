@@ -31,4 +31,25 @@ class RichTextViewerFactoryTest {
     JavaFxThreadTestSupport.runOnFxThread(
         () -> assertNotNull(new RichTextViewerFactory().create().view()));
   }
+
+  @Test
+  void reusesSingleViewerSurfaceAcrossAsciiAndRawModes() {
+    JavaFxThreadTestSupport.runOnFxThread(
+        () -> {
+          RichTextViewerSurface surface = new RichTextViewerFactory().create();
+
+          surface.showText("root\n└─ id: 1", "tree-content");
+          assertTrue(surface.hasContentStyleClass("tree-content"));
+          assertFalse(surface.hasContentStyleClass("raw-json-content"));
+          assertTrue(surface.text().contains("id: 1"));
+
+          surface.showText("{\"id\":1}", "raw-json-content");
+          assertTrue(surface.hasContentStyleClass("raw-json-content"));
+          assertFalse(surface.hasContentStyleClass("tree-content"));
+          assertTrue(surface.text().contains("\"id\""));
+
+          surface.hide();
+          assertFalse(surface.view().isVisible());
+        });
+  }
 }
