@@ -19,7 +19,6 @@ public class LargePreviewProperties {
   private int warmPageRadius = DEFAULT_WARM_PAGE_RADIUS;
   private int previewMaxDepth = 8;
   private int previewMaxChildrenPerContainer = 64;
-  private int textNodeBudget = 12000;
   private int pageIndexStrideBytes = DEFAULT_PAGE_INDEX_STRIDE_BYTES;
   private int visibleChunkBytes = DEFAULT_VISIBLE_CHUNK_BYTES;
   private int chunkOverlapBytes = DEFAULT_CHUNK_OVERLAP_BYTES;
@@ -70,14 +69,6 @@ public class LargePreviewProperties {
 
   public void setPreviewMaxChildrenPerContainer(int previewMaxChildrenPerContainer) {
     this.previewMaxChildrenPerContainer = previewMaxChildrenPerContainer;
-  }
-
-  public int getTextNodeBudget() {
-    return textNodeBudget;
-  }
-
-  public void setTextNodeBudget(int textNodeBudget) {
-    this.textNodeBudget = textNodeBudget;
   }
 
   public int getPageIndexStrideBytes() {

@@ -3,13 +3,9 @@ package com.davidpe.jsontree.ui.support;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -21,55 +17,30 @@ public class AsciiTreeSyntaxHighlighter {
   private static final Pattern NUMBER_PATTERN =
       Pattern.compile("^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$");
 
-  private final int textNodeBudget;
+  private final SearchHighlightRangeNormalizer highlightRangeNormalizer;
 
   public AsciiTreeSyntaxHighlighter() {
-    this(new LargePreviewProperties());
+    this(new LargePreviewProperties(), new SearchHighlightRangeNormalizer());
   }
 
   public AsciiTreeSyntaxHighlighter(LargePreviewProperties largePreviewProperties) {
-    this.textNodeBudget = Math.max(1, largePreviewProperties.getTextNodeBudget());
+    this(largePreviewProperties, new SearchHighlightRangeNormalizer());
   }
 
-  public TextFlow highlight(AsciiTreeDocument document) {
-    TextFlow textFlow = new TextFlow();
-    textFlow.getStyleClass().add("tree-content");
-    textFlow.getStyleClass().add("tree-content-flow");
-
-    appendHighlightedContent(textFlow, document);
-    return textFlow;
+  AsciiTreeSyntaxHighlighter(
+      LargePreviewProperties largePreviewProperties,
+      SearchHighlightRangeNormalizer highlightRangeNormalizer) {
+    this.highlightRangeNormalizer = highlightRangeNormalizer;
   }
 
-  public TextFlowRenderOutcome appendHighlightedContent(TextFlow textFlow, AsciiTreeDocument document) {
-    return appendHighlightedContent(textFlow, document, List.of());
-  }
-
-  public TextFlowRenderOutcome appendHighlightedContent(
-      TextFlow textFlow,
-      AsciiTreeDocument document,
-      List<SearchHighlightRange> highlightRanges
-  ) {
-    textFlow.getChildren().clear();
-    TextFlowRenderPlan renderPlan = buildRenderPlan(document, highlightRanges);
-    for (TextFlowRenderFragment fragment : renderPlan.fragments()) {
-      textFlow.getChildren().add(renderFragment(fragment));
-    }
-    return renderPlan.guardrailApplied()
-        ? TextFlowRenderOutcome.guardrailTriggered()
-        : TextFlowRenderOutcome.normalOutcome();
-  }
-
-  TextFlowRenderPlan buildRenderPlan(
+  public ViewerTextRenderPlan buildRenderPlan(
       AsciiTreeDocument document, List<SearchHighlightRange> highlightRanges) {
     if (document.content().isEmpty()) {
-      return TextFlowRenderPlan.normal(List.of());
+      return ViewerTextRenderPlan.normal(List.of());
     }
-    List<SearchHighlightRange> orderedRanges =
-        highlightRanges.stream()
-            .sorted(Comparator.comparingInt(SearchHighlightRange::startIndex))
-            .toList();
+    List<SearchHighlightRange> orderedRanges = highlightRangeNormalizer.normalize(highlightRanges);
 
-    List<TextFlowRenderFragment> fragments = new ArrayList<>();
+    List<ViewerTextRenderFragment> fragments = new ArrayList<>();
     int cursor = 0;
     int rangeIndex = 0;
     int lineStart = 0;
@@ -100,21 +71,17 @@ public class AsciiTreeSyntaxHighlighter {
 
           int overlapStart = Math.max(segmentStart, range.startIndex());
           int overlapEnd = Math.min(segmentEnd, range.endIndex());
-          if (overlapStart > localCursor
-              && appendFragment(
-                  fragments,
-                  fragmentForSegment(
-                      sliceSegment(segment, segmentStart, localCursor, overlapStart), false, false))) {
-            return applyPlainTextFallback(content, "tree-default", "#d9dce3");
+          if (overlapStart > localCursor) {
+            fragments.add(
+                fragmentForSegment(
+                    sliceSegment(segment, segmentStart, localCursor, overlapStart), false, false));
           }
-          if (overlapEnd > overlapStart
-              && appendFragment(
-                  fragments,
-                  fragmentForSegment(
-                      sliceSegment(segment, segmentStart, overlapStart, overlapEnd),
-                      true,
-                      range.active()))) {
-            return applyPlainTextFallback(content, "tree-default", "#d9dce3");
+          if (overlapEnd > overlapStart) {
+            fragments.add(
+                fragmentForSegment(
+                    sliceSegment(segment, segmentStart, overlapStart, overlapEnd),
+                    true,
+                    range.active()));
           }
           localCursor = Math.max(localCursor, overlapEnd);
           if (range.endIndex() <= segmentEnd) {
@@ -124,26 +91,21 @@ public class AsciiTreeSyntaxHighlighter {
           break;
         }
 
-        if (localCursor < segmentEnd
-            && appendFragment(
-                fragments,
-                fragmentForSegment(
-                    sliceSegment(segment, segmentStart, localCursor, segmentEnd), false, false))) {
-          return applyPlainTextFallback(content, "tree-default", "#d9dce3");
+        if (localCursor < segmentEnd) {
+          fragments.add(
+              fragmentForSegment(
+                  sliceSegment(segment, segmentStart, localCursor, segmentEnd), false, false));
         }
         cursor = segmentEnd;
       }
 
       if (index < content.length()) {
-        if (appendFragment(
-            fragments, fragmentForSegment(styledSegment("\n", "tree-default"), false, false))) {
-          return applyPlainTextFallback(content, "tree-default", "#d9dce3");
-        }
+        fragments.add(fragmentForSegment(styledSegment("\n", "tree-default"), false, false));
         cursor++;
         lineStart = index + 1;
       }
     }
-    return TextFlowRenderPlan.normal(fragments);
+    return ViewerTextRenderPlan.normal(fragments);
   }
 
   private StyledSegment sliceSegment(
@@ -160,43 +122,10 @@ public class AsciiTreeSyntaxHighlighter {
         segment.colorHex());
   }
 
-  private Text renderFragment(TextFlowRenderFragment fragment) {
-    Text node = new Text(fragment.text());
-    node.getStyleClass().add(fragment.styleClass());
-    if (fragment.highlighted()) {
-      node.getStyleClass().add("search-match");
-      if (fragment.activeHighlight()) {
-        node.getStyleClass().add("search-match-active");
-        node.setFill(Color.web("#1c69d4"));
-        node.setStyle("-fx-font-weight: 700;");
-      } else {
-        node.setFill(Color.web("#355c8a"));
-      }
-      node.setUnderline(true);
-      return node;
-    }
-    node.setFill(Color.web(fragment.colorHex()));
-    return node;
-  }
-
-  private TextFlowRenderFragment fragmentForSegment(
+  private ViewerTextRenderFragment fragmentForSegment(
       StyledSegment segment, boolean highlighted, boolean activeHighlight) {
-    return new TextFlowRenderFragment(
+    return new ViewerTextRenderFragment(
         segment.text(), segment.styleClass(), segment.colorHex(), highlighted, activeHighlight);
-  }
-
-  private boolean appendFragment(
-      List<TextFlowRenderFragment> fragments, TextFlowRenderFragment fragment) {
-    if (fragments.size() >= textNodeBudget) {
-      return true;
-    }
-    fragments.add(fragment);
-    return false;
-  }
-
-  private TextFlowRenderPlan applyPlainTextFallback(
-      String content, String baseStyleClass, String baseColorHex) {
-    return TextFlowRenderPlan.guardrailFallback(content, baseStyleClass, baseColorHex);
   }
 
   List<StyledSegment> tokenize(AsciiTreeDocument document) {

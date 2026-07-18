@@ -12,7 +12,6 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.TextFlow?>
 
 <BorderPane fx:id="rootPane" styleClass="app-shell" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.MainWindowController">
 
@@ -125,15 +124,14 @@
                     <padding>
                         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
                     </padding>
-                    <ScrollPane fx:id="viewerScrollPane" fitToHeight="false" fitToWidth="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="viewer-scroll-pane" vbarPolicy="AS_NEEDED">
+                    <ScrollPane fx:id="viewerScrollPane" fitToHeight="true" fitToWidth="true" hbarPolicy="AS_NEEDED" pannable="true" styleClass="viewer-scroll-pane" vbarPolicy="AS_NEEDED">
                         <content>
                             <VBox fx:id="viewerContentBox" spacing="18.0" styleClass="viewer-content">
                                 <padding>
                                     <Insets bottom="32.0" left="32.0" right="32.0" top="32.0" />
                                 </padding>
                                 <Region fx:id="largePreviewTopSpacer" managed="false" visible="false" />
-                                <TextFlow fx:id="treeContentFlow" styleClass="tree-content" visible="false" />
-                                <TextFlow fx:id="rawJsonContentFlow" managed="false" styleClass="raw-json-content" visible="false" />
+                                <StackPane fx:id="viewerDocumentHost" managed="false" visible="false" VBox.vgrow="ALWAYS" />
                                 <Label fx:id="emptyStateLabel" styleClass="empty-state" wrapText="true" />
                                 <Region fx:id="largePreviewBottomSpacer" managed="false" visible="false" />
                             </VBox>

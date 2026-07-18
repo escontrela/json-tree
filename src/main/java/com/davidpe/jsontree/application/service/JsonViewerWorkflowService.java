@@ -21,7 +21,6 @@ import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
-import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -59,30 +58,12 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   private final AsciiTreeRendererPort asciiTreeRendererPort;
   private final JsonInspectionModeResolver inspectionModeResolver;
   private final LargePreviewSessionService largePreviewSessionService;
-  private final AsciiTreeFullRenderGuard asciiTreeFullRenderGuard;
   private final Clock clock;
 
   private JsonViewerLoadResult currentView;
 
   @Autowired
   /** Creates the workflow service with the default system clock. */
-  public JsonViewerWorkflowService(
-      JsonValidationPort validationPort,
-      JsonHistoryRepository jsonHistoryRepository,
-      AsciiTreeRendererPort asciiTreeRendererPort,
-      JsonInspectionModeResolver inspectionModeResolver,
-      LargePreviewSessionService largePreviewSessionService,
-      AsciiTreeFullRenderGuard asciiTreeFullRenderGuard) {
-    this(
-        validationPort,
-        jsonHistoryRepository,
-        asciiTreeRendererPort,
-        inspectionModeResolver,
-        largePreviewSessionService,
-        asciiTreeFullRenderGuard,
-        Clock.systemDefaultZone());
-  }
-
   public JsonViewerWorkflowService(
       JsonValidationPort validationPort,
       JsonHistoryRepository jsonHistoryRepository,
@@ -95,7 +76,6 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         asciiTreeRendererPort,
         inspectionModeResolver,
         largePreviewSessionService,
-        new AsciiTreeFullRenderGuard(new LargePreviewProperties()),
         Clock.systemDefaultZone());
   }
 
@@ -105,14 +85,12 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       AsciiTreeRendererPort asciiTreeRendererPort,
       JsonInspectionModeResolver inspectionModeResolver,
       LargePreviewSessionService largePreviewSessionService,
-      AsciiTreeFullRenderGuard asciiTreeFullRenderGuard,
       Clock clock) {
     this.validationPort = validationPort;
     this.jsonHistoryRepository = jsonHistoryRepository;
     this.asciiTreeRendererPort = asciiTreeRendererPort;
     this.inspectionModeResolver = inspectionModeResolver;
     this.largePreviewSessionService = largePreviewSessionService;
-    this.asciiTreeFullRenderGuard = asciiTreeFullRenderGuard;
     this.clock = clock;
   }
 
@@ -463,12 +441,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     AsciiTreeDocument fullDocument = renderDocument(importResult.path(), JsonInspectionMode.FULL);
-    if (!asciiTreeFullRenderGuard.exceedsBudget(fullDocument)) {
-      return RenderableLoadState.full(fullDocument);
-    }
-
-    RenderableLoadState promotedState = openLargePreviewState(importResult, historyEntry);
-    return promotedState.withHistoryLineCount(fullDocument.lineCount());
+    return RenderableLoadState.full(fullDocument);
   }
 
   private RenderableLoadState openLargePreviewState(

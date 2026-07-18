@@ -164,7 +164,6 @@ class ClipboardJsonImportServiceTest {
         inspectionModeResolver(),
         new LargePreviewSessionService(
             new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
-        new AsciiTreeFullRenderGuard(new LargePreviewProperties()),
         fixedClock());
   }
 

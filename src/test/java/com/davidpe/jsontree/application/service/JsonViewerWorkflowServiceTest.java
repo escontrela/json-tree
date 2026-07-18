@@ -213,7 +213,8 @@ class JsonViewerWorkflowServiceTest {
   }
 
   @Test
-  void promotesFullModeToLargePreviewWhenFullRenderWouldExceedBudget() throws IOException {
+  void keepsFullModeWhenSizeIsBelowThresholdEvenIfLegacyRenderGuardWouldTrip()
+      throws IOException {
     TrackingRendererPort renderer =
         new TrackingRendererPort(
             new AsciiTreeDocument(
@@ -237,7 +238,6 @@ class JsonViewerWorkflowServiceTest {
             renderer,
             inspectionModeResolver(2_048_576L),
             largePreviewSessionService(largePreviewStore),
-            new AsciiTreeFullRenderGuard(12),
             Clock.systemUTC());
     Path importedFile = Files.writeString(tempDir.resolve("borderline.json"), "{\"id\":1}");
 
@@ -253,16 +253,17 @@ class JsonViewerWorkflowServiceTest {
                 JsonDocumentSourceKind.LOCAL_FILE));
 
     assertEquals(
-        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
         result.inspectionMode());
-    assertTrue(result.hasLargePreviewSession());
-    assertFalse(result.capabilities().searchAvailable());
+    assertFalse(result.hasLargePreviewSession());
+    assertTrue(result.capabilities().searchAvailable());
     assertEquals(1, renderer.fullRenderCount);
-    assertEquals(1, largePreviewStore.materializeCalls);
+    assertEquals(0, largePreviewStore.materializeCalls);
   }
 
   @Test
-  void promotesHistoryReopenToLargePreviewWhenFullRenderWouldExceedBudget() throws IOException {
+  void keepsHistoryReopenInFullModeWhenSizeIsBelowThresholdEvenIfLegacyRenderGuardWouldTrip()
+      throws IOException {
     TrackingRendererPort renderer =
         new TrackingRendererPort(
             new AsciiTreeDocument(
@@ -300,18 +301,18 @@ class JsonViewerWorkflowServiceTest {
             renderer,
             inspectionModeResolver(2_048_576L),
             largePreviewSessionService(largePreviewStore),
-            new AsciiTreeFullRenderGuard(12),
             Clock.systemUTC());
 
     JsonViewerLoadResult result =
         workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
 
     assertEquals(
-        com.davidpe.jsontree.application.model.JsonInspectionMode.LARGE_PREVIEW,
+        com.davidpe.jsontree.application.model.JsonInspectionMode.FULL,
         result.inspectionMode());
-    assertTrue(result.hasLargePreviewSession());
+    assertFalse(result.hasLargePreviewSession());
+    assertTrue(result.capabilities().outlineAvailable());
     assertEquals(1, renderer.fullRenderCount);
-    assertEquals(1, largePreviewStore.materializeCalls);
+    assertEquals(0, largePreviewStore.materializeCalls);
   }
 
   @Test

@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.support;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
@@ -46,17 +47,53 @@ class AsciiTreeSyntaxHighlighterTest {
     }
 
     @Test
-    void fallsBackToSinglePlainTextNodeWhenBudgetWouldBeExceeded() {
+    void keepsStyledFragmentsEvenWhenTheLegacyBudgetWouldHaveBeenExceeded() {
         LargePreviewProperties properties = new LargePreviewProperties();
-        properties.setTextNodeBudget(2);
         AsciiTreeSyntaxHighlighter guardedHighlighter = new AsciiTreeSyntaxHighlighter(properties);
         AsciiTreeDocument document = new AsciiTreeDocument("root", "root\n├─ a: 1\n└─ b: 2", 3);
 
-        TextFlowRenderPlan renderPlan = guardedHighlighter.buildRenderPlan(document, List.of());
+        ViewerTextRenderPlan renderPlan = guardedHighlighter.buildRenderPlan(document, List.of());
 
-        assertTrue(renderPlan.guardrailApplied());
-        assertEquals(1, renderPlan.fragments().size());
-        assertEquals(document.content(), renderPlan.fragments().getFirst().text());
+        assertFalse(renderPlan.guardrailApplied());
+        assertTrue(renderPlan.fragments().size() > 1);
+        assertEquals(
+                document.content(),
+                renderPlan.fragments().stream()
+                        .map(ViewerTextRenderFragment::text)
+                        .reduce("", String::concat));
+    }
+
+    @Test
+    void normalizesOverlappingInactiveAndActiveHighlightRanges() {
+        AsciiTreeDocument document = new AsciiTreeDocument("root", "root\n└─ name: \"David\"", 2);
+
+        ViewerTextRenderPlan renderPlan = highlighter.buildRenderPlan(
+                document,
+                List.of(
+                        new SearchHighlightRange(10, 17, false),
+                        new SearchHighlightRange(13, 19, true))
+        );
+
+        String renderedText = renderPlan.fragments().stream()
+                .map(ViewerTextRenderFragment::text)
+                .reduce("", String::concat);
+
+        assertEquals(document.content(), renderedText);
+        assertTrue(renderPlan.fragments().stream()
+                .filter(ViewerTextRenderFragment::highlighted)
+                .anyMatch(ViewerTextRenderFragment::activeHighlight));
+        assertEquals(
+                9,
+                renderPlan.fragments().stream()
+                        .filter(ViewerTextRenderFragment::highlighted)
+                        .mapToInt(fragment -> fragment.text().length())
+                        .sum());
+        assertEquals(
+                6,
+                renderPlan.fragments().stream()
+                        .filter(ViewerTextRenderFragment::activeHighlight)
+                        .mapToInt(fragment -> fragment.text().length())
+                        .sum());
     }
 
     private AsciiTreeSyntaxHighlighter.StyledSegment findSegment(

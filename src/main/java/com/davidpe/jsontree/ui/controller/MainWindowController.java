@@ -23,6 +23,7 @@ import com.davidpe.jsontree.ui.model.ViewerVisualState;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
@@ -44,10 +45,12 @@ import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityResolver;
 import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityState;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
+import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
+import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
-import com.davidpe.jsontree.ui.support.SearchTextFlowHighlighter;
-import com.davidpe.jsontree.ui.support.TextFlowRenderOutcome;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import java.nio.file.Path;
@@ -66,7 +69,6 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
-import javafx.geometry.Bounds;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
@@ -88,8 +90,6 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
 import javafx.stage.Window;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
@@ -111,7 +111,6 @@ public class MainWindowController implements UiScreenController {
           .withLocale(Locale.ROOT)
           .withZone(ZoneId.systemDefault());
 
-  private final AsciiTreeSyntaxHighlighter syntaxHighlighter;
   private final ImportClipboardJsonUseCase importClipboardJsonUseCase;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
@@ -125,18 +124,19 @@ public class MainWindowController implements UiScreenController {
   private final UiFlowManager uiFlowManager;
   private final DroppedJsonPathResolver droppedJsonPathResolver;
   private final SearchMatchProjector searchMatchProjector;
-  private final SearchTextFlowHighlighter searchTextFlowHighlighter;
   private final ClipboardImportShortcutSupport clipboardImportShortcutSupport;
   private final InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
   private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
+  private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
+  private final RichTextViewerFactory richTextViewerFactory;
+  private final TypewriterLabelRevealService typewriterLabelRevealService;
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
   public MainWindowController(
-      AsciiTreeSyntaxHighlighter syntaxHighlighter,
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
@@ -149,15 +149,16 @@ public class MainWindowController implements UiScreenController {
       ClipboardPort clipboardPort,
       DroppedJsonPathResolver droppedJsonPathResolver,
       SearchMatchProjector searchMatchProjector,
-      SearchTextFlowHighlighter searchTextFlowHighlighter,
       ClipboardImportShortcutSupport clipboardImportShortcutSupport,
       InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
       LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
       LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
+      ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
+      TypewriterLabelRevealService typewriterLabelRevealService,
+      RichTextViewerFactory richTextViewerFactory,
       @Lazy UiFlowManager uiFlowManager) {
-    this.syntaxHighlighter = syntaxHighlighter;
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
@@ -170,13 +171,15 @@ public class MainWindowController implements UiScreenController {
     this.clipboardPort = clipboardPort;
     this.droppedJsonPathResolver = droppedJsonPathResolver;
     this.searchMatchProjector = searchMatchProjector;
-    this.searchTextFlowHighlighter = searchTextFlowHighlighter;
     this.clipboardImportShortcutSupport = clipboardImportShortcutSupport;
     this.inlineHistoryPreviewStateResolver = inlineHistoryPreviewStateResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
     this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
+    this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
+    this.typewriterLabelRevealService = typewriterLabelRevealService;
+    this.richTextViewerFactory = richTextViewerFactory;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -232,9 +235,7 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Region largePreviewTopSpacer;
 
-  @FXML private TextFlow treeContentFlow;
-
-  @FXML private TextFlow rawJsonContentFlow;
+  @FXML private StackPane viewerDocumentHost;
 
   @FXML private Region largePreviewBottomSpacer;
 
@@ -304,6 +305,7 @@ public class MainWindowController implements UiScreenController {
   private long viewerWorkflowLoadSequence;
   private LargePreviewViewportState currentLargePreviewViewportState =
       LargePreviewViewportState.inactive();
+  private RichTextViewerSurface richTextViewerSurface;
   private List<Region> largePreviewLoaderSquares = List.of();
   private LargePreviewLoadingAffordance largePreviewLoadingAffordance;
   private PauseTransition largePreviewLoaderRevealTransition;
@@ -313,6 +315,10 @@ public class MainWindowController implements UiScreenController {
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
+    richTextViewerSurface = richTextViewerFactory.create();
+    viewerDocumentHost.setManaged(true);
+    viewerDocumentHost.setVisible(true);
+    viewerDocumentHost.getChildren().setAll(richTextViewerSurface.view());
     fileWarningIconLabel.setGraphic(LargePreviewWarningIconFactory.create(16.0));
     configureWindowMetricsLogging();
     rootPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleGlobalKeyPressed);
@@ -646,18 +652,15 @@ public class MainWindowController implements UiScreenController {
 
   private void renderAsciiTree(JsonViewerLoadResult result, double targetVerticalScrollValue) {
     AsciiTreeDocument document = result.asciiTreeDocument();
+    ViewerTextRenderPlan renderPlan =
+        viewerTextRenderPlanFactory.buildAsciiPlan(document, currentAsciiHighlightRanges(document));
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
     resetViewModeIfNeeded();
     applyLargePreviewDocumentScrollShell(result);
-    TextFlowRenderOutcome renderOutcome =
-        syntaxHighlighter.appendHighlightedContent(
-        treeContentFlow, document, currentAsciiHighlightRanges(document));
-    treeContentFlow.setManaged(true);
-    treeContentFlow.setVisible(true);
-    rawJsonContentFlow.setManaged(false);
-    rawJsonContentFlow.setVisible(false);
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
+    richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     updateOutlineShell(result, document);
@@ -665,9 +668,6 @@ public class MainWindowController implements UiScreenController {
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
-    if (renderOutcome.guardrailApplied()) {
-      footerStatusLabel.setText("Render budget guard active • showing simplified tree");
-    }
   }
 
   public void showEmptyViewer() {
@@ -685,14 +685,13 @@ public class MainWindowController implements UiScreenController {
     fileLoadedAtValueLabel.setText("Not loaded");
     fileSourceValueLabel.setText("Waiting for import");
     showOutlineEmptyShell();
-    treeContentFlow.getChildren().clear();
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
+    richTextViewerSurface.clear();
+    richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     emptyStateLabel.setText("Drop a JSON anywhere in the window");
     setValidationBadge("Waiting", "status-idle");
-    footerStatusLabel.setText("No JSON loaded");
+    updateFooterStatusLabel("No JSON loaded");
     setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
     viewerContentBox.autosize();
     searchWorkflowService.clear();
@@ -712,7 +711,7 @@ public class MainWindowController implements UiScreenController {
         "The outline panel remains docked and ready for the incoming document.",
         "outline-state-loading");
     setValidationBadge("Drop ready", "status-accent");
-    footerStatusLabel.setText("Waiting for JSON drop");
+    updateFooterStatusLabel("Waiting for JSON drop");
     setStatusRailValues("DROP READY", "--", "--", "Drag payload");
     applyState(ViewerVisualState.DRAGGING);
   }
@@ -737,12 +736,11 @@ public class MainWindowController implements UiScreenController {
         "The panel keeps a reserved minimap surface while validation completes.",
         "outline-state-loading");
     setValidationBadge("Loading", "status-muted");
-    footerStatusLabel.setText("Parsing JSON");
+    updateFooterStatusLabel("Parsing JSON");
     setStatusRailValues("LOADING", "--", "--", "Local file");
     emptyStateLabel.setText("Loading JSON preview...");
-    treeContentFlow.getChildren().clear();
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
+    richTextViewerSurface.clear();
+    richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     searchWorkflowService.clear();
@@ -765,14 +763,13 @@ public class MainWindowController implements UiScreenController {
         "Fix the document or reopen a valid snapshot to restore the minimap.",
         "outline-state-invalid");
     setValidationBadge("Invalid", "status-error");
-    footerStatusLabel.setText("JSON needs attention");
+    updateFooterStatusLabel("JSON needs attention");
     if ("VALID".equals(statusStateValueLabel.getText())) {
       statusStateValueLabel.setText("INVALID");
     }
     emptyStateLabel.setText(message);
-    treeContentFlow.getChildren().clear();
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
+    richTextViewerSurface.clear();
+    richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     searchWorkflowService.clear();
@@ -788,7 +785,7 @@ public class MainWindowController implements UiScreenController {
     viewerAidMetaLabel.setText(
         "The selected file exists but does not contain any JSON content to render.");
     outlineStateLabel.setText("The outline minimap cannot render because the file is empty.");
-    footerStatusLabel.setText("The JSON file is empty");
+    updateFooterStatusLabel("The JSON file is empty");
   }
 
   ViewerVisualState currentState() {
@@ -912,7 +909,7 @@ public class MainWindowController implements UiScreenController {
     cancelLargePreviewLoadingAffordance();
     if (throwable != null || result == null) {
       showInvalidState("Unable to load JSON file: " + fileName);
-      footerStatusLabel.setText("JSON load failed");
+      updateFooterStatusLabel("JSON load failed");
       return;
     }
     presentLoadResult(result);
@@ -929,14 +926,14 @@ public class MainWindowController implements UiScreenController {
     cancelLargePreviewLoadingAffordance();
     if (throwable != null) {
       showInvalidState("Unable to reopen history snapshot: " + fileName);
-      footerStatusLabel.setText("History reopen failed");
+      updateFooterStatusLabel("History reopen failed");
       return;
     }
     result.ifPresentOrElse(
         this::presentLoadResult,
         () -> {
           showInvalidState("Stored history snapshot is no longer available.");
-          footerStatusLabel.setText("History snapshot unavailable");
+          updateFooterStatusLabel("History snapshot unavailable");
         });
   }
 
@@ -970,7 +967,7 @@ public class MainWindowController implements UiScreenController {
   private void presentClipboardImportFailure(ClipboardJsonImportResult result) {
     if (workflowService.currentView().isPresent()) {
       restoreViewFromWorkflow();
-      footerStatusLabel.setText(result.message());
+      updateFooterStatusLabel(result.message());
       return;
     }
 
@@ -989,7 +986,7 @@ public class MainWindowController implements UiScreenController {
         "The clipboard stays external until it contains valid JSON that can become a temporary"
             + " local document.");
     outlineStateLabel.setText("Clipboard content did not produce a valid JSON outline.");
-    footerStatusLabel.setText(result.message());
+    updateFooterStatusLabel(result.message());
     setStatusRailValues("INVALID", "--", "--", "Clipboard");
   }
 
@@ -1015,12 +1012,16 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void updateFileNameLabel(String fileName) {
-    fileNameLabel.setText(fileName);
+    typewriterLabelRevealService.reveal(fileNameLabel, fileName);
     if (fileName != null && fileName.length() > FILE_NAME_COMPACT_LENGTH_THRESHOLD) {
       fileNameLabel.setStyle(FILE_NAME_COMPACT_STYLE);
       return;
     }
     fileNameLabel.setStyle("");
+  }
+
+  private void updateFooterStatusLabel(String statusText) {
+    typewriterLabelRevealService.reveal(footerStatusLabel, statusText);
   }
 
   private void updateFileSummary(JsonViewerLoadResult result) {
@@ -1206,9 +1207,6 @@ public class MainWindowController implements UiScreenController {
     if (!showingRawJson) {
       return;
     }
-    rawJsonContentFlow.getChildren().clear();
-    rawJsonContentFlow.setManaged(false);
-    rawJsonContentFlow.setVisible(false);
     rawJsonButton.setText("Raw JSON");
     showingRawJson = false;
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
@@ -1715,7 +1713,7 @@ public class MainWindowController implements UiScreenController {
         result.usesLargePreview() ? false : !presentation.outlineEnabled());
     setValidationBadge(
         presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
-    footerStatusLabel.setText(presentation.footerStatus());
+    updateFooterStatusLabel(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
   }
 
@@ -1809,25 +1807,16 @@ public class MainWindowController implements UiScreenController {
         prettyLargePreviewEnabled
             ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
             : rawJsonPresentationService.present(rawJson);
-    TextFlowRenderOutcome renderOutcome =
-        searchTextFlowHighlighter.appendHighlightedText(
-        rawJsonContentFlow,
-        currentRawJsonPresentation.content(),
-        currentRawHighlightRanges(),
-        "raw-json-text",
-        "#2d333a");
-    treeContentFlow.setManaged(false);
-    treeContentFlow.setVisible(false);
-    rawJsonContentFlow.setManaged(true);
-    rawJsonContentFlow.setVisible(true);
+    ViewerTextRenderPlan renderPlan =
+        viewerTextRenderPlanFactory.buildRawPlan(
+            currentRawJsonPresentation.content(), currentRawHighlightRanges());
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "raw-json-content");
+    richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
-    if (renderOutcome.guardrailApplied()) {
-      footerStatusLabel.setText("Render budget guard active • showing simplified raw JSON");
-    }
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {
@@ -1857,34 +1846,24 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void scrollActiveHighlightIntoView() {
-    TextFlow activeFlow = showingRawJson ? rawJsonContentFlow : treeContentFlow;
-    activeFlow.getChildren().stream()
-        .filter(Text.class::isInstance)
-        .map(Text.class::cast)
-        .filter(text -> text.getStyleClass().contains("search-match-active"))
+    if (showingRawJson) {
+      currentRawHighlightRanges().stream()
+          .filter(SearchHighlightRange::active)
+          .findFirst()
+          .ifPresent(range -> richTextViewerSurface.scrollToOffset(range.startIndex()));
+      return;
+    }
+
+    workflowService
+        .currentView()
+        .filter(JsonViewerLoadResult::hasRenderableTree)
+        .map(JsonViewerLoadResult::asciiTreeDocument)
+        .map(this::currentAsciiHighlightRanges)
+        .stream()
+        .flatMap(List::stream)
+        .filter(SearchHighlightRange::active)
         .findFirst()
-        .ifPresent(this::scrollTextIntoView);
-  }
-
-  private void scrollTextIntoView(Text textNode) {
-    viewerContentBox.applyCss();
-    viewerContentBox.layout();
-
-    Bounds nodeBounds =
-        viewerContentBox.sceneToLocal(textNode.localToScene(textNode.getBoundsInLocal()));
-    Bounds viewportBounds = viewerScrollPane.getViewportBounds();
-    Bounds contentBounds = viewerContentBox.getLayoutBounds();
-
-    double maxHorizontalOffset =
-        Math.max(1.0, contentBounds.getWidth() - viewportBounds.getWidth());
-    double maxVerticalOffset =
-        Math.max(1.0, contentBounds.getHeight() - viewportBounds.getHeight());
-
-    double targetX = Math.max(0.0, nodeBounds.getMinX() - (viewportBounds.getWidth() * 0.2));
-    double targetY = Math.max(0.0, nodeBounds.getMinY() - (viewportBounds.getHeight() * 0.2));
-
-    viewerScrollPane.setHvalue(clamp(targetX / maxHorizontalOffset));
-    viewerScrollPane.setVvalue(clamp(targetY / maxVerticalOffset));
+        .ifPresent(range -> richTextViewerSurface.scrollToOffset(range.startIndex()));
   }
 
   private double clamp(double value) {
