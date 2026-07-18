@@ -10,6 +10,7 @@ import com.davidpe.jsontree.application.service.ProcessMemoryReferenceService;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenFactory;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.support.SettingsFormStateResolver;
 import org.junit.jupiter.api.Test;
 
@@ -39,6 +40,7 @@ class SettingsNavigationControllerTest {
             null,
             null,
             null,
+            new TypewriterLabelRevealService(),
             null,
             uiFlowManager);
 

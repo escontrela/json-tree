@@ -30,6 +30,12 @@
 - Dragging activates a stronger shell glow, while loading, valid, and invalid states update the status labels consistently.
 - Empty-file and invalid outcomes use concise, readable messages inside the viewer shell.
 
+## Typewriter Label Reveals
+
+- `fileNameLabel` and `footerStatusLabel` now reveal new text progressively with a subtle typewriter-style effect instead of swapping instantly.
+- The effect is centralized in a reusable UI presentation service so rapid state changes can cancel stale animations cleanly without leaving partial text behind.
+- The service is intentionally scoped to lightweight labels only and does not animate the ASCII viewer or raw JSON body.
+
 ## ASCII Syntax Highlighting
 
 - The viewer highlights structural labels, keys, strings, numbers, booleans, nulls, and array counts with distinct colors in the dark theme.

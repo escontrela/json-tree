@@ -23,6 +23,7 @@ import com.davidpe.jsontree.ui.model.ViewerVisualState;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
@@ -131,6 +132,7 @@ public class MainWindowController implements UiScreenController {
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
   private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final RichTextViewerFactory richTextViewerFactory;
+  private final TypewriterLabelRevealService typewriterLabelRevealService;
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
@@ -154,6 +156,7 @@ public class MainWindowController implements UiScreenController {
       LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
       ViewerCapabilityPresentationResolver capabilityPresentationResolver,
       ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
+      TypewriterLabelRevealService typewriterLabelRevealService,
       RichTextViewerFactory richTextViewerFactory,
       @Lazy UiFlowManager uiFlowManager) {
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
@@ -175,6 +178,7 @@ public class MainWindowController implements UiScreenController {
     this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
+    this.typewriterLabelRevealService = typewriterLabelRevealService;
     this.richTextViewerFactory = richTextViewerFactory;
     this.uiFlowManager = uiFlowManager;
   }
@@ -687,7 +691,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setVisible(true);
     emptyStateLabel.setText("Drop a JSON anywhere in the window");
     setValidationBadge("Waiting", "status-idle");
-    footerStatusLabel.setText("No JSON loaded");
+    updateFooterStatusLabel("No JSON loaded");
     setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
     viewerContentBox.autosize();
     searchWorkflowService.clear();
@@ -707,7 +711,7 @@ public class MainWindowController implements UiScreenController {
         "The outline panel remains docked and ready for the incoming document.",
         "outline-state-loading");
     setValidationBadge("Drop ready", "status-accent");
-    footerStatusLabel.setText("Waiting for JSON drop");
+    updateFooterStatusLabel("Waiting for JSON drop");
     setStatusRailValues("DROP READY", "--", "--", "Drag payload");
     applyState(ViewerVisualState.DRAGGING);
   }
@@ -732,7 +736,7 @@ public class MainWindowController implements UiScreenController {
         "The panel keeps a reserved minimap surface while validation completes.",
         "outline-state-loading");
     setValidationBadge("Loading", "status-muted");
-    footerStatusLabel.setText("Parsing JSON");
+    updateFooterStatusLabel("Parsing JSON");
     setStatusRailValues("LOADING", "--", "--", "Local file");
     emptyStateLabel.setText("Loading JSON preview...");
     richTextViewerSurface.clear();
@@ -759,7 +763,7 @@ public class MainWindowController implements UiScreenController {
         "Fix the document or reopen a valid snapshot to restore the minimap.",
         "outline-state-invalid");
     setValidationBadge("Invalid", "status-error");
-    footerStatusLabel.setText("JSON needs attention");
+    updateFooterStatusLabel("JSON needs attention");
     if ("VALID".equals(statusStateValueLabel.getText())) {
       statusStateValueLabel.setText("INVALID");
     }
@@ -781,7 +785,7 @@ public class MainWindowController implements UiScreenController {
     viewerAidMetaLabel.setText(
         "The selected file exists but does not contain any JSON content to render.");
     outlineStateLabel.setText("The outline minimap cannot render because the file is empty.");
-    footerStatusLabel.setText("The JSON file is empty");
+    updateFooterStatusLabel("The JSON file is empty");
   }
 
   ViewerVisualState currentState() {
@@ -905,7 +909,7 @@ public class MainWindowController implements UiScreenController {
     cancelLargePreviewLoadingAffordance();
     if (throwable != null || result == null) {
       showInvalidState("Unable to load JSON file: " + fileName);
-      footerStatusLabel.setText("JSON load failed");
+      updateFooterStatusLabel("JSON load failed");
       return;
     }
     presentLoadResult(result);
@@ -922,14 +926,14 @@ public class MainWindowController implements UiScreenController {
     cancelLargePreviewLoadingAffordance();
     if (throwable != null) {
       showInvalidState("Unable to reopen history snapshot: " + fileName);
-      footerStatusLabel.setText("History reopen failed");
+      updateFooterStatusLabel("History reopen failed");
       return;
     }
     result.ifPresentOrElse(
         this::presentLoadResult,
         () -> {
           showInvalidState("Stored history snapshot is no longer available.");
-          footerStatusLabel.setText("History snapshot unavailable");
+          updateFooterStatusLabel("History snapshot unavailable");
         });
   }
 
@@ -963,7 +967,7 @@ public class MainWindowController implements UiScreenController {
   private void presentClipboardImportFailure(ClipboardJsonImportResult result) {
     if (workflowService.currentView().isPresent()) {
       restoreViewFromWorkflow();
-      footerStatusLabel.setText(result.message());
+      updateFooterStatusLabel(result.message());
       return;
     }
 
@@ -982,7 +986,7 @@ public class MainWindowController implements UiScreenController {
         "The clipboard stays external until it contains valid JSON that can become a temporary"
             + " local document.");
     outlineStateLabel.setText("Clipboard content did not produce a valid JSON outline.");
-    footerStatusLabel.setText(result.message());
+    updateFooterStatusLabel(result.message());
     setStatusRailValues("INVALID", "--", "--", "Clipboard");
   }
 
@@ -1008,12 +1012,16 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void updateFileNameLabel(String fileName) {
-    fileNameLabel.setText(fileName);
+    typewriterLabelRevealService.reveal(fileNameLabel, fileName);
     if (fileName != null && fileName.length() > FILE_NAME_COMPACT_LENGTH_THRESHOLD) {
       fileNameLabel.setStyle(FILE_NAME_COMPACT_STYLE);
       return;
     }
     fileNameLabel.setStyle("");
+  }
+
+  private void updateFooterStatusLabel(String statusText) {
+    typewriterLabelRevealService.reveal(footerStatusLabel, statusText);
   }
 
   private void updateFileSummary(JsonViewerLoadResult result) {
@@ -1705,7 +1713,7 @@ public class MainWindowController implements UiScreenController {
         result.usesLargePreview() ? false : !presentation.outlineEnabled());
     setValidationBadge(
         presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
-    footerStatusLabel.setText(presentation.footerStatus());
+    updateFooterStatusLabel(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
   }
 
