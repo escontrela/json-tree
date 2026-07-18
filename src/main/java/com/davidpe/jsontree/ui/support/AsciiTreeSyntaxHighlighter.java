@@ -17,7 +17,6 @@ public class AsciiTreeSyntaxHighlighter {
   private static final Pattern NUMBER_PATTERN =
       Pattern.compile("^-?\\d+(\\.\\d+)?([eE][+-]?\\d+)?$");
 
-  private final int textNodeBudget;
   private final SearchHighlightRangeNormalizer highlightRangeNormalizer;
 
   public AsciiTreeSyntaxHighlighter() {
@@ -31,7 +30,6 @@ public class AsciiTreeSyntaxHighlighter {
   AsciiTreeSyntaxHighlighter(
       LargePreviewProperties largePreviewProperties,
       SearchHighlightRangeNormalizer highlightRangeNormalizer) {
-    this.textNodeBudget = Math.max(1, largePreviewProperties.getTextNodeBudget());
     this.highlightRangeNormalizer = highlightRangeNormalizer;
   }
 
@@ -73,21 +71,17 @@ public class AsciiTreeSyntaxHighlighter {
 
           int overlapStart = Math.max(segmentStart, range.startIndex());
           int overlapEnd = Math.min(segmentEnd, range.endIndex());
-          if (overlapStart > localCursor
-              && appendFragment(
-                  fragments,
-                  fragmentForSegment(
-                      sliceSegment(segment, segmentStart, localCursor, overlapStart), false, false))) {
-            return applyPlainTextFallback(content, "tree-default", "#d9dce3");
+          if (overlapStart > localCursor) {
+            fragments.add(
+                fragmentForSegment(
+                    sliceSegment(segment, segmentStart, localCursor, overlapStart), false, false));
           }
-          if (overlapEnd > overlapStart
-              && appendFragment(
-                  fragments,
-                  fragmentForSegment(
-                      sliceSegment(segment, segmentStart, overlapStart, overlapEnd),
-                      true,
-                      range.active()))) {
-            return applyPlainTextFallback(content, "tree-default", "#d9dce3");
+          if (overlapEnd > overlapStart) {
+            fragments.add(
+                fragmentForSegment(
+                    sliceSegment(segment, segmentStart, overlapStart, overlapEnd),
+                    true,
+                    range.active()));
           }
           localCursor = Math.max(localCursor, overlapEnd);
           if (range.endIndex() <= segmentEnd) {
@@ -97,21 +91,16 @@ public class AsciiTreeSyntaxHighlighter {
           break;
         }
 
-        if (localCursor < segmentEnd
-            && appendFragment(
-                fragments,
-                fragmentForSegment(
-                    sliceSegment(segment, segmentStart, localCursor, segmentEnd), false, false))) {
-          return applyPlainTextFallback(content, "tree-default", "#d9dce3");
+        if (localCursor < segmentEnd) {
+          fragments.add(
+              fragmentForSegment(
+                  sliceSegment(segment, segmentStart, localCursor, segmentEnd), false, false));
         }
         cursor = segmentEnd;
       }
 
       if (index < content.length()) {
-        if (appendFragment(
-            fragments, fragmentForSegment(styledSegment("\n", "tree-default"), false, false))) {
-          return applyPlainTextFallback(content, "tree-default", "#d9dce3");
-        }
+        fragments.add(fragmentForSegment(styledSegment("\n", "tree-default"), false, false));
         cursor++;
         lineStart = index + 1;
       }
@@ -137,20 +126,6 @@ public class AsciiTreeSyntaxHighlighter {
       StyledSegment segment, boolean highlighted, boolean activeHighlight) {
     return new ViewerTextRenderFragment(
         segment.text(), segment.styleClass(), segment.colorHex(), highlighted, activeHighlight);
-  }
-
-  private boolean appendFragment(
-      List<ViewerTextRenderFragment> fragments, ViewerTextRenderFragment fragment) {
-    if (fragments.size() >= textNodeBudget) {
-      return true;
-    }
-    fragments.add(fragment);
-    return false;
-  }
-
-  private ViewerTextRenderPlan applyPlainTextFallback(
-      String content, String baseStyleClass, String baseColorHex) {
-    return ViewerTextRenderPlan.guardrailFallback(content, baseStyleClass, baseColorHex);
   }
 
   List<StyledSegment> tokenize(AsciiTreeDocument document) {

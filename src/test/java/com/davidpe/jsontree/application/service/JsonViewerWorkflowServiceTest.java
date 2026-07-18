@@ -238,7 +238,6 @@ class JsonViewerWorkflowServiceTest {
             renderer,
             inspectionModeResolver(2_048_576L),
             largePreviewSessionService(largePreviewStore),
-            new AsciiTreeFullRenderGuard(12),
             Clock.systemUTC());
     Path importedFile = Files.writeString(tempDir.resolve("borderline.json"), "{\"id\":1}");
 
@@ -302,7 +301,6 @@ class JsonViewerWorkflowServiceTest {
             renderer,
             inspectionModeResolver(2_048_576L),
             largePreviewSessionService(largePreviewStore),
-            new AsciiTreeFullRenderGuard(12),
             Clock.systemUTC());
 
     JsonViewerLoadResult result =

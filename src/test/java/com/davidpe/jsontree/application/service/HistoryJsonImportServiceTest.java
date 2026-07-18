@@ -111,7 +111,7 @@ class HistoryJsonImportServiceTest {
   @Test
   void importsOversizedJsonIntoHistoryThroughLargePreviewRendererPath() throws IOException {
     Path largeJson = tempDir.resolve("oversized.json");
-    Files.writeString(largeJson, "{\"payload\":\"012345678901234567890123456789\"}");
+    Files.writeString(largeJson, "{\"payload\":\"" + "0123456789".repeat(140) + "\"}");
     InMemoryHistoryRepository historyRepository = new InMemoryHistoryRepository();
     TrackingRendererPort rendererPort = new TrackingRendererPort();
     JsonViewerWorkflowService workflowService =
@@ -145,7 +145,6 @@ class HistoryJsonImportServiceTest {
         new JsonInspectionModeResolver(properties),
         new LargePreviewSessionService(
             new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
-        new AsciiTreeFullRenderGuard(properties),
         fixedClock());
   }
 

@@ -664,9 +664,6 @@ public class MainWindowController implements UiScreenController {
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
-    if (renderPlan.guardrailApplied()) {
-      footerStatusLabel.setText("Render budget guard active • showing simplified tree");
-    }
   }
 
   public void showEmptyViewer() {
@@ -1812,9 +1809,6 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
-    if (renderPlan.guardrailApplied()) {
-      footerStatusLabel.setText("Render budget guard active • showing simplified raw JSON");
-    }
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {

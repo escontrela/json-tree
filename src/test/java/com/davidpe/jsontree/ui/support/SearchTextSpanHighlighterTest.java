@@ -26,9 +26,8 @@ class SearchTextSpanHighlighterTest {
   }
 
   @Test
-  void fallsBackToSinglePlainTextNodeWhenBudgetWouldBeExceeded() {
+  void keepsSplitHighlightSpansEvenWhenTheLegacyBudgetWouldHaveBeenExceeded() {
     LargePreviewProperties properties = new LargePreviewProperties();
-    properties.setTextNodeBudget(2);
     SearchTextSpanHighlighter highlighter = new SearchTextSpanHighlighter(properties);
     String content = "alpha beta gamma delta";
 
@@ -42,9 +41,13 @@ class SearchTextSpanHighlighterTest {
             "raw-json-text",
             "#2d333a");
 
-    assertTrue(renderPlan.guardrailApplied());
-    assertEquals(1, renderPlan.fragments().size());
-    assertEquals(content, renderPlan.fragments().getFirst().text());
+    assertFalse(renderPlan.guardrailApplied());
+    assertTrue(renderPlan.fragments().size() > 1);
+    assertEquals(
+        content,
+        renderPlan.fragments().stream()
+            .map(ViewerTextRenderFragment::text)
+            .reduce("", String::concat));
   }
 
   @Test

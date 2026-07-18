@@ -21,5 +21,3 @@ json-tree:
     warm-page-radius: 2
     preview-max-depth: 8
     preview-max-children-per-container: 64
-    # Hard-stop JavaFX text-node growth well before the viewer can freeze or exhaust heap.
-    text-node-budget: 12000

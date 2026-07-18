@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class SearchTextSpanHighlighter {
 
-  private final int textNodeBudget;
   private final SearchHighlightRangeNormalizer highlightRangeNormalizer;
 
   public SearchTextSpanHighlighter() {
@@ -21,7 +20,6 @@ public class SearchTextSpanHighlighter {
   SearchTextSpanHighlighter(
       LargePreviewProperties largePreviewProperties,
       SearchHighlightRangeNormalizer highlightRangeNormalizer) {
-    this.textNodeBudget = Math.max(1, largePreviewProperties.getTextNodeBudget());
     this.highlightRangeNormalizer = highlightRangeNormalizer;
   }
 
@@ -40,33 +38,29 @@ public class SearchTextSpanHighlighter {
     int cursor = 0;
     for (SearchHighlightRange range : orderedRanges) {
       if (range.startIndex() > cursor) {
-        if (appendFragment(
-            fragments,
-            buildFragment(content.substring(cursor, range.startIndex()), baseStyleClass, baseColorHex, false, false))) {
-          return applyPlainTextFallback(content, baseStyleClass, baseColorHex);
-        }
+        fragments.add(
+            buildFragment(
+                content.substring(cursor, range.startIndex()),
+                baseStyleClass,
+                baseColorHex,
+                false,
+                false));
       }
       if (range.endIndex() > range.startIndex()) {
-        if (appendFragment(
-            fragments,
+        fragments.add(
             buildFragment(
                 content.substring(range.startIndex(), range.endIndex()),
                 baseStyleClass,
                 baseColorHex,
                 true,
-                range.active()))) {
-          return applyPlainTextFallback(content, baseStyleClass, baseColorHex);
-        }
+                range.active()));
       }
       cursor = Math.max(cursor, range.endIndex());
     }
 
     if (cursor < content.length()) {
-      if (appendFragment(
-          fragments,
-          buildFragment(content.substring(cursor), baseStyleClass, baseColorHex, false, false))) {
-        return applyPlainTextFallback(content, baseStyleClass, baseColorHex);
-      }
+      fragments.add(
+          buildFragment(content.substring(cursor), baseStyleClass, baseColorHex, false, false));
     }
     return ViewerTextRenderPlan.normal(fragments);
   }
@@ -80,17 +74,4 @@ public class SearchTextSpanHighlighter {
     return new ViewerTextRenderFragment(textValue, baseStyleClass, colorHex, highlighted, active);
   }
 
-  private boolean appendFragment(
-      List<ViewerTextRenderFragment> fragments, ViewerTextRenderFragment fragment) {
-    if (fragments.size() >= textNodeBudget) {
-      return true;
-    }
-    fragments.add(fragment);
-    return false;
-  }
-
-  private ViewerTextRenderPlan applyPlainTextFallback(
-      String content, String baseStyleClass, String baseColorHex) {
-    return ViewerTextRenderPlan.guardrailFallback(content, baseStyleClass, baseColorHex);
-  }
 }
