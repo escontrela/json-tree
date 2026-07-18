@@ -2,3 +2,4 @@
 target/
 .idea/
 *.iml
+app-data/history/*.json

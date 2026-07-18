@@ -5,7 +5,7 @@
   "sizeBytes" : 1567,
   "lineCount" : 68,
   "valid" : true,
-  "favorite" : true
+  "favorite" : false
 }, {
   "storedName" : "2026-05-27_15-14-20_test.json",
   "originalName" : "test.json",
@@ -29,7 +29,7 @@
   "sizeBytes" : 9960,
   "lineCount" : 274,
   "valid" : true,
-  "favorite" : true
+  "favorite" : false
 }, {
   "storedName" : "2026-07-03_00-08-18_clipboard-2026-07-03_00-08-18.json",
   "originalName" : "clipboard-2026-07-03_00-08-18.json",
@@ -45,7 +45,7 @@
   "sizeBytes" : 188,
   "lineCount" : 10,
   "valid" : true,
-  "favorite" : true
+  "favorite" : false
 }, {
   "storedName" : "2026-07-04_10-54-35_Chess-Game-Dataset_1-level_12-MB_minified.json",
   "originalName" : "Chess-Game-Dataset_1-level_12-MB_minified.json",
@@ -68,6 +68,30 @@
   "importedAt" : 1783155630.095207000,
   "sizeBytes" : 10001,
   "lineCount" : 290,
+  "valid" : true,
+  "favorite" : false
+}, {
+  "storedName" : "2026-07-19_01-16-02_za-reader-v1.json",
+  "originalName" : "za-reader-v1.json",
+  "importedAt" : 1784416562.079321000,
+  "sizeBytes" : 147604,
+  "lineCount" : 1874,
+  "valid" : true,
+  "favorite" : true
+}, {
+  "storedName" : "2026-07-19_01-16-55_za-reader-pdp.json",
+  "originalName" : "za-reader-pdp.json",
+  "importedAt" : 1784416615.310684000,
+  "sizeBytes" : 298786,
+  "lineCount" : 2906,
+  "valid" : true,
+  "favorite" : true
+}, {
+  "storedName" : "2026-07-19_01-17-00_za-navigat-menu.json",
+  "originalName" : "za-navigat-menu.json",
+  "importedAt" : 1784416620.179161000,
+  "sizeBytes" : 56519990,
+  "lineCount" : 2061,
   "valid" : true,
   "favorite" : true
 } ]

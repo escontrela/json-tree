@@ -3,6 +3,8 @@ package com.davidpe.jsontree.ui.support;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import javafx.beans.value.ChangeListener;
 import javafx.geometry.Pos;
 import javafx.scene.layout.StackPane;
 import org.fxmisc.flowless.VirtualizedScrollPane;
@@ -22,8 +24,10 @@ public final class RichTextViewerSurface {
 
   private final CodeArea codeArea;
   private final StackPane container;
+  private final RichTextViewportScrollResolver viewportScrollResolver;
 
   RichTextViewerSurface() {
+    this.viewportScrollResolver = new RichTextViewportScrollResolver();
     this.codeArea = new CodeArea();
     this.codeArea.setEditable(false);
     this.codeArea.setWrapText(false);
@@ -122,6 +126,36 @@ public final class RichTextViewerSurface {
     int clampedOffset = Math.max(0, Math.min(offset, codeArea.getLength()));
     codeArea.moveTo(clampedOffset);
     codeArea.requestFollowCaret();
+  }
+
+  public double verticalScrollValue() {
+    Double estimatedScrollY = codeArea.estimatedScrollYProperty().getValue();
+    return viewportScrollResolver.scrollValue(
+        estimatedScrollY == null ? 0.0 : estimatedScrollY,
+        viewportHeight(),
+        totalContentHeightEstimate());
+  }
+
+  public double viewportHeight() {
+    return Math.max(0.0, codeArea.getViewportHeight());
+  }
+
+  public double totalContentHeightEstimate() {
+    Double estimate = codeArea.totalHeightEstimateProperty().getValue();
+    return estimate == null ? 0.0 : Math.max(0.0, estimate);
+  }
+
+  public void scrollToVerticalValue(double scrollValue) {
+    codeArea.scrollYToPixel(
+        viewportScrollResolver.scrollOffset(scrollValue, viewportHeight(), totalContentHeightEstimate()));
+  }
+
+  public void addViewportChangeListener(Runnable listener) {
+    Objects.requireNonNull(listener, "listener must not be null");
+    ChangeListener<Number> metricsListener = (unused, oldValue, newValue) -> listener.run();
+    codeArea.estimatedScrollYProperty().addListener(metricsListener);
+    codeArea.totalHeightEstimateProperty().addListener(metricsListener);
+    codeArea.heightProperty().addListener(metricsListener);
   }
 
   private void applyContentStyleClass(String contentStyleClass) {
