@@ -869,6 +869,7 @@ public class MainWindowController implements UiScreenController {
     hideLargePreviewDocumentScrollShell();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
+    preparePresentationStateForIncomingDocument();
     resetToolbarForNonRenderableState();
     showFileWarningIcon(false);
     updateFileNameLabel(fileName);
@@ -897,7 +898,6 @@ public class MainWindowController implements UiScreenController {
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
-    resetPresentationState();
     applyState(ViewerVisualState.LOADING);
     hideBreadcrumbLabel();
   }
@@ -2097,6 +2097,11 @@ public class MainWindowController implements UiScreenController {
         .ifPresent(
             result -> {
               currentPresentationMode = normalizePresentationMode(targetMode, result);
+              if (currentPresentationMode == ViewerPresentationMode.STRUCTURE) {
+                searchWorkflowService.clear();
+                hideSearchModal();
+                syncActiveSearchStrip();
+              }
               renderCurrentPresentation(result);
             });
   }
@@ -2136,14 +2141,17 @@ public class MainWindowController implements UiScreenController {
               structureButton.setText("ASCII tree");
               currentPresentationMode = ViewerPresentationMode.STRUCTURE;
               updateFooterStatusLabel("Rendered " + document.lineCount() + " structure lines");
-              statusStateValueLabel.setText("STRUCTURE");
+              setStatusRailValues(
+                  "STRUCTURE",
+                  ByteSizeFormatter.format(result.importResult().sizeBytes()),
+                  Integer.toString(document.lineCount()),
+                  sourceLabel(result.importResult().sourceKind()));
               resetOutlineModel();
               showOutlineShellState(
                   "Outline unavailable",
                   "Structure mode keeps the outline disabled in this iteration.",
                   "Return to ASCII tree or Raw JSON to restore outline interactions.",
                   null);
-              setOutlinePanelVisible(false);
               applyState(ViewerVisualState.VALID);
               hideBreadcrumbLabel();
             },
@@ -2200,6 +2208,16 @@ public class MainWindowController implements UiScreenController {
 
   private void resetPresentationState() {
     currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
+    rawJsonButton.setText("Raw JSON");
+    structureButton.setText("Structure");
+    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+    resetStructureDocument();
+  }
+
+  private void preparePresentationStateForIncomingDocument() {
+    if (currentPresentationMode != ViewerPresentationMode.STRUCTURE) {
+      currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
+    }
     rawJsonButton.setText("Raw JSON");
     structureButton.setText("Structure");
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});

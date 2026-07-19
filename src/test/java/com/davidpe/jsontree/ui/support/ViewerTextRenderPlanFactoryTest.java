@@ -34,4 +34,15 @@ class ViewerTextRenderPlanFactoryTest {
     assertEquals("raw-json-text", renderPlan.fragments().getFirst().styleClass());
     assertTrue(renderPlan.fragments().stream().anyMatch(ViewerTextRenderFragment::highlighted));
   }
+
+  @Test
+  void buildsStructurePlansThroughTheSameAsciiPipelineWithoutSearchHighlights() {
+    ViewerTextRenderPlan renderPlan =
+        factory.buildAsciiPlan(
+            new AsciiTreeDocument("root", "root\n└─ users []\n   └─ [0]\n      └─ name", 4),
+            List.of());
+
+    assertEquals("tree-structure", renderPlan.fragments().getFirst().styleClass());
+    assertTrue(renderPlan.fragments().stream().noneMatch(ViewerTextRenderFragment::highlighted));
+  }
 }
