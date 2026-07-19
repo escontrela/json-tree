@@ -3,6 +3,7 @@ package com.davidpe.jsontree.application.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.CurlCommandSource;
@@ -145,6 +146,34 @@ class CurlDocumentImportServiceTest {
         result.message());
   }
 
+  @Test
+  void repeatedImportsCreateDistinctHistoryEntriesForTheSameCurl() {
+    RecordingHistoryRepository repository = new RecordingHistoryRepository();
+    CurlDocumentImportService service =
+        new CurlDocumentImportService(
+            request ->
+                CurlExecutionResult.success(
+                    200,
+                    request.url(),
+                    Map.of("Content-Type", List.of("application/json; charset=UTF-8")),
+                    "{\"id\":1}".getBytes(StandardCharsets.UTF_8),
+                    "application/json",
+                    "UTF-8"),
+            viewerWorkflowService(repository),
+            fixedClock(),
+            tempDir);
+
+    CurlDocumentImportResult first = service.importRequest(sampleRequest());
+    CurlDocumentImportResult second = service.importRequest(sampleRequest());
+
+    assertTrue(first.successful());
+    assertTrue(second.successful());
+    assertEquals(2, repository.savedEntries.size());
+    assertNotEquals(
+        first.loadResult().importResult().fileName(), second.loadResult().importResult().fileName());
+    assertEquals(sampleRequest().rawCommand(), repository.savedEntries.getLast().curlCommand());
+  }
+
   private CurlExecutionRequest sampleRequest() {
     return new CurlExecutionRequest(
         "curl https://example.com/items",
@@ -177,6 +206,7 @@ class CurlDocumentImportServiceTest {
   private static final class RecordingHistoryRepository implements JsonHistoryRepository {
 
     private ImportedJsonFile lastSaved;
+    private final java.util.LinkedList<ImportedJsonFile> savedEntries = new java.util.LinkedList<>();
 
     @Override
     public List<ImportedJsonFile> findAll() {
@@ -201,6 +231,7 @@ class CurlDocumentImportServiceTest {
     @Override
     public void save(ImportedJsonFile importedJsonFile, String jsonContent) {
       this.lastSaved = importedJsonFile;
+      this.savedEntries.add(importedJsonFile);
     }
 
     @Override

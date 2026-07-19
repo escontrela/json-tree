@@ -97,6 +97,9 @@
 - Supported curl responses are materialized into temporary local `.json` or `.md` files and then reopened through the ordinary viewer and history workflow instead of forking a second remote-document subsystem.
 - Persisted history metadata now keeps the original source kind plus the normalized curl command when the entry came from a remote fetch, while older history metadata still defaults safely back to ordinary local-file provenance.
 - Inline history, the dedicated history screen, and reopened snapshots now make curl provenance explicit with compact `curl fetch` source cues without changing favorites, delete, search-by-name, or reopen behavior.
+- The history screen now exposes a reusable `New curl` modal entry point so manual curl commands can be typed or pasted without going through clipboard or drag-and-drop first.
+- Curl-backed history rows now expose `Edit curl`, which reopens the same reusable modal prefilled with the stored original curl command for safe manual reruns.
+- Submitting the modal reuses the same parser, Java transport, response materialization, and history persistence workflow as clipboard and dropped-file curls, so rerunning the same request always creates a fresh snapshot instead of mutating the old one.
 
 ## BMW Theme Tokens
 
