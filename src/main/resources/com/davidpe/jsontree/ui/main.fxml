@@ -21,7 +21,7 @@
             <VBox spacing="8.0">
                 <Label styleClass="eyebrow-label" text="Workspace" />
                 <Label styleClass="app-title" text="JSON → TREE" />
-                <Label styleClass="hero-support" text="Inspect JSON as a structured ASCII tree with a persistent utility rail and primary viewer workspace." wrapText="true" />
+                <Label styleClass="hero-support" text="Inspect JSON and Markdown with a persistent utility rail and primary viewer workspace." wrapText="true" />
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
@@ -180,11 +180,11 @@
                 <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
             </padding>
             <Label styleClass="eyebrow-label" text="Outline" />
-            <Label fx:id="viewerAidTitleLabel" styleClass="viewer-aid-title" text="Awaiting JSON" />
+            <Label fx:id="viewerAidTitleLabel" styleClass="viewer-aid-title" text="Awaiting document" />
             <StackPane fx:id="outlinePreviewShell" minHeight="260.0" prefHeight="360.0" styleClass="outline-preview-shell" VBox.vgrow="ALWAYS">
                 <Canvas fx:id="outlineCanvas" mouseTransparent="true" />
                 <Region fx:id="outlineViewportMarker" managed="false" mouseTransparent="true" styleClass="outline-viewport-marker" visible="false" />
-                <Label fx:id="outlineStateLabel" styleClass="outline-state-label" text="Load a local JSON file to prepare the outline minimap shell." wrapText="true" />
+                <Label fx:id="outlineStateLabel" styleClass="outline-state-label" text="Load a local JSON or Markdown file to prepare the outline minimap shell." wrapText="true" />
             </StackPane>
             <Label fx:id="viewerAidMetaLabel" styleClass="viewer-aid-meta" text="The panel keeps a dedicated minimap shell ready for the active document." wrapText="true" />
         </VBox>

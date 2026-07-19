@@ -45,4 +45,15 @@ class ViewerTextRenderPlanFactoryTest {
     assertEquals("tree-structure", renderPlan.fragments().getFirst().styleClass());
     assertTrue(renderPlan.fragments().stream().noneMatch(ViewerTextRenderFragment::highlighted));
   }
+
+  @Test
+  void buildsMarkdownPlansThroughTheSharedPipeline() {
+    ViewerTextRenderPlan renderPlan =
+        factory.buildMarkdownPlan(
+            "# Heading\n- item\n> quote\n",
+            List.of(new SearchHighlightRange(2, 9, true)));
+
+    assertEquals("markdown-heading", renderPlan.fragments().getFirst().styleClass());
+    assertTrue(renderPlan.fragments().stream().anyMatch(ViewerTextRenderFragment::highlighted));
+  }
 }

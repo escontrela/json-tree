@@ -27,7 +27,7 @@ public class JsonSearchWorkflowService {
   public JsonSearchExecutionResult activateSearch(String sourceIdentity, String rawQuery) {
     String sourceText = viewerWorkflowService.currentViewRawJson().orElse(null);
     if (sourceText == null || sourceText.isBlank()) {
-      return JsonSearchExecutionResult.failure("No JSON source is available for search.");
+      return JsonSearchExecutionResult.failure("No source text is available for search.");
     }
     JsonSearchExecutionResult result =
         regexTextSearchService.search(sourceIdentity, rawQuery, sourceText);

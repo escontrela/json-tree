@@ -776,9 +776,36 @@
     -fx-font-size: 14px;
 }
 
+.markdown-content {
+    -fx-font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+    -fx-font-size: 14px;
+}
+
 .text.raw-json-text,
 .rich-text-viewer .raw-json-text {
     -fx-fill: #2d333a;
+}
+
+.text.markdown-heading,
+.rich-text-viewer .markdown-heading {
+    -fx-fill: #123e72;
+    -fx-font-weight: 700;
+}
+
+.text.markdown-list,
+.rich-text-viewer .markdown-list {
+    -fx-fill: #2d333a;
+}
+
+.text.markdown-quote,
+.rich-text-viewer .markdown-quote {
+    -fx-fill: #5f6c79;
+    -fx-font-style: italic;
+}
+
+.text.markdown-fence,
+.rich-text-viewer .markdown-fence {
+    -fx-fill: #1c69d4;
 }
 
 .rich-text-viewer .search-match {

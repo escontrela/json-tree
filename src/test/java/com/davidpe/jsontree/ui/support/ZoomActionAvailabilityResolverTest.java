@@ -7,6 +7,7 @@ import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
@@ -45,6 +46,7 @@ class ZoomActionAvailabilityResolverTest {
   void enablesZoomForValidFullAndLargePreviewDocuments() {
     assertTrue(resolver.shouldEnable(renderableResult(JsonInspectionMode.FULL)));
     assertTrue(resolver.shouldEnable(renderableResult(JsonInspectionMode.LARGE_PREVIEW)));
+    assertTrue(resolver.shouldEnable(markdownResult()));
   }
 
   private JsonViewerLoadResult renderableResult(JsonInspectionMode mode) {
@@ -64,6 +66,25 @@ class ZoomActionAvailabilityResolverTest {
         mode == JsonInspectionMode.LARGE_PREVIEW
             ? JsonViewerCapabilities.largePreview()
             : JsonViewerCapabilities.full(),
+        null);
+  }
+
+  private JsonViewerLoadResult markdownResult() {
+    return new JsonViewerLoadResult(
+        new JsonImportResult(
+            Path.of("/tmp/readme.md"),
+            "readme.md",
+            1024L,
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.LOCAL_FILE,
+            DocumentFormat.MARKDOWN),
+        new JsonValidationResult(JsonValidationStatus.VALID, "Markdown ready", null, null),
+        new AsciiTreeDocument("readme.md", "# Heading\n\ncontent", 3),
+        null,
+        JsonInspectionMode.FULL,
+        new JsonViewerCapabilities(true, true, true),
         null);
   }
 }

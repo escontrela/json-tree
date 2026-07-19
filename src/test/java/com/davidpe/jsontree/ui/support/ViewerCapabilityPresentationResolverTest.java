@@ -8,6 +8,7 @@ import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
@@ -92,6 +93,21 @@ class ViewerCapabilityPresentationResolverTest {
     assertFalse(presentation.outlineEnabled());
   }
 
+  @Test
+  void resolvesMarkdownPresentationAsRawOnlyWithOutlineAndSearch() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(markdownResult(), ViewerPresentationMode.RAW_JSON);
+
+    assertFalse(presentation.rawJsonEnabled());
+    assertFalse(presentation.structureEnabled());
+    assertTrue(presentation.searchEnabled());
+    assertTrue(presentation.outlineEnabled());
+    assertEquals("Copy raw", presentation.copyButtonText());
+    assertEquals("Markdown", presentation.validationBadgeText());
+    assertEquals("MARKDOWN", presentation.statusState());
+    assertTrue(presentation.footerStatus().contains("markdown lines"));
+  }
+
   private JsonViewerLoadResult fullResult() {
     return new JsonViewerLoadResult(
         new JsonImportResult(
@@ -144,6 +160,25 @@ class ViewerCapabilityPresentationResolverTest {
         null,
         JsonInspectionMode.FULL,
         JsonViewerCapabilities.full(),
+        null);
+  }
+
+  private JsonViewerLoadResult markdownResult() {
+    return new JsonViewerLoadResult(
+        new JsonImportResult(
+            Path.of("/tmp/readme.md"),
+            "readme.md",
+            256,
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.LOCAL_FILE,
+            DocumentFormat.MARKDOWN),
+        new JsonValidationResult(JsonValidationStatus.VALID, "Markdown ready.", null, null),
+        new AsciiTreeDocument("readme.md", "# Heading\n\ncontent", 3),
+        null,
+        JsonInspectionMode.FULL,
+        new JsonViewerCapabilities(true, true, true),
         null);
   }
 }

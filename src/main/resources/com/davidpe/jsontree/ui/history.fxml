@@ -17,7 +17,7 @@
             <HBox alignment="CENTER_LEFT" spacing="16.0" styleClass="header-bar">
                 <VBox spacing="8.0">
                     <Label styleClass="eyebrow-label" text="Local archive" />
-                    <Label styleClass="app-title" text="JSON History" />
+                    <Label styleClass="app-title" text="Inspection History" />
                     <Label styleClass="hero-support" text="Review previous inspections, reopen stored trees, and manage local snapshots." wrapText="true" />
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
@@ -52,14 +52,14 @@
                     <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="viewer-card-header">
                         <VBox spacing="6.0">
                             <Label styleClass="eyebrow-label" text="Timeline" />
-                            <Label styleClass="viewer-card-title" text="Stored JSON inspections" />
+                            <Label styleClass="viewer-card-title" text="Stored inspections" />
                         </VBox>
                         <HBox fx:id="storedInspectionsRegion" alignment="CENTER_RIGHT" spacing="8.0" HBox.hgrow="ALWAYS">
                             <HBox fx:id="historySearchControlsBox" alignment="CENTER_RIGHT" spacing="8.0">
-                                <TextField fx:id="historySearchField" onAction="#executeHistorySearch" prefWidth="220.0" promptText="Search stored JSON" styleClass="history-search-field" />
+                                <TextField fx:id="historySearchField" onAction="#executeHistorySearch" prefWidth="220.0" promptText="Search stored documents" styleClass="history-search-field" />
                                 <Button fx:id="historySearchButton" mnemonicParsing="false" onAction="#executeHistorySearch" styleClass="ghost-button history-search-button" text="Search" />
                             </HBox>
-                            <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="history-import-button" text="Import JSON" />
+                            <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="history-import-button" text="Import file" />
                             <Button fx:id="favoritesFilterButton" mnemonicParsing="false" onAction="#toggleFavoritesOnly" styleClass="ghost-button history-filter-button" text="Favorites only" />
                         </HBox>
                     </HBox>

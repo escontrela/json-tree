@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +10,7 @@ public class ViewerCapabilityPresentationResolver {
 
   public ViewerCapabilityPresentation resolve(
       JsonViewerLoadResult result, ViewerPresentationMode presentationMode) {
+    DocumentFormat documentFormat = result.importResult().documentFormat();
     if (result.usesLargePreview()) {
       return new ViewerCapabilityPresentation(
           false,
@@ -18,12 +20,34 @@ public class ViewerCapabilityPresentationResolver {
           "Copy preview",
           "Preview",
           "status-accent",
-          " • byte-paged large preview",
-          "Showing the current large-file page as a raw byte chunk",
+          documentFormat.markdown()
+              ? " • byte-paged large preview • markdown"
+              : " • byte-paged large preview",
+          documentFormat.markdown()
+              ? "Showing the current large-file page as a raw Markdown chunk"
+              : "Showing the current large-file page as a raw byte chunk",
           "PREVIEW",
           "Outline unavailable",
           "Large preview disables the outline and minimap while the viewer stays focused on the active page chunk.",
           "Large preview stays locked to the active page raw view. Regex search stays disabled.");
+    }
+
+    if (documentFormat.markdown()) {
+      int renderedLines = result.asciiTreeDocument() == null ? 0 : result.asciiTreeDocument().lineCount();
+      return new ViewerCapabilityPresentation(
+          false,
+          false,
+          result.capabilities().searchAvailable(),
+          result.capabilities().outlineAvailable(),
+          "Copy raw",
+          "Markdown",
+          "status-accent",
+          "",
+          "Rendered " + renderedLines + " markdown lines",
+          "MARKDOWN",
+          "Markdown outline",
+          "The Markdown outline follows heading anchors when available and falls back to source segments otherwise.",
+          "Markdown stays in raw-source mode. Structure stays unavailable while regex search and outline remain active.");
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;

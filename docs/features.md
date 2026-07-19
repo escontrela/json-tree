@@ -6,6 +6,20 @@
 - Import metadata is normalized into a workflow-friendly result object with absolute path, filename, size, and basic availability flags.
 - JavaFX controllers are expected to consume the use case result instead of reading file metadata directly from the filesystem.
 
+## Markdown Document Support
+
+- The import boundary now accepts `.md` files alongside `.json` and classifies the source once into an explicit document format before the rest of the workflow runs.
+- Markdown follows the same main import, drag-and-drop, file-chooser, history, reopen, copy, and zoom flows as JSON where raw-text inspection makes sense, without forking controller logic on file extensions.
+- Non-empty Markdown opens directly in a raw-source presentation through the shared RichTextFX viewer pipeline; it does not run JSON validation or ASCII-tree rendering.
+- Empty Markdown files surface through the same empty-document UX channel as JSON empties, while unreadable files still fail through the existing safe load path.
+- Markdown history entries stay in the same filesystem-backed archive as JSON snapshots, preserve their `.md` stored extension, and default safely back to `JSON` when legacy metadata lacks the new format field.
+- The history rail and dedicated history screen now label Markdown entries as Markdown instead of pretending they are `Valid JSON`, while filename, timestamp, size, favorites, delete, and search-by-name behavior stay shared.
+- Markdown raw rendering keeps the original source text byte-for-byte while applying lightweight source-centric styling for headings, list markers, block quotes, and fenced-code delimiters.
+- Markdown reuses the main raw-text regex search and copy workflows. Search highlights only matched fragments, clear/reset removes stale state, and zoom mirrors the same Markdown raw presentation.
+- For non-large Markdown files, the outline rail stays active through a dedicated heading-based outline model. ATX headings become anchors with preserved depth and source-line positions, and heading-less documents fall back to compact source-line anchors so the minimap remains usable.
+- Clicking the Markdown minimap moves the raw viewer to the corresponding heading or fallback anchor, while ordinary viewer scrolling continues to update the minimap viewport marker through the shared outline shell.
+- Large Markdown files reuse the existing byte-paged `LARGE_PREVIEW` raw workflow instead of trying to fully materialize an unsupported tree. In that mode, Markdown follows the same current product rule as other large previews: raw page available, search and outline disabled.
+
 ## Validation States
 
 - JSON validation is delegated to a dedicated service boundary backed by Jackson parsing.

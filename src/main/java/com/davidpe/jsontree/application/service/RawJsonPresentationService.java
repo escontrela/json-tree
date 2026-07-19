@@ -35,6 +35,13 @@ public class RawJsonPresentationService {
     }
   }
 
+  public RawJsonPresentation presentPlainText(String rawText) {
+    if (rawText == null || rawText.isEmpty()) {
+      return new RawJsonPresentation("", new int[] {0});
+    }
+    return new RawJsonPresentation(rawText, identityBoundaries(rawText.length()));
+  }
+
   public RawJsonPresentation presentLargePreviewChunk(
       String rawJson, boolean prettyOnLargePreviewEnabled) {
     if (rawJson == null || rawJson.isEmpty()) {

@@ -16,12 +16,28 @@ public class ViewerTextRenderPlanFactory {
 
   private final AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter;
   private final SearchTextSpanHighlighter searchTextSpanHighlighter;
+  private final MarkdownTextSyntaxHighlighter markdownTextSyntaxHighlighter;
+  private final ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay;
+
+  public ViewerTextRenderPlanFactory(
+      AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter,
+      SearchTextSpanHighlighter searchTextSpanHighlighter,
+      MarkdownTextSyntaxHighlighter markdownTextSyntaxHighlighter,
+      ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay) {
+    this.asciiTreeSyntaxHighlighter = asciiTreeSyntaxHighlighter;
+    this.searchTextSpanHighlighter = searchTextSpanHighlighter;
+    this.markdownTextSyntaxHighlighter = markdownTextSyntaxHighlighter;
+    this.renderPlanSearchOverlay = renderPlanSearchOverlay;
+  }
 
   public ViewerTextRenderPlanFactory(
       AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter,
       SearchTextSpanHighlighter searchTextSpanHighlighter) {
-    this.asciiTreeSyntaxHighlighter = asciiTreeSyntaxHighlighter;
-    this.searchTextSpanHighlighter = searchTextSpanHighlighter;
+    this(
+        asciiTreeSyntaxHighlighter,
+        searchTextSpanHighlighter,
+        new MarkdownTextSyntaxHighlighter(),
+        new ViewerTextRenderPlanSearchOverlay(new SearchHighlightRangeNormalizer()));
   }
 
   public ViewerTextRenderPlan buildAsciiPlan(
@@ -33,5 +49,11 @@ public class ViewerTextRenderPlanFactory {
       String content, List<SearchHighlightRange> highlightRanges) {
     return searchTextSpanHighlighter.buildRenderPlan(
         content, highlightRanges, RAW_JSON_BASE_STYLE_CLASS, RAW_JSON_BASE_COLOR);
+  }
+
+  public ViewerTextRenderPlan buildMarkdownPlan(
+      String content, List<SearchHighlightRange> highlightRanges) {
+    ViewerTextRenderPlan basePlan = markdownTextSyntaxHighlighter.buildRenderPlan(content);
+    return renderPlanSearchOverlay.apply(basePlan, highlightRanges);
   }
 }

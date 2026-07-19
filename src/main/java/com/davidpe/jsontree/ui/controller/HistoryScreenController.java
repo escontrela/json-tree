@@ -337,7 +337,10 @@ public class HistoryScreenController implements UiScreenController {
               + " • "
               + ByteSizeFormatter.format(item.sizeBytes())
               + " • "
-              + (item.valid() ? "VALID" : "INVALID"));
+              + historyDocumentLabel(item)
+              + " • "
+              + item.lineCount()
+              + " lines");
       HistoryFavoritePresentation favoritePresentation =
           historyFavoritePresentationResolver.resolve(item);
       titleLabel.setText(favoritePresentation.title());
@@ -365,5 +368,12 @@ public class HistoryScreenController implements UiScreenController {
       }
       return false;
     }
+  }
+
+  private String historyDocumentLabel(ImportedJsonFile item) {
+    if (item.documentFormat().markdown()) {
+      return "Markdown";
+    }
+    return item.valid() ? "JSON" : "Invalid JSON";
   }
 }
