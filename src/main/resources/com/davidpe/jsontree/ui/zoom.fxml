@@ -18,6 +18,7 @@
             <VBox spacing="4.0">
                 <Label fx:id="zoomModeLabel" styleClass="eyebrow-label" text="Zoom viewer" />
                 <Label fx:id="zoomTitleLabel" styleClass="viewer-card-title" text="Expanded reading surface" />
+                <Label fx:id="zoomMetaLabel" styleClass="file-meta" managed="false" visible="false" wrapText="true" />
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <Button mnemonicParsing="false" onAction="#closeWindow" styleClass="ghost-button" text="Close" />
@@ -28,6 +29,7 @@
             <padding>
                 <Insets bottom="24.0" left="24.0" right="24.0" top="24.0" />
             </padding>
+            <StackPane fx:id="zoomViewerHost" managed="false" visible="false" />
             <Label fx:id="zoomStateLabel" styleClass="empty-state zoom-window-empty-state" text="The current JSON presentation will appear here once the zoom viewer content is wired." wrapText="true" />
         </StackPane>
     </center>

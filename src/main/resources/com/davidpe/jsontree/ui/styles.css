@@ -116,6 +116,16 @@
     -fx-background-color: #ffffff;
 }
 
+.zoom-window-viewer-shell > .rich-text-viewer-shell {
+    -fx-background-color: #ffffff;
+}
+
+.zoom-window-viewer-shell > .rich-text-viewer-shell,
+.zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll,
+.zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll > .viewport {
+    -fx-background-color: #ffffff;
+}
+
 .zoom-window-empty-state {
     -fx-max-width: 520;
     -fx-text-alignment: center;

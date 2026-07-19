@@ -13,7 +13,9 @@ import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
+import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
+import com.davidpe.jsontree.ui.support.ZoomViewerSnapshotFactory;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -48,6 +50,8 @@ class MainWindowZoomActionTest {
             null,
             new ZoomActionAvailabilityResolver(),
             coordinator,
+            new ZoomViewerStateBridge(),
+            new ZoomViewerSnapshotFactory(),
             null);
 
     controller.openZoomViewer();
@@ -83,6 +87,8 @@ class MainWindowZoomActionTest {
             null,
             new ZoomActionAvailabilityResolver(),
             coordinator,
+            new ZoomViewerStateBridge(),
+            new ZoomViewerSnapshotFactory(),
             null);
 
     controller.openZoomViewer();
