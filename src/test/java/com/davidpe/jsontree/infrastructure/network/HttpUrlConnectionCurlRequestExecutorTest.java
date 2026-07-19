@@ -9,6 +9,7 @@ import com.davidpe.jsontree.application.model.CurlCommandSource;
 import com.davidpe.jsontree.application.model.CurlExecutionHeader;
 import com.davidpe.jsontree.application.model.CurlExecutionRequest;
 import com.davidpe.jsontree.application.model.CurlExecutionResult;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,7 +52,35 @@ class HttpUrlConnectionCurlRequestExecutorTest {
     assertEquals("application/json", result.contentType());
     assertEquals("utf-8", result.charsetName());
     assertEquals("demo", connection.requestProperties().get("X-Test"));
+    assertEquals(
+        LargePreviewSettingsSnapshot.DEFAULT_CURL_USER_AGENT,
+        connection.requestProperties().get("User-Agent"));
     assertArrayEquals("{\"ok\":true}".getBytes(StandardCharsets.UTF_8), result.responseBody());
+  }
+
+  @Test
+  void preservesExplicitUserAgentWhenCurlAlreadyProvidesOne() {
+    RecordingHttpURLConnection connection =
+        new RecordingHttpURLConnection(
+            200,
+            "application/json; charset=UTF-8",
+            "{\"ok\":true}".getBytes(StandardCharsets.UTF_8),
+            Map.of("Content-Type", List.of("application/json; charset=UTF-8")));
+    HttpUrlConnectionCurlRequestExecutor executor =
+        new FakeExecutor(new ArrayDeque<>(List.of(connection)), () -> "Fallback UA");
+    CurlExecutionRequest request =
+        new CurlExecutionRequest(
+            "curl -H 'User-Agent: explicit' http://localhost/test",
+            CurlCommandSource.clipboard(),
+            URI.create("http://localhost/test"),
+            "GET",
+            false,
+            List.of(new CurlExecutionHeader("User-Agent", "explicit")),
+            "");
+
+    executor.execute(request);
+
+    assertEquals("explicit", connection.requestProperties().get("User-Agent"));
   }
 
   @Test
@@ -118,6 +147,13 @@ class HttpUrlConnectionCurlRequestExecutorTest {
     private final Deque<RecordingHttpURLConnection> connections;
 
     private FakeExecutor(Deque<RecordingHttpURLConnection> connections) {
+      this(connections, () -> LargePreviewSettingsSnapshot.DEFAULT_CURL_USER_AGENT);
+    }
+
+    private FakeExecutor(
+        Deque<RecordingHttpURLConnection> connections,
+        java.util.function.Supplier<String> defaultUserAgentSupplier) {
+      super(defaultUserAgentSupplier);
       this.connections = connections;
     }
 

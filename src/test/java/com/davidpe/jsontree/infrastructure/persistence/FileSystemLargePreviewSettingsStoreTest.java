@@ -25,7 +25,7 @@ class FileSystemLargePreviewSettingsStoreTest {
   void savesAndLoadsSettingsRoundTrip() {
     FileSystemLargePreviewSettingsStore store = new FileSystemLargePreviewSettingsStore(properties());
     LargePreviewSettingsSnapshot snapshot =
-        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true, true);
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, "Chrome UA", true, true);
 
     store.save(snapshot);
 
@@ -35,7 +35,7 @@ class FileSystemLargePreviewSettingsStoreTest {
   @Test
   void persistedSettingsRemainAvailableForANewStoreInstance() {
     LargePreviewSettingsSnapshot snapshot =
-        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true, true);
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, "Chrome UA", true, true);
 
     new FileSystemLargePreviewSettingsStore(properties()).save(snapshot);
 
@@ -55,6 +55,24 @@ class FileSystemLargePreviewSettingsStoreTest {
 
     assertEquals(
         new LargePreviewSettingsSnapshot(8_388_608L, 262_144, false, false),
+        store.load().orElseThrow());
+  }
+
+  @Test
+  void oldSettingsFilesWithoutUserAgentRemainReadable() throws Exception {
+    FileSystemLargePreviewSettingsStore store = new FileSystemLargePreviewSettingsStore(properties());
+    Files.createDirectories(tempDir);
+    Files.writeString(
+        tempDir.resolve("preview.properties"),
+        """
+        largePreviewThresholdBytes=8388608
+        viewerChunkBytes=262144
+        prettyOnLargePreviewEnabled=true
+        nightModeEnabled=true
+        """);
+
+    assertEquals(
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true, true),
         store.load().orElseThrow());
   }
 

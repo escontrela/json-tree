@@ -2,6 +2,8 @@ package com.davidpe.jsontree.infrastructure.network;
 
 import com.davidpe.jsontree.application.model.CurlExecutionRequest;
 import com.davidpe.jsontree.application.model.CurlExecutionResult;
+import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
+import com.davidpe.jsontree.application.port.in.ViewLargePreviewSettingsUseCase;
 import com.davidpe.jsontree.application.port.out.CurlRequestExecutorPort;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -17,12 +19,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.function.Supplier;
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,9 +38,29 @@ public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutor
   private static final int CONNECT_TIMEOUT_MILLIS = 10_000;
   private static final int READ_TIMEOUT_MILLIS = 20_000;
   private static final int MAX_REDIRECTS = 5;
+  private static final String USER_AGENT_HEADER = "User-Agent";
   private static final HostnameVerifier INSECURE_HOSTNAME_VERIFIER = (host, session) -> true;
 
+  private final Supplier<String> defaultUserAgentSupplier;
   private final SSLSocketFactory insecureSslSocketFactory = buildInsecureSslSocketFactory();
+
+  @Autowired
+  public HttpUrlConnectionCurlRequestExecutor(
+      ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase) {
+    this(
+        () ->
+            viewLargePreviewSettingsUseCase
+                .currentLargePreviewSettings()
+                .defaultCurlUserAgent());
+  }
+
+  HttpUrlConnectionCurlRequestExecutor() {
+    this(() -> LargePreviewSettingsSnapshot.DEFAULT_CURL_USER_AGENT);
+  }
+
+  HttpUrlConnectionCurlRequestExecutor(Supplier<String> defaultUserAgentSupplier) {
+    this.defaultUserAgentSupplier = defaultUserAgentSupplier;
+  }
 
   @Override
   public CurlExecutionResult execute(CurlExecutionRequest request) {
@@ -104,6 +128,12 @@ public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutor
       byte[] body) throws IOException {
     connection.setRequestMethod(method);
     request.headers().forEach(header -> connection.setRequestProperty(header.name(), header.value()));
+    if (request.headers().stream().noneMatch(header -> USER_AGENT_HEADER.equalsIgnoreCase(header.name()))) {
+      String defaultUserAgent = defaultUserAgentSupplier.get();
+      if (defaultUserAgent != null && !defaultUserAgent.isBlank()) {
+        connection.setRequestProperty(USER_AGENT_HEADER, defaultUserAgent.trim());
+      }
+    }
     if (body.length == 0) {
       return;
     }

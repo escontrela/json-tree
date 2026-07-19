@@ -44,7 +44,7 @@ class LargePreviewSettingsServiceTest {
     LargePreviewSettingsService service =
         new LargePreviewSettingsService(store, new LargePreviewSettingsSnapshot(2_048L, 4_096));
     LargePreviewSettingsSnapshot updatedSnapshot =
-        new LargePreviewSettingsSnapshot(8_192L, 16_384, true, true);
+        new LargePreviewSettingsSnapshot(8_192L, 16_384, "Chrome UA", true, true);
 
     LargePreviewSettingsSnapshot savedSnapshot = service.saveAndApply(updatedSnapshot);
 
@@ -74,6 +74,7 @@ class LargePreviewSettingsServiceTest {
     LargePreviewSettingsSnapshot snapshot = new LargePreviewSettingsSnapshot(2_048L, 4_096, true);
 
     assertEquals(new LargePreviewSettingsSnapshot(2_048L, 4_096, true, false), snapshot);
+    assertEquals(LargePreviewSettingsSnapshot.DEFAULT_CURL_USER_AGENT, snapshot.defaultCurlUserAgent());
   }
 
   private LargePreviewSettingsStore emptyStore() {

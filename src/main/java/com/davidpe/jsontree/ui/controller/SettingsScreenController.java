@@ -41,12 +41,14 @@ public class SettingsScreenController implements UiScreenController {
   @FXML private BorderPane rootPane;
   @FXML private TextField largePreviewThresholdField;
   @FXML private TextField viewerChunkBytesField;
+  @FXML private TextField defaultCurlUserAgentField;
   @FXML private CheckBox prettyLargePreviewCheckBox;
   @FXML private CheckBox nightModeCheckBox;
   @FXML private Label memoryReferenceLabel;
   @FXML private Label memoryWarningLabel;
   @FXML private Label thresholdErrorLabel;
   @FXML private Label chunkErrorLabel;
+  @FXML private Label defaultCurlUserAgentErrorLabel;
   @FXML private Button applyButton;
 
   public SettingsScreenController(
@@ -71,6 +73,9 @@ public class SettingsScreenController implements UiScreenController {
         .textProperty()
         .addListener((unused, oldValue, newValue) -> refreshFormState());
     viewerChunkBytesField
+        .textProperty()
+        .addListener((unused, oldValue, newValue) -> refreshFormState());
+    defaultCurlUserAgentField
         .textProperty()
         .addListener((unused, oldValue, newValue) -> refreshFormState());
     prettyLargePreviewCheckBox
@@ -100,6 +105,7 @@ public class SettingsScreenController implements UiScreenController {
         new LargePreviewSettingsSnapshot(
             Long.parseLong(largePreviewThresholdField.getText().trim()),
             Integer.parseInt(viewerChunkBytesField.getText().trim()),
+            defaultCurlUserAgentField.getText().trim(),
             prettyLargePreviewCheckBox.isSelected(),
             nightModeCheckBox.isSelected()));
     applicationThemeService.refreshRegisteredRoots();
@@ -115,6 +121,7 @@ public class SettingsScreenController implements UiScreenController {
     applyingSnapshot = true;
     largePreviewThresholdField.setText(state.thresholdText());
     viewerChunkBytesField.setText(state.chunkText());
+    defaultCurlUserAgentField.setText(state.defaultCurlUserAgentText());
     prettyLargePreviewCheckBox.setSelected(state.prettyLargePreviewSelected());
     nightModeCheckBox.setSelected(state.nightModeSelected());
     applyingSnapshot = false;
@@ -129,6 +136,7 @@ public class SettingsScreenController implements UiScreenController {
         settingsFormStateResolver.resolve(
             largePreviewThresholdField.getText(),
             viewerChunkBytesField.getText(),
+            defaultCurlUserAgentField.getText(),
             prettyLargePreviewCheckBox.isSelected(),
             nightModeCheckBox.isSelected(),
             processMemoryReferenceService.startupMaxMemoryBytes()));
@@ -140,6 +148,7 @@ public class SettingsScreenController implements UiScreenController {
     applyWarningStyle(state.warningActive());
     syncErrorLabel(thresholdErrorLabel, state.thresholdErrorText());
     syncErrorLabel(chunkErrorLabel, state.chunkErrorText());
+    syncErrorLabel(defaultCurlUserAgentErrorLabel, state.defaultCurlUserAgentErrorText());
     applyButton.setDisable(!state.applyEnabled());
   }
 

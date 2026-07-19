@@ -346,9 +346,11 @@
 ## Settings Screen
 
 - The top toolbar now exposes a dedicated `Settings` screen integrated through the normal `UiScreenId` and `UiFlowManager` flow instead of a modal dialog.
-- Settings currently edit two runtime values: the large-preview activation threshold and the byte-paged visible chunk size.
+- Settings currently edit two numeric runtime values: the large-preview activation threshold and the byte-paged visible chunk size.
+- Settings also expose the default fallback `User-Agent` used by curl-backed imports whenever the pasted or dropped curl command did not declare one explicitly.
 - Settings also expose `Pretty on large preview`, a persisted toggle that enables best-effort formatting for invalid standalone large-preview raw chunks on future JSON loads.
 - `Back` always discards unsaved form edits and returns to the main screen.
 - `Apply` persists the edited values to local file-based settings storage and updates the runtime snapshot used by the next JSON import or history reopen.
 - The currently opened document is not reprocessed in place after `Apply`; the new values start affecting the next load only.
 - The screen also shows the JVM startup memory reference and highlights the threshold advisory in red when the configured large-file threshold exceeds that startup reference.
+- Curl-backed imports preserve any explicit `User-Agent` header already present in the normalized request; the fallback only applies when that header is missing.

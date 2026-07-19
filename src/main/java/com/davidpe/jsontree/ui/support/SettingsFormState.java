@@ -6,6 +6,7 @@ package com.davidpe.jsontree.ui.support;
 public record SettingsFormState(
     String thresholdText,
     String chunkText,
+    String defaultCurlUserAgentText,
     boolean prettyLargePreviewSelected,
     boolean nightModeSelected,
     String memoryReferenceText,
@@ -13,4 +14,5 @@ public record SettingsFormState(
     boolean warningActive,
     String thresholdErrorText,
     String chunkErrorText,
+    String defaultCurlUserAgentErrorText,
     boolean applyEnabled) {}
