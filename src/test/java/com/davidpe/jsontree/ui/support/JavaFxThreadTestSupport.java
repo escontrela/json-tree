@@ -9,13 +9,13 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import javafx.application.Platform;
 
-final class JavaFxThreadTestSupport {
+public final class JavaFxThreadTestSupport {
 
   private static final AtomicBoolean STARTED = new AtomicBoolean(false);
 
   private JavaFxThreadTestSupport() {}
 
-  static void startPlatform() {
+  public static void startPlatform() {
     if (STARTED.compareAndSet(false, true)) {
       configureHeadlessJavaFx();
       CountDownLatch latch = new CountDownLatch(1);
@@ -24,7 +24,7 @@ final class JavaFxThreadTestSupport {
     }
   }
 
-  static void runOnFxThread(Runnable action) {
+  public static void runOnFxThread(Runnable action) {
     startPlatform();
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<Throwable> failure = new AtomicReference<>();

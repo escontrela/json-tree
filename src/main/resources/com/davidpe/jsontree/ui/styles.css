@@ -104,6 +104,23 @@
     -fx-border-color: #c23b32;
 }
 
+.zoom-window-shell {
+    -fx-padding: 20;
+}
+
+.zoom-window-header {
+    -fx-padding: 0;
+}
+
+.zoom-window-viewer-shell {
+    -fx-background-color: #ffffff;
+}
+
+.zoom-window-empty-state {
+    -fx-max-width: 520;
+    -fx-text-alignment: center;
+}
+
 .import-utility-card.utility-dragging {
     -fx-border-color: #1c69d4;
     -fx-background-color: #f3f7fd;
