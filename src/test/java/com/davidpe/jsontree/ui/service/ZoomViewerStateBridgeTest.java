@@ -66,6 +66,20 @@ class ZoomViewerStateBridgeTest {
     release.run();
   }
 
+  @Test
+  void replaysRenderedAndRawMarkdownSnapshotsWithoutLosingTheModeIdentity() {
+    ZoomViewerStateBridge bridge = new ZoomViewerStateBridge();
+
+    bridge.publish(renderable("Markdown", "readme.md"));
+    bridge.publish(renderable("Raw Markdown", "readme.md"));
+
+    List<String> replayedModes = new ArrayList<>();
+    Runnable release = bridge.subscribe(snapshot -> replayedModes.add(snapshot.modeLabel()));
+
+    assertEquals(List.of("Raw Markdown"), replayedModes);
+    release.run();
+  }
+
   private ZoomViewerSnapshot renderable(String modeLabel, String fileName) {
     return ZoomViewerSnapshot.renderable(
         false,
@@ -80,6 +94,8 @@ class ZoomViewerStateBridgeTest {
         "tree-content",
         switch (modeLabel) {
           case "Raw JSON" -> ViewerPresentationMode.RAW_JSON;
+          case "Raw Markdown" -> ViewerPresentationMode.RAW_MARKDOWN;
+          case "Markdown" -> ViewerPresentationMode.MARKDOWN_RENDERED;
           case "Structure" -> ViewerPresentationMode.STRUCTURE;
           default -> ViewerPresentationMode.ASCII_TREE;
         },

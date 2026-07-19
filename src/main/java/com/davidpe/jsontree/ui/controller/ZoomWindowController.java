@@ -373,7 +373,7 @@ public class ZoomWindowController {
   }
 
   private BreadcrumbViewerMode breadcrumbViewerMode(ViewerPresentationMode presentationMode) {
-    if (presentationMode == ViewerPresentationMode.RAW_JSON) {
+    if (presentationMode.rawTextMode()) {
       return BreadcrumbViewerMode.RAW_JSON;
     }
     if (presentationMode == ViewerPresentationMode.STRUCTURE) {

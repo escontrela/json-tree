@@ -106,6 +106,40 @@ class ZoomViewerSnapshotFactoryTest {
     assertTrue(snapshot.windowTitle().contains("schema.json"));
   }
 
+  @Test
+  void buildsRenderedAndRawMarkdownSnapshotsUsingTheSharedContract() {
+    JsonViewerLoadResult result = markdownResult("notes.md", JsonInspectionMode.FULL);
+    ViewerTextRenderPlan renderPlan =
+        ViewerTextRenderPlan.normal(
+            List.of(
+                new ViewerTextRenderFragment(
+                    "Heading\n\nParagraph", "markdown-rendered-heading-1", "#2d333a", false, false)));
+
+    var renderedSnapshot =
+        factory.renderable(
+            result,
+            "Markdown",
+            renderPlan,
+            "markdown-content",
+            "2.0 KB • local import",
+            ViewerPresentationMode.MARKDOWN_RENDERED,
+            JsonBreadcrumbModel.unavailable());
+    var rawSnapshot =
+        factory.renderable(
+            result,
+            "Raw Markdown",
+            renderPlan,
+            "markdown-content",
+            "2.0 KB • local import",
+            ViewerPresentationMode.RAW_MARKDOWN,
+            JsonBreadcrumbModel.unavailable());
+
+    assertEquals("Markdown", renderedSnapshot.modeLabel());
+    assertEquals(ViewerPresentationMode.MARKDOWN_RENDERED, renderedSnapshot.presentationMode());
+    assertEquals("Raw Markdown", rawSnapshot.modeLabel());
+    assertEquals(ViewerPresentationMode.RAW_MARKDOWN, rawSnapshot.presentationMode());
+  }
+
   private JsonViewerLoadResult renderableResult(String fileName, JsonInspectionMode mode) {
     return new JsonViewerLoadResult(
         new JsonImportResult(
@@ -123,6 +157,27 @@ class ZoomViewerSnapshotFactoryTest {
         mode == JsonInspectionMode.LARGE_PREVIEW
             ? JsonViewerCapabilities.largePreview()
             : JsonViewerCapabilities.full(),
+        null);
+  }
+
+  private JsonViewerLoadResult markdownResult(String fileName, JsonInspectionMode mode) {
+    return new JsonViewerLoadResult(
+        new JsonImportResult(
+            Path.of("/tmp/" + fileName),
+            fileName,
+            1024L,
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.LOCAL_FILE,
+            com.davidpe.jsontree.domain.model.DocumentFormat.MARKDOWN),
+        new JsonValidationResult(JsonValidationStatus.VALID, "Markdown ready", null, null),
+        new AsciiTreeDocument(fileName, "# Heading\n\nParagraph", 3),
+        null,
+        mode,
+        mode == JsonInspectionMode.LARGE_PREVIEW
+            ? JsonViewerCapabilities.largePreview()
+            : new JsonViewerCapabilities(true, true, true),
         null);
   }
 }
