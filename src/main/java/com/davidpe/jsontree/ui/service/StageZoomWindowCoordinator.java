@@ -6,7 +6,7 @@ import com.davidpe.jsontree.ui.support.ZoomWindowPlacementResolver;
 import javafx.scene.Scene;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import org.springframework.context.annotation.Lazy;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
@@ -18,7 +18,7 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
   public static final double INITIAL_WIDTH = 1180.0;
   public static final double INITIAL_HEIGHT = 760.0;
 
-  private final Stage primaryStage;
+  private final ObjectProvider<Stage> primaryStageProvider;
   private final ZoomWindowViewFactory zoomWindowViewFactory;
   private final ZoomWindowPlacementResolver zoomWindowPlacementResolver;
   private final String applicationTitle;
@@ -26,11 +26,11 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
   private Stage zoomStage;
 
   public StageZoomWindowCoordinator(
-      @Lazy Stage primaryStage,
+      ObjectProvider<Stage> primaryStageProvider,
       ZoomWindowViewFactory zoomWindowViewFactory,
       ZoomWindowPlacementResolver zoomWindowPlacementResolver,
       String applicationTitle) {
-    this.primaryStage = primaryStage;
+    this.primaryStageProvider = primaryStageProvider;
     this.zoomWindowViewFactory = zoomWindowViewFactory;
     this.zoomWindowPlacementResolver = zoomWindowPlacementResolver;
     this.applicationTitle = applicationTitle;
@@ -60,7 +60,10 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
 
     ZoomWindowView view = zoomWindowViewFactory.create();
     Stage stage = new Stage();
-    stage.initOwner(primaryStage);
+    Stage primaryStage = primaryStageProvider.getIfAvailable();
+    if (primaryStage != null) {
+      stage.initOwner(primaryStage);
+    }
     stage.initModality(Modality.NONE);
     stage.setTitle(applicationTitle + " • Zoom");
     stage.setResizable(true);
@@ -80,6 +83,7 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
   }
 
   private void centerRelativeToOwner(Stage stage) {
+    Stage primaryStage = primaryStageProvider.getIfAvailable();
     if (primaryStage == null || primaryStage.getWidth() <= 0.0 || primaryStage.getHeight() <= 0.0) {
       stage.centerOnScreen();
       return;
