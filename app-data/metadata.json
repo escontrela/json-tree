@@ -163,4 +163,15 @@
   "documentFormat" : "JSON",
   "sourceKind" : "CURL",
   "curlCommand" : "curl --location 'https://www.zara.com/itxrest/2/catalog/store/10701/product/00085117?locale=es_ES'"
+}, {
+  "storedName" : "2026-07-19_20-44-17_00085117-2026-07-19_20-44-17.json",
+  "originalName" : "00085117-2026-07-19_20-44-17.json",
+  "importedAt" : 1784486657.071420000,
+  "sizeBytes" : 12271,
+  "lineCount" : 390,
+  "valid" : true,
+  "favorite" : false,
+  "documentFormat" : "JSON",
+  "sourceKind" : "CURL",
+  "curlCommand" : "curl --location 'https://www.zara.com/itxrest/2/catalog/store/10702/product/00085117?locale=es_ES'"
 } ]
