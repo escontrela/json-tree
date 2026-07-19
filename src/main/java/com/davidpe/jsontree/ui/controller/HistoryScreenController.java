@@ -295,7 +295,7 @@ public class HistoryScreenController implements UiScreenController {
     private final javafx.scene.image.ImageView warningIcon =
         LargePreviewWarningIconFactory.create(14.0);
     private final Button favoriteButton = new Button("Pin");
-    private final Button editCurlButton = new Button("Edit curl");
+    private final Button editCurlButton = new Button("Edit/Rerun curl");
     private final Button deleteButton = new Button("Delete");
     private final HBox titleRow = new HBox(8.0);
     private final VBox textBox = new VBox(4.0);
