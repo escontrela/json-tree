@@ -14,4 +14,8 @@ public record CurlCommandSource(String label) {
   public static CurlCommandSource droppedFile(Path path) {
     return new CurlCommandSource("Dropped file: " + path.getFileName());
   }
+
+  public static CurlCommandSource editor() {
+    return new CurlCommandSource("Curl editor");
+  }
 }

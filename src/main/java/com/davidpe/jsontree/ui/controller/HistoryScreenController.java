@@ -10,6 +10,7 @@ import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.ui.support.HistoryArchiveViewState;
 import com.davidpe.jsontree.ui.support.HistoryArchiveViewStateResolver;
+import com.davidpe.jsontree.ui.support.HistoryCurlEditAvailabilityResolver;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
@@ -18,6 +19,7 @@ import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.service.CurlEditorModalCoordinator;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -54,7 +56,9 @@ public class HistoryScreenController implements UiScreenController {
   private final ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase;
   private final HistoryFavoritePresentationResolver historyFavoritePresentationResolver;
   private final HistoryArchiveViewStateResolver historyArchiveViewStateResolver;
+  private final HistoryCurlEditAvailabilityResolver historyCurlEditAvailabilityResolver;
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
+  private final CurlEditorModalCoordinator curlEditorModalCoordinator;
   private final UiFlowManager uiFlowManager;
   private boolean favoritesOnly;
   private String activeSearchQuery = "";
@@ -66,7 +70,9 @@ public class HistoryScreenController implements UiScreenController {
       ToggleHistoryFavoriteUseCase toggleHistoryFavoriteUseCase,
       HistoryFavoritePresentationResolver historyFavoritePresentationResolver,
       HistoryArchiveViewStateResolver historyArchiveViewStateResolver,
+      HistoryCurlEditAvailabilityResolver historyCurlEditAvailabilityResolver,
       LargePreviewIndicatorResolver largePreviewIndicatorResolver,
+      CurlEditorModalCoordinator curlEditorModalCoordinator,
       @Lazy UiFlowManager uiFlowManager) {
     this.workflowService = workflowService;
     this.importHistoryJsonUseCase = importHistoryJsonUseCase;
@@ -74,7 +80,9 @@ public class HistoryScreenController implements UiScreenController {
     this.toggleHistoryFavoriteUseCase = toggleHistoryFavoriteUseCase;
     this.historyFavoritePresentationResolver = historyFavoritePresentationResolver;
     this.historyArchiveViewStateResolver = historyArchiveViewStateResolver;
+    this.historyCurlEditAvailabilityResolver = historyCurlEditAvailabilityResolver;
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
+    this.curlEditorModalCoordinator = curlEditorModalCoordinator;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -97,6 +105,8 @@ public class HistoryScreenController implements UiScreenController {
   @FXML private Button favoritesFilterButton;
 
   @FXML private Button importJsonButton;
+
+  @FXML private Button newCurlButton;
 
   @FXML private Label historyImportFeedbackLabel;
 
@@ -198,6 +208,11 @@ public class HistoryScreenController implements UiScreenController {
     onShow();
   }
 
+  @FXML
+  void openNewCurl() {
+    curlEditorModalCoordinator.openNew(this::onShow);
+  }
+
   private void applyFavoritesFilterButtonStyle(boolean active) {
     ObservableList<String> styleClasses = favoritesFilterButton.getStyleClass();
     if (!styleClasses.contains("ghost-button")) {
@@ -266,6 +281,13 @@ public class HistoryScreenController implements UiScreenController {
     onShow();
   }
 
+  void openEditCurl(ImportedJsonFile entry) {
+    if (!historyCurlEditAvailabilityResolver.supports(entry)) {
+      return;
+    }
+    curlEditorModalCoordinator.openPrefilled(entry.curlCommand(), this::onShow);
+  }
+
   private final class HistoryEntryListCell extends ListCell<ImportedJsonFile> {
 
     private final Label titleLabel = new Label();
@@ -273,6 +295,7 @@ public class HistoryScreenController implements UiScreenController {
     private final javafx.scene.image.ImageView warningIcon =
         LargePreviewWarningIconFactory.create(14.0);
     private final Button favoriteButton = new Button("Pin");
+    private final Button editCurlButton = new Button("Edit curl");
     private final Button deleteButton = new Button("Delete");
     private final HBox titleRow = new HBox(8.0);
     private final VBox textBox = new VBox(4.0);
@@ -293,6 +316,17 @@ public class HistoryScreenController implements UiScreenController {
             }
             event.consume();
           });
+      editCurlButton.getStyleClass().addAll("ghost-button", "history-curl-button");
+      editCurlButton.setManaged(false);
+      editCurlButton.setVisible(false);
+      editCurlButton.setOnAction(
+          event -> {
+            ImportedJsonFile item = getItem();
+            if (item != null) {
+              openEditCurl(item);
+            }
+            event.consume();
+          });
       deleteButton.getStyleClass().add("ghost-button");
       deleteButton.getStyleClass().add("history-delete-button");
       deleteButton.setOnAction(
@@ -308,7 +342,7 @@ public class HistoryScreenController implements UiScreenController {
       textBox.getChildren().addAll(titleRow, metaLabel);
       HBox.setHgrow(spacer, Priority.ALWAYS);
       content.setAlignment(Pos.CENTER_LEFT);
-      content.getChildren().addAll(textBox, spacer, favoriteButton, deleteButton);
+      content.getChildren().addAll(textBox, spacer, editCurlButton, favoriteButton, deleteButton);
 
       setOnMouseClicked(
           event -> {
@@ -343,8 +377,11 @@ public class HistoryScreenController implements UiScreenController {
               + " lines");
       HistoryFavoritePresentation favoritePresentation =
           historyFavoritePresentationResolver.resolve(item);
+      boolean editableCurl = historyCurlEditAvailabilityResolver.supports(item);
       titleLabel.setText(favoritePresentation.title());
       favoriteButton.setText(favoritePresentation.buttonText());
+      editCurlButton.setManaged(editableCurl);
+      editCurlButton.setVisible(editableCurl);
       favoriteButton.getStyleClass().removeAll("history-favorite-button-active", "primary-button");
       titleLabel.getStyleClass().remove("history-entry-title-favorite");
       if (favoritePresentation.active()) {
@@ -361,7 +398,7 @@ public class HistoryScreenController implements UiScreenController {
       }
       Node current = node;
       while (current != null) {
-        if (current == deleteButton || current == favoriteButton) {
+        if (current == deleteButton || current == favoriteButton || current == editCurlButton) {
           return true;
         }
         current = current.getParent();

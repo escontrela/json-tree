@@ -60,6 +60,7 @@
                                 <Button fx:id="historySearchButton" mnemonicParsing="false" onAction="#executeHistorySearch" styleClass="ghost-button history-search-button" text="Search" />
                             </HBox>
                             <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="history-import-button" text="Import file" />
+                            <Button fx:id="newCurlButton" mnemonicParsing="false" onAction="#openNewCurl" styleClass="history-import-button" text="New curl" />
                             <Button fx:id="favoritesFilterButton" mnemonicParsing="false" onAction="#toggleFavoritesOnly" styleClass="ghost-button history-filter-button" text="Favorites only" />
                         </HBox>
                     </HBox>
