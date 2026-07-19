@@ -28,10 +28,7 @@ class JsonStructureDocumentServiceTest {
                 """)
             .content();
 
-    assertTrue(content.contains("root"));
-    assertTrue(content.contains("user"));
-    assertTrue(content.contains("address"));
-    assertTrue(content.contains("city"));
+    assertEquals("root\n└─ user\n   └─ address\n      └─ city", content);
     assertFalse(content.contains("Madrid"));
     assertFalse(content.contains(":"));
   }
@@ -49,8 +46,7 @@ class JsonStructureDocumentServiceTest {
                 """)
             .content();
 
-    assertTrue(content.contains("api-response"));
-    assertTrue(content.contains("snake_case []"));
+    assertEquals("root\n├─ api-response\n└─ snake_case []", content);
     assertFalse(content.contains("\"api-response\""));
   }
 
@@ -68,9 +64,7 @@ class JsonStructureDocumentServiceTest {
                 """)
             .content();
 
-    assertTrue(content.startsWith("root []"));
-    assertTrue(content.contains("[0]"));
-    assertTrue(content.contains("opening_name"));
+    assertEquals("root []\n└─ [0]\n   └─ opening_name", content);
     assertFalse(content.contains("Sicilian"));
   }
 
@@ -87,5 +81,21 @@ class JsonStructureDocumentServiceTest {
             .content();
 
     assertEquals("root\n└─ ids []\n   └─ [0]", content);
+  }
+
+  @Test
+  void rendersTopLevelObjectFieldsDirectlyUnderRoot() {
+    String content =
+        service
+            .buildFromRawJson(
+                """
+                {
+                  "app": {},
+                  "theme": "dark"
+                }
+                """)
+            .content();
+
+    assertEquals("root\n├─ app\n└─ theme", content);
   }
 }
