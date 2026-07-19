@@ -51,6 +51,19 @@ class ZoomViewerStateBridgeTest {
     secondRelease.run();
   }
 
+  @Test
+  void keepsStructureSnapshotsInTheSameSharedBridgeLifecycle() {
+    ZoomViewerStateBridge bridge = new ZoomViewerStateBridge();
+
+    bridge.publish(renderable("Structure", "schema-a.json"));
+
+    List<String> replayedModes = new ArrayList<>();
+    Runnable release = bridge.subscribe(snapshot -> replayedModes.add(snapshot.modeLabel()));
+
+    assertEquals(List.of("Structure"), replayedModes);
+    release.run();
+  }
+
   private ZoomViewerSnapshot renderable(String modeLabel, String fileName) {
     return ZoomViewerSnapshot.renderable(
         "JSON -> TREE • Zoom • " + fileName,
