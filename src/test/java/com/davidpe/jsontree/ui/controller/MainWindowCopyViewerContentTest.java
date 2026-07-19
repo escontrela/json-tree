@@ -50,6 +50,7 @@ class MainWindowCopyViewerContentTest {
         null,
         null,
         null,
+        null,
         clipboardPort,
         null,
         null,

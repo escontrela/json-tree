@@ -2,6 +2,9 @@ package com.davidpe.jsontree.application.service;
 
 import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
 import com.davidpe.jsontree.application.model.ClipboardJsonImportStatus;
+import com.davidpe.jsontree.application.model.CurlCommandParseResult;
+import com.davidpe.jsontree.application.model.CurlCommandSource;
+import com.davidpe.jsontree.application.model.CurlDocumentImportResult;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
@@ -30,6 +33,8 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
 
   private final ClipboardPort clipboardPort;
   private final JsonViewerWorkflowService workflowService;
+  private final CurlCommandParserService curlCommandParserService;
+  private final CurlDocumentImportService curlDocumentImportService;
   private final ObjectMapper objectMapper;
   private final Clock clock;
   private final Path tempRootDirectory;
@@ -38,11 +43,15 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
   public ClipboardJsonImportService(
       ClipboardPort clipboardPort,
       JsonViewerWorkflowService workflowService,
+      CurlCommandParserService curlCommandParserService,
+      CurlDocumentImportService curlDocumentImportService,
       ObjectMapper objectMapper
   ) {
     this(
         clipboardPort,
         workflowService,
+        curlCommandParserService,
+        curlDocumentImportService,
         objectMapper,
         Clock.systemDefaultZone(),
         Path.of(System.getProperty("java.io.tmpdir")));
@@ -51,12 +60,16 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
   ClipboardJsonImportService(
       ClipboardPort clipboardPort,
       JsonViewerWorkflowService workflowService,
+      CurlCommandParserService curlCommandParserService,
+      CurlDocumentImportService curlDocumentImportService,
       ObjectMapper objectMapper,
       Clock clock,
       Path tempRootDirectory
   ) {
     this.clipboardPort = clipboardPort;
     this.workflowService = workflowService;
+    this.curlCommandParserService = curlCommandParserService;
+    this.curlDocumentImportService = curlDocumentImportService;
     this.objectMapper = objectMapper;
     this.clock = clock;
     this.tempRootDirectory = tempRootDirectory;
@@ -80,6 +93,15 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
     }
 
     String rawJson = clipboardText.get();
+    CurlCommandParseResult curlParseResult =
+        curlCommandParserService.detectAndParse(rawJson, CurlCommandSource.clipboard());
+    if (curlParseResult.successful()) {
+      return fromCurlResult(curlDocumentImportService.importRequest(curlParseResult.request()));
+    }
+    if (curlParseResult.status() == com.davidpe.jsontree.application.model.CurlCommandParseStatus.INVALID) {
+      return ClipboardJsonImportResult.failure(
+          ClipboardJsonImportStatus.INVALID_CURL, curlParseResult.message());
+    }
     try {
       objectMapper.readTree(rawJson);
     } catch (JsonProcessingException exception) {
@@ -99,6 +121,21 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
             true,
             JsonDocumentSourceKind.CLIPBOARD);
     return ClipboardJsonImportResult.success(workflowService.loadImportedFile(importResult));
+  }
+
+  private ClipboardJsonImportResult fromCurlResult(CurlDocumentImportResult curlResult) {
+    if (curlResult.successful()) {
+      return ClipboardJsonImportResult.success(curlResult.loadResult());
+    }
+    ClipboardJsonImportStatus status =
+        switch (curlResult.status()) {
+          case INVALID_CURL -> ClipboardJsonImportStatus.INVALID_CURL;
+          case EXECUTION_FAILED -> ClipboardJsonImportStatus.CURL_EXECUTION_FAILED;
+          case UNSUPPORTED_RESPONSE -> ClipboardJsonImportStatus.UNSUPPORTED_RESPONSE;
+          case UNREADABLE_SOURCE -> ClipboardJsonImportStatus.UNREADABLE_CLIPBOARD;
+          case IMPORTED -> ClipboardJsonImportStatus.IMPORTED;
+        };
+    return ClipboardJsonImportResult.failure(status, curlResult.message());
   }
 
   private Path materializeClipboardJson(String rawJson) {

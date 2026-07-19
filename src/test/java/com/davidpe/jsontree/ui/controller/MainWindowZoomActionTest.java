@@ -29,6 +29,7 @@ class MainWindowZoomActionTest {
         new MainWindowController(
             null,
             null,
+            null,
             new StaticWorkflowService(Optional.empty()),
             null,
             null,
@@ -68,6 +69,7 @@ class MainWindowZoomActionTest {
     RecordingZoomWindowCoordinator coordinator = new RecordingZoomWindowCoordinator();
     MainWindowController controller =
         new MainWindowController(
+            null,
             null,
             null,
             new StaticWorkflowService(Optional.of(renderableResult())),

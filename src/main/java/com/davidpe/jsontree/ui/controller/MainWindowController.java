@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
+import com.davidpe.jsontree.application.model.DroppedFileImportResult;
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
@@ -10,6 +11,7 @@ import com.davidpe.jsontree.application.model.LargePreviewViewerPageResult;
 import com.davidpe.jsontree.application.model.MarkdownOutlineModel;
 import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
+import com.davidpe.jsontree.application.port.in.ImportDroppedFileUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonBreadcrumbModelService;
@@ -126,6 +128,7 @@ public class MainWindowController implements UiScreenController {
           .withZone(ZoneId.systemDefault());
 
   private final ImportClipboardJsonUseCase importClipboardJsonUseCase;
+  private final ImportDroppedFileUseCase importDroppedFileUseCase;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
   private final JsonBreadcrumbModelService breadcrumbModelService;
@@ -160,6 +163,7 @@ public class MainWindowController implements UiScreenController {
 
   public MainWindowController(
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
+      ImportDroppedFileUseCase importDroppedFileUseCase,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
       JsonBreadcrumbModelService breadcrumbModelService,
@@ -190,6 +194,7 @@ public class MainWindowController implements UiScreenController {
       ZoomViewerSnapshotFactory zoomViewerSnapshotFactory,
       @Lazy UiFlowManager uiFlowManager) {
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
+    this.importDroppedFileUseCase = importDroppedFileUseCase;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
     this.breadcrumbModelService = breadcrumbModelService;
@@ -829,7 +834,10 @@ public class MainWindowController implements UiScreenController {
             "ASCII tree",
             renderPlan,
             "tree-content",
-            formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind()),
+            formatFileMeta(
+                result.importResult().sizeBytes(),
+                result.importResult().sourceKind(),
+                result.historyEntry()),
             ViewerPresentationMode.ASCII_TREE,
             currentBreadcrumbModel));
     richTextViewerSurface.scrollToTop();
@@ -1063,7 +1071,7 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
-    loadImportedFileAsync(importJsonUseCase.importFile(jsonPath));
+    loadDroppedFileAsync(jsonPath);
     event.setDropCompleted(true);
     event.consume();
   }
@@ -1086,13 +1094,7 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
-    ClipboardJsonImportResult result = importClipboardJsonUseCase.importFromClipboard();
-    if (result.successful()) {
-      presentLoadResult(result.loadResult());
-      event.consume();
-      return;
-    }
-    presentClipboardImportFailure(result);
+    loadClipboardImportAsync();
     event.consume();
   }
 
@@ -1114,6 +1116,33 @@ public class MainWindowController implements UiScreenController {
                             requestSequence, importResult.fileName(), result, throwable)));
   }
 
+  private void loadDroppedFileAsync(Path path) {
+    showLoadingState(path.getFileName().toString());
+    beginLargePreviewLoadingAffordance();
+    long requestSequence = ++viewerWorkflowLoadSequence;
+    CompletableFuture
+        .supplyAsync(() -> importDroppedFileUseCase.importDroppedFile(path))
+        .whenComplete(
+            (result, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleDroppedFileImportResult(
+                            requestSequence, path.getFileName().toString(), result, throwable)));
+  }
+
+  private void loadClipboardImportAsync() {
+    showLoadingState("Clipboard");
+    beginLargePreviewLoadingAffordance();
+    long requestSequence = ++viewerWorkflowLoadSequence;
+    CompletableFuture
+        .supplyAsync(importClipboardJsonUseCase::importFromClipboard)
+        .whenComplete(
+            (result, throwable) ->
+                Platform.runLater(
+                    () ->
+                        handleClipboardImportResult(requestSequence, result, throwable)));
+  }
+
   private void handleImportedFileLoadResult(
       long requestSequence,
       String fileName,
@@ -1129,6 +1158,45 @@ public class MainWindowController implements UiScreenController {
       return;
     }
     presentLoadResult(result);
+  }
+
+  private void handleDroppedFileImportResult(
+      long requestSequence,
+      String fileName,
+      DroppedFileImportResult result,
+      Throwable throwable) {
+    if (requestSequence != viewerWorkflowLoadSequence) {
+      return;
+    }
+    cancelLargePreviewLoadingAffordance();
+    if (throwable != null || result == null) {
+      showInvalidState("Unable to import dropped file: " + fileName);
+      updateFooterStatusLabel("Dropped-file import failed");
+      return;
+    }
+    if (result.successful()) {
+      presentLoadResult(result.loadResult());
+      return;
+    }
+    presentDroppedFileImportFailure(result);
+  }
+
+  private void handleClipboardImportResult(
+      long requestSequence, ClipboardJsonImportResult result, Throwable throwable) {
+    if (requestSequence != viewerWorkflowLoadSequence) {
+      return;
+    }
+    cancelLargePreviewLoadingAffordance();
+    if (throwable != null || result == null) {
+      showInvalidState("Unable to import clipboard content.");
+      updateFooterStatusLabel("Clipboard import failed");
+      return;
+    }
+    if (result.successful()) {
+      presentLoadResult(result.loadResult());
+      return;
+    }
+    presentClipboardImportFailure(result);
   }
 
   private void handleHistoryReopenResult(
@@ -1194,27 +1262,67 @@ public class MainWindowController implements UiScreenController {
     currentLoadedAt = Instant.now();
     currentViewIdentity = "clipboard-error:" + currentLoadedAt.toEpochMilli();
     showFileWarningIcon(false);
-    updateFileNameLabel("Clipboard JSON");
-    fileMetaLabel.setText(
-        "Paste valid JSON using Command+P or Command+V on macOS, Ctrl+P or Ctrl+V elsewhere.");
+    updateFileNameLabel("Clipboard import");
+    fileMetaLabel.setText(clipboardImportGuidance(result));
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
     fileSourceValueLabel.setText("Clipboard");
     showInvalidState(result.message());
     viewerAidTitleLabel.setText("Clipboard import failed");
     viewerAidMetaLabel.setText(
-        "The clipboard stays external until it contains valid JSON that can become a temporary"
-            + " local document.");
-    outlineStateLabel.setText("Clipboard content did not produce a valid JSON outline.");
+        "The clipboard stays external until it contains valid JSON or a supported curl command"
+            + " that can become a temporary local document.");
+    outlineStateLabel.setText("Clipboard content did not produce a renderable document outline.");
     updateFooterStatusLabel(result.message());
     setStatusRailValues("INVALID", "--", "--", "Clipboard");
   }
 
-  private String formatFileMeta(long sizeBytes, JsonDocumentSourceKind sourceKind) {
+  private void presentDroppedFileImportFailure(DroppedFileImportResult result) {
+    if (workflowService.currentView().isPresent()) {
+      restoreViewFromWorkflow();
+      updateFooterStatusLabel(result.message());
+      return;
+    }
+    resetOutlineModel();
+    currentLoadedAt = Instant.now();
+    currentViewIdentity = "drop-error:" + currentLoadedAt.toEpochMilli();
+    showFileWarningIcon(false);
+    updateFileNameLabel("Dropped file");
+    fileMetaLabel.setText("Drop a .json, .md, or a text file that contains one supported curl command.");
+    fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
+    fileSourceValueLabel.setText("Drag and drop");
+    showInvalidState(result.message());
+    viewerAidTitleLabel.setText("Dropped-file import failed");
+    viewerAidMetaLabel.setText(
+        "Supported local documents open directly. Other text files must contain one supported curl"
+            + " command.");
+    outlineStateLabel.setText("Dropped content did not produce a renderable document outline.");
+    updateFooterStatusLabel(result.message());
+    setStatusRailValues("INVALID", "--", "--", "Drag and drop");
+  }
+
+  private String clipboardImportGuidance(ClipboardJsonImportResult result) {
+    if (result.status() == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.INVALID_CURL
+        || result.status()
+            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.CURL_EXECUTION_FAILED
+        || result.status()
+            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.UNSUPPORTED_RESPONSE) {
+      return "Paste valid JSON or one supported curl command using Command+P / Command+V on macOS,"
+          + " Ctrl+P / Ctrl+V elsewhere.";
+    }
+    return "Paste valid JSON using Command+P or Command+V on macOS, Ctrl+P or Ctrl+V elsewhere.";
+  }
+
+  private String formatFileMeta(
+      long sizeBytes, JsonDocumentSourceKind sourceKind, ImportedJsonFile historyEntry) {
     String meta = ByteSizeFormatter.format(sizeBytes);
     return switch (sourceKind) {
-      case HISTORY -> meta + " • reopened from history";
+      case HISTORY ->
+          historyEntry != null && historyEntry.curlBacked()
+              ? meta + " • reopened from history • curl fetch"
+              : meta + " • reopened from history";
       case CLIPBOARD -> meta + " • clipboard import";
       case LOCAL_FILE -> meta + " • local import";
+      case CURL -> meta + " • curl fetch";
     };
   }
 
@@ -1249,10 +1357,13 @@ public class MainWindowController implements UiScreenController {
     updateFileNameLabel(result.importResult().fileName());
     showFileWarningIcon(largePreviewIndicatorResolver.showForCurrentView(result));
     fileMetaLabel.setText(
-        formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind())
+        formatFileMeta(
+                result.importResult().sizeBytes(),
+                result.importResult().sourceKind(),
+                result.historyEntry())
             + presentation.fileMetaSuffix());
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(resolveLoadedAt(result)));
-    fileSourceValueLabel.setText(sourceLabel(result.importResult().sourceKind()));
+    fileSourceValueLabel.setText(sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
   }
 
   private Instant resolveLoadedAt(JsonViewerLoadResult result) {
@@ -1276,6 +1387,7 @@ public class MainWindowController implements UiScreenController {
     String prefix =
         switch (result.importResult().sourceKind()) {
           case CLIPBOARD -> "clipboard:";
+          case CURL -> "curl:";
           case LOCAL_FILE -> "file:";
           case HISTORY -> "history:";
         };
@@ -1301,13 +1413,17 @@ public class MainWindowController implements UiScreenController {
         state,
         ByteSizeFormatter.format(result.importResult().sizeBytes()),
         lines,
-        sourceLabel(result.importResult().sourceKind()));
+        sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
   }
 
-  private String sourceLabel(JsonDocumentSourceKind sourceKind) {
+  private String sourceLabel(JsonDocumentSourceKind sourceKind, ImportedJsonFile historyEntry) {
     return switch (sourceKind) {
-      case HISTORY -> "History snapshot";
+      case HISTORY ->
+          historyEntry != null && historyEntry.curlBacked()
+              ? "History snapshot (curl)"
+              : "History snapshot";
       case CLIPBOARD -> "Clipboard";
+      case CURL -> "Curl fetch";
       case LOCAL_FILE -> "Local file";
     };
   }
@@ -1396,7 +1512,7 @@ public class MainWindowController implements UiScreenController {
               + " • "
               + ByteSizeFormatter.format(item.sizeBytes())
               + " • "
-              + item.documentFormat().displayLabel()
+              + historyEntryFormatLabel(item)
               + " • "
               + item.lineCount()
               + " lines");
@@ -1424,6 +1540,12 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setVvalue(0);
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
+  }
+
+  private String historyEntryFormatLabel(ImportedJsonFile item) {
+    return item.curlBacked()
+        ? item.documentFormat().displayLabel() + " • curl fetch"
+        : item.documentFormat().displayLabel();
   }
 
   @FXML
@@ -2125,7 +2247,9 @@ public class MainWindowController implements UiScreenController {
                           ? "markdown-content"
                           : "raw-json-content",
                       formatFileMeta(
-                          result.importResult().sizeBytes(), result.importResult().sourceKind()),
+                          result.importResult().sizeBytes(),
+                          result.importResult().sourceKind(),
+                          result.historyEntry()),
                       ViewerPresentationMode.RAW_JSON,
                       currentBreadcrumbModel));
             });
@@ -2240,7 +2364,9 @@ public class MainWindowController implements UiScreenController {
                       renderPlan,
                       "tree-content",
                       formatFileMeta(
-                          result.importResult().sizeBytes(), result.importResult().sourceKind()),
+                          result.importResult().sizeBytes(),
+                          result.importResult().sourceKind(),
+                          result.historyEntry()),
                       ViewerPresentationMode.STRUCTURE,
                       currentBreadcrumbModel));
               richTextViewerSurface.scrollToTop();
@@ -2254,7 +2380,7 @@ public class MainWindowController implements UiScreenController {
                   "STRUCTURE",
                   ByteSizeFormatter.format(result.importResult().sizeBytes()),
                   Integer.toString(document.lineCount()),
-                  sourceLabel(result.importResult().sourceKind()));
+                  sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
               resetOutlineModel();
               showOutlineShellState(
                   "Outline unavailable",
