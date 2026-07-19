@@ -2,6 +2,7 @@ package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,6 +20,7 @@ public class ViewerTextRenderPlanFactory {
   private final MarkdownTextSyntaxHighlighter markdownTextSyntaxHighlighter;
   private final ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay;
 
+  @Autowired
   public ViewerTextRenderPlanFactory(
       AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter,
       SearchTextSpanHighlighter searchTextSpanHighlighter,

@@ -2,6 +2,7 @@ package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -17,6 +18,7 @@ public class SearchTextSpanHighlighter {
     this(largePreviewProperties, new SearchHighlightRangeNormalizer());
   }
 
+  @Autowired
   SearchTextSpanHighlighter(
       LargePreviewProperties largePreviewProperties,
       SearchHighlightRangeNormalizer highlightRangeNormalizer) {

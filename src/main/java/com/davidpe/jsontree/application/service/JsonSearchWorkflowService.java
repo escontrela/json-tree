@@ -3,6 +3,7 @@ package com.davidpe.jsontree.application.service;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -17,6 +18,7 @@ public class JsonSearchWorkflowService {
     this(viewerWorkflowService, new RegexTextSearchService());
   }
 
+  @Autowired
   public JsonSearchWorkflowService(
       JsonViewerWorkflowService viewerWorkflowService,
       RegexTextSearchService regexTextSearchService) {
