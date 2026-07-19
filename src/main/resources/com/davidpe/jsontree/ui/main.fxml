@@ -107,18 +107,21 @@
                         <Label styleClass="viewer-card-title" text="Structured developer output" />
                     </VBox>
                     <Region HBox.hgrow="ALWAYS" />
-                    <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
-                        <HBox fx:id="largePreviewPageControls" alignment="CENTER_RIGHT" managed="false" spacing="6.0" styleClass="large-preview-page-strip" visible="false">
-                            <Button fx:id="largePreviewPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Previous" />
-                            <Label fx:id="largePreviewCurrentPageLabel" styleClass="large-preview-page-label" text="Page 1" />
-                            <Label fx:id="largePreviewTotalPagesLabel" styleClass="large-preview-page-meta" text="of 1" />
-                            <Button fx:id="largePreviewNextButton" disable="true" mnemonicParsing="false" onAction="#showNextLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Next" />
+                    <VBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
+                        <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-button-row">
+                            <HBox fx:id="largePreviewPageControls" alignment="CENTER_RIGHT" managed="false" spacing="6.0" styleClass="large-preview-page-strip" visible="false">
+                                <Button fx:id="largePreviewPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Previous" />
+                                <Label fx:id="largePreviewCurrentPageLabel" styleClass="large-preview-page-label" text="Page 1" />
+                                <Label fx:id="largePreviewTotalPagesLabel" styleClass="large-preview-page-meta" text="of 1" />
+                                <Button fx:id="largePreviewNextButton" disable="true" mnemonicParsing="false" onAction="#showNextLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Next" />
+                            </HBox>
+                            <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Focus" />
+                            <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Density" />
+                            <Button fx:id="zoomButton" disable="true" mnemonicParsing="false" onAction="#openZoomViewer" styleClass="ghost-button" text="Zoom" />
+                            <Button fx:id="outlineToggleButton" mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
                         </HBox>
-                        <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Focus" />
-                        <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Density" />
-                        <Button fx:id="zoomButton" disable="true" mnemonicParsing="false" onAction="#openZoomViewer" styleClass="ghost-button" text="Zoom" />
-                        <Button fx:id="outlineToggleButton" mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
-                    </HBox>
+                        <Label fx:id="breadcrumbLabel" managed="false" styleClass="viewer-toolbar-breadcrumb" visible="false" wrapText="true" />
+                    </VBox>
                 </HBox>
 
                 <StackPane fx:id="viewerShell" styleClass="viewer-shell" VBox.vgrow="ALWAYS">
