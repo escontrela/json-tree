@@ -130,6 +130,10 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return loadImportedFile(importResult);
   }
 
+  public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult, String curlCommand) {
+    return loadImportedFileInternal(importResult, curlCommand);
+  }
+
   /**
    * Persists a validated import into history and returns operation status.
    *
@@ -182,6 +186,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
    * @return full viewer state, including validation and rendered data when available.
    */
   public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult) {
+    return loadImportedFileInternal(importResult, null);
+  }
+
+  private JsonViewerLoadResult loadImportedFileInternal(
+      JsonImportResult importResult, String curlCommand) {
     JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(importResult);
     if (!importResult.available()) {
       JsonViewerLoadResult unavailableResult =
@@ -199,7 +208,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     if (importResult.documentFormat().markdown()) {
-      JsonViewerLoadResult markdownResult = loadMarkdownImportedFile(importResult, inspectionMode, null);
+      JsonViewerLoadResult markdownResult =
+          loadMarkdownImportedFile(importResult, inspectionMode, null, curlCommand);
       replaceCurrentView(markdownResult);
       return markdownResult;
     }
@@ -216,7 +226,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       asciiTreeDocument = renderableLoadState.document();
       largePreviewSession = renderableLoadState.largePreviewSession();
       historyEntry =
-          createHistoryEntry(importResult, renderableLoadState.historyLineCount(), true);
+          createHistoryEntry(
+              importResult, renderableLoadState.historyLineCount(), true, curlCommand);
       jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
     }
 
@@ -269,7 +280,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
     if (historyEntry.get().documentFormat().markdown()) {
       JsonViewerLoadResult markdownResult =
-          loadMarkdownImportedFile(importResult, inspectionMode, historyEntry.get());
+          loadMarkdownImportedFile(importResult, inspectionMode, historyEntry.get(), null);
       replaceCurrentView(markdownResult);
       return Optional.of(markdownResult);
     }
@@ -414,6 +425,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
 
   private ImportedJsonFile createHistoryEntry(
       JsonImportResult importResult, int lineCount, boolean valid) {
+    return createHistoryEntry(importResult, lineCount, valid, null);
+  }
+
+  private ImportedJsonFile createHistoryEntry(
+      JsonImportResult importResult, int lineCount, boolean valid, String curlCommand) {
     Instant importedAt = Instant.now(clock);
     return new ImportedJsonFile(
         buildStoredName(importedAt, importResult.fileName()),
@@ -423,7 +439,9 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         lineCount,
         valid,
         false,
-        importResult.documentFormat());
+        importResult.documentFormat(),
+        importResult.sourceKind(),
+        importResult.sourceKind() == JsonDocumentSourceKind.CURL ? curlCommand : null);
   }
 
   private String buildStoredName(Instant importedAt, String originalName) {
@@ -485,7 +503,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
   private JsonViewerLoadResult loadMarkdownImportedFile(
       JsonImportResult importResult,
       JsonInspectionMode inspectionMode,
-      ImportedJsonFile existingHistoryEntry) {
+      ImportedJsonFile existingHistoryEntry,
+      String curlCommand) {
     String markdownContent = readFileContents(importResult.path());
     JsonValidationResult validationResult =
         markdownContent.isBlank()
@@ -512,7 +531,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
             createHistoryEntry(
                 importResult,
                 markdownDocument == null ? lineCountFor(markdownContent) : markdownDocument.lineCount(),
-                true);
+                true,
+                curlCommand);
         jsonHistoryRepository.save(historyEntry, markdownContent);
       }
     }
@@ -545,6 +565,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return switch (importResult.sourceKind()) {
       case LOCAL_FILE -> LargePreviewSessionSource.local(importResult.path());
       case CLIPBOARD -> LargePreviewSessionSource.clipboard(importResult.path());
+      case CURL -> LargePreviewSessionSource.curl(importResult.path());
       case HISTORY ->
           LargePreviewSessionSource.history(importResult.path(), historyEntry.storedName());
     };

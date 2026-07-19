@@ -17,6 +17,8 @@ import java.time.Instant;
  * @param valid whether the stored JSON content is valid.
  * @param favorite whether the history entry is marked as favorite.
  * @param documentFormat classified format for the persisted entry.
+ * @param sourceKind original source kind from which the persisted entry was created.
+ * @param curlCommand stored curl provenance when the entry originated from a curl fetch.
  */
 public record ImportedJsonFile(
     String storedName,
@@ -26,7 +28,9 @@ public record ImportedJsonFile(
     int lineCount,
     boolean valid,
     boolean favorite,
-    DocumentFormat documentFormat) {
+    DocumentFormat documentFormat,
+    JsonDocumentSourceKind sourceKind,
+    String curlCommand) {
 
   public ImportedJsonFile(
       String storedName,
@@ -44,12 +48,39 @@ public record ImportedJsonFile(
         lineCount,
         valid,
         favorite,
-        DocumentFormat.JSON);
+        DocumentFormat.JSON,
+        JsonDocumentSourceKind.LOCAL_FILE,
+        null);
+  }
+
+  public ImportedJsonFile(
+      String storedName,
+      String originalName,
+      Instant importedAt,
+      long sizeBytes,
+      int lineCount,
+      boolean valid,
+      boolean favorite,
+      DocumentFormat documentFormat) {
+    this(
+        storedName,
+        originalName,
+        importedAt,
+        sizeBytes,
+        lineCount,
+        valid,
+        favorite,
+        documentFormat,
+        JsonDocumentSourceKind.LOCAL_FILE,
+        null);
   }
 
   public ImportedJsonFile {
     if (documentFormat == null) {
       documentFormat = DocumentFormat.JSON;
+    }
+    if (sourceKind == null) {
+      sourceKind = JsonDocumentSourceKind.LOCAL_FILE;
     }
   }
 
@@ -68,6 +99,12 @@ public record ImportedJsonFile(
         lineCount,
         valid,
         nextFavorite,
-        documentFormat);
+        documentFormat,
+        sourceKind,
+        curlCommand);
+  }
+
+  public boolean curlBacked() {
+    return sourceKind == JsonDocumentSourceKind.CURL;
   }
 }
