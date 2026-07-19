@@ -115,6 +115,7 @@ class CurlDocumentImportServiceTest {
     assertEquals(CurlDocumentImportStatus.UNSUPPORTED_RESPONSE, result.status());
     assertEquals(200, result.httpStatusCode());
     assertTrue(result.message().contains("HTTP 200"));
+    assertTrue(result.message().contains(sampleRequest().rawCommand()));
   }
 
   @Test
@@ -138,7 +139,10 @@ class CurlDocumentImportServiceTest {
     assertFalse(result.successful());
     assertEquals(CurlDocumentImportStatus.EXECUTION_FAILED, result.status());
     assertEquals(403, result.httpStatusCode());
-    assertEquals("HTTP 403: access denied by the remote endpoint.", result.message());
+    assertEquals(
+        "HTTP 403: access denied by the remote endpoint. Request: "
+            + sampleRequest().rawCommand(),
+        result.message());
   }
 
   private CurlExecutionRequest sampleRequest() {

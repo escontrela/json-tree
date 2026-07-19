@@ -68,12 +68,14 @@ public class CurlDocumentImportService {
     CurlExecutionResult executionResult = curlRequestExecutorPort.execute(request);
     if (!executionResult.successful()) {
       return CurlDocumentImportResult.failure(
-          CurlDocumentImportStatus.EXECUTION_FAILED, executionResult.failureMessage());
+          CurlDocumentImportStatus.EXECUTION_FAILED,
+          appendAttemptedRequest(executionResult.failureMessage(), request),
+          executionResult.statusCode() > 0 ? executionResult.statusCode() : null);
     }
     if (executionResult.statusCode() >= 400) {
       return CurlDocumentImportResult.failure(
           CurlDocumentImportStatus.EXECUTION_FAILED,
-          composeHttpFailureMessage(executionResult.statusCode()),
+          appendAttemptedRequest(composeHttpFailureMessage(executionResult.statusCode()), request),
           executionResult.statusCode());
     }
 
@@ -81,9 +83,11 @@ public class CurlDocumentImportService {
     if (documentFormat == null) {
       return CurlDocumentImportResult.failure(
           CurlDocumentImportStatus.UNSUPPORTED_RESPONSE,
-          "HTTP "
-              + executionResult.statusCode()
-              + " returned content that is not a supported JSON or Markdown document.",
+          appendAttemptedRequest(
+              "HTTP "
+                  + executionResult.statusCode()
+                  + " returned content that is not a supported JSON or Markdown document.",
+              request),
           executionResult.statusCode());
     }
 
@@ -110,6 +114,10 @@ public class CurlDocumentImportService {
       case 429 -> "HTTP 429: remote endpoint rate-limited the request.";
       default -> "HTTP " + statusCode + ": curl fetch failed.";
     };
+  }
+
+  private String appendAttemptedRequest(String message, CurlExecutionRequest request) {
+    return message + " Request: " + request.rawCommand();
   }
 
   private DocumentFormat detectDocumentFormat(CurlExecutionResult executionResult) {

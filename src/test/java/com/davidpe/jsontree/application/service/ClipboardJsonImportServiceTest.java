@@ -217,7 +217,8 @@ class ClipboardJsonImportServiceTest {
 
     assertFalse(result.successful());
     assertEquals(ClipboardJsonImportStatus.CURL_EXECUTION_FAILED, result.status());
-    assertEquals("HTTP 403: access denied by the remote endpoint.", result.message());
+    assertTrue(result.message().contains("HTTP 403: access denied by the remote endpoint."));
+    assertTrue(result.message().contains("Request: curl https://example.com/items"));
   }
 
   private JsonViewerWorkflowService viewerWorkflowService() {

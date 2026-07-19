@@ -72,6 +72,32 @@ class DroppedFileImportServiceTest {
   }
 
   @Test
+  void keepsAttemptedCurlRequestInDroppedFileFailureMessage() throws Exception {
+    Path curlFile =
+        Files.writeString(
+            tempDir.resolve("request.txt"),
+            "curl https://example.com/items --header 'X-Test: demo'");
+    DroppedFileImportService service =
+        new DroppedFileImportService(
+            viewerWorkflowService(),
+            new CurlCommandParserService(),
+            fakeCurlService(
+                CurlDocumentImportResult.failure(
+                    CurlDocumentImportStatus.EXECUTION_FAILED,
+                    "HTTP 403: access denied by the remote endpoint. Request: curl https://example.com/items --header 'X-Test: demo'",
+                    403)));
+
+    var result = service.importDroppedFile(curlFile);
+
+    assertEquals(
+        "HTTP 403: access denied by the remote endpoint. Request: curl https://example.com/items --header 'X-Test: demo'",
+        result.message());
+    assertEquals(
+        com.davidpe.jsontree.application.model.DroppedFileImportStatus.EXECUTION_FAILED,
+        result.status());
+  }
+
+  @Test
   void rejectsNonDocumentNonCurlFiles() throws Exception {
     Path textFile = Files.writeString(tempDir.resolve("notes.txt"), "hello world");
     DroppedFileImportService service =
