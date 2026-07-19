@@ -87,9 +87,43 @@ public class JsonStructureDocumentService {
       if (node.isEmpty()) {
         return StructureShape.emptyArray();
       }
-      return StructureShape.array(toShape(node.get(0)));
+      StructureShape representativeShape = null;
+      for (JsonNode arrayElement : node) {
+        representativeShape = mergeShapes(representativeShape, toShape(arrayElement));
+      }
+      return representativeShape == null
+          ? StructureShape.emptyArray()
+          : StructureShape.array(representativeShape);
     }
     return StructureShape.scalar();
+  }
+
+  private StructureShape mergeShapes(StructureShape left, StructureShape right) {
+    if (left == null) {
+      return right;
+    }
+    if (right == null) {
+      return left;
+    }
+    if (left.kind() == StructureKind.SCALAR) {
+      return right.kind() == StructureKind.SCALAR ? left : right;
+    }
+    if (right.kind() == StructureKind.SCALAR) {
+      return left;
+    }
+    if (left.kind() != right.kind()) {
+      return left;
+    }
+    if (left.kind() == StructureKind.ARRAY) {
+      return StructureShape.array(mergeShapes(left.arrayItemShape(), right.arrayItemShape()));
+    }
+
+    LinkedHashMap<String, StructureShape> mergedFields = new LinkedHashMap<>(left.objectFields());
+    right.objectFields()
+        .forEach(
+            (fieldName, rightShape) ->
+                mergedFields.merge(fieldName, rightShape, this::mergeShapes));
+    return StructureShape.object(mergedFields);
   }
 
   private enum StructureKind {

@@ -98,4 +98,86 @@ class JsonStructureDocumentServiceTest {
 
     assertEquals("root\n├─ app\n└─ theme", content);
   }
+
+  @Test
+  void mergesDisjointObjectFieldsAcrossArrayElementsIntoOneRepresentativeBranch() {
+    String content =
+        service
+            .buildFromRawJson(
+                """
+                {
+                  "games": [
+                    { "opening_name": "Sicilian" },
+                    { "winner": "white" }
+                  ]
+                }
+                """)
+            .content();
+
+    assertEquals("root\n└─ games []\n   └─ [0]\n      ├─ opening_name\n      └─ winner", content);
+  }
+
+  @Test
+  void keepsStructuredArrayShapeWhenMixedWithScalars() {
+    String content =
+        service
+            .buildFromRawJson(
+                """
+                {
+                  "items": [
+                    1,
+                    { "name": "admin" }
+                  ]
+                }
+                """)
+            .content();
+
+    assertEquals("root\n└─ items []\n   └─ [0]\n      └─ name", content);
+  }
+
+  @Test
+  void rendersNestedArraysRecursivelyThroughRepresentativeNodes() {
+    String content =
+        service
+            .buildFromRawJson(
+                """
+                {
+                  "matrix": [
+                    [1, 2],
+                    [3, 4]
+                  ]
+                }
+                """)
+            .content();
+
+    assertEquals("root\n└─ matrix []\n   └─ [0] []\n      └─ [0]", content);
+  }
+
+  @Test
+  void mergesNestedHeterogeneousArrayObjectsRecursively() {
+    String content =
+        service
+            .buildFromRawJson(
+                """
+                {
+                  "users": [
+                    {
+                      "roles": [
+                        { "id": 1 }
+                      ]
+                    },
+                    {
+                      "roles": [
+                        { "name": "admin" }
+                      ]
+                    }
+                  ]
+                }
+                """)
+            .content();
+
+    assertEquals(
+        "root\n└─ users []\n   └─ [0]\n      └─ roles []\n         └─ [0]\n            ├─ id\n            └─ name",
+        content);
+  }
 }
