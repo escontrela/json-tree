@@ -3,6 +3,7 @@ package com.davidpe.jsontree.ui.support;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
@@ -11,6 +12,7 @@ import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -32,13 +34,25 @@ class ZoomViewerSnapshotFactoryTest {
         "ASCII tree",
         factory
             .renderable(
-                result, "ASCII tree", renderPlan, "tree-content", "1.0 KB • local import")
+                result,
+                "ASCII tree",
+                renderPlan,
+                "tree-content",
+                "1.0 KB • local import",
+                ViewerPresentationMode.ASCII_TREE,
+                JsonBreadcrumbModel.unavailable())
             .modeLabel());
     assertEquals(
         "Raw JSON",
         factory
             .renderable(
-                result, "Raw JSON", renderPlan, "raw-json-content", "1.0 KB • local import")
+                result,
+                "Raw JSON",
+                renderPlan,
+                "raw-json-content",
+                "1.0 KB • local import",
+                ViewerPresentationMode.RAW_JSON,
+                JsonBreadcrumbModel.unavailable())
             .modeLabel());
   }
 
@@ -57,9 +71,12 @@ class ZoomViewerSnapshotFactoryTest {
             "Raw page",
             renderPlan,
             "raw-json-content",
-            "12.3 MB • reopened from history • byte-paged large preview");
+            "12.3 MB • reopened from history • byte-paged large preview",
+            ViewerPresentationMode.RAW_JSON,
+            JsonBreadcrumbModel.unavailable());
 
     assertEquals("Raw page", snapshot.modeLabel());
+    assertTrue(snapshot.largePreview());
     assertTrue(snapshot.windowTitle().contains("large.json"));
     assertTrue(snapshot.documentMeta().contains("byte-paged large preview"));
   }
@@ -79,10 +96,13 @@ class ZoomViewerSnapshotFactoryTest {
             "Structure",
             renderPlan,
             "tree-content",
-            "1.0 KB • local import");
+            "1.0 KB • local import",
+            ViewerPresentationMode.STRUCTURE,
+            JsonBreadcrumbModel.unavailable());
 
     assertEquals("Structure", snapshot.modeLabel());
     assertEquals("tree-content", snapshot.contentStyleClass());
+    assertEquals(ViewerPresentationMode.STRUCTURE, snapshot.presentationMode());
     assertTrue(snapshot.windowTitle().contains("schema.json"));
   }
 

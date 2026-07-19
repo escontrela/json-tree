@@ -3,6 +3,7 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
@@ -11,18 +12,28 @@
 
 <BorderPane fx:id="rootPane" styleClass="app-shell zoom-window-shell" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.ZoomWindowController">
     <top>
-        <HBox alignment="CENTER_LEFT" spacing="12.0" styleClass="workspace-header zoom-window-header">
+        <VBox spacing="12.0" styleClass="workspace-header zoom-window-header">
             <padding>
                 <Insets bottom="18.0" left="20.0" right="20.0" top="18.0" />
             </padding>
-            <VBox spacing="4.0">
-                <Label fx:id="zoomModeLabel" styleClass="eyebrow-label" text="Zoom viewer" />
-                <Label fx:id="zoomTitleLabel" styleClass="viewer-card-title" text="Expanded reading surface" />
-                <Label fx:id="zoomMetaLabel" styleClass="file-meta" managed="false" visible="false" wrapText="true" />
-            </VBox>
-            <Region HBox.hgrow="ALWAYS" />
-            <Button mnemonicParsing="false" onAction="#closeWindow" styleClass="ghost-button" text="Close" />
-        </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="12.0">
+                <VBox spacing="4.0">
+                    <Label fx:id="zoomModeLabel" styleClass="eyebrow-label" text="Zoom viewer" />
+                    <Label fx:id="zoomTitleLabel" styleClass="viewer-card-title" text="Expanded reading surface" />
+                    <Label fx:id="zoomMetaLabel" styleClass="file-meta" managed="false" visible="false" wrapText="true" />
+                </VBox>
+                <Region HBox.hgrow="ALWAYS" />
+                <Button mnemonicParsing="false" onAction="#closeWindow" styleClass="ghost-button" text="Close" />
+            </HBox>
+            <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="zoom-search-strip">
+                <TextField fx:id="zoomSearchField" onAction="#executeSearch" promptText="Regex search" HBox.hgrow="ALWAYS" />
+                <Button fx:id="zoomSearchPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousSearchResult" styleClass="ghost-button search-strip-button" text="Previous" />
+                <Button fx:id="zoomSearchNextButton" disable="true" mnemonicParsing="false" onAction="#showNextSearchResult" styleClass="ghost-button search-strip-button" text="Next" />
+                <Label fx:id="zoomSearchOccurrenceLabel" styleClass="zoom-search-count" text="Ready" />
+            </HBox>
+            <Label fx:id="zoomSearchErrorLabel" managed="false" styleClass="search-modal-error" visible="false" wrapText="true" />
+            <Label fx:id="zoomBreadcrumbLabel" managed="false" styleClass="viewer-toolbar-breadcrumb zoom-breadcrumb-label" visible="false" wrapText="true" />
+        </VBox>
     </top>
     <center>
         <StackPane styleClass="viewer-shell zoom-window-viewer-shell">

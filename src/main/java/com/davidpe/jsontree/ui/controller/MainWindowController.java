@@ -784,7 +784,9 @@ public class MainWindowController implements UiScreenController {
             "ASCII tree",
             renderPlan,
             "tree-content",
-            formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind())));
+            formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind()),
+            ViewerPresentationMode.ASCII_TREE,
+            currentBreadcrumbModel));
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
@@ -1482,11 +1484,14 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void copyTree() {
-    workflowService
-        .currentView()
-        .map(JsonViewerLoadResult::asciiTreeDocument)
-        .map(AsciiTreeDocument::content)
-        .ifPresent(clipboardPort::copy);
+    if (copyTreeButton.isDisable() || richTextViewerSurface == null) {
+      return;
+    }
+    String viewerText = richTextViewerSurface.text();
+    if (viewerText == null || viewerText.isBlank()) {
+      return;
+    }
+    clipboardPort.copy(viewerText);
   }
 
   @FXML
@@ -1998,6 +2003,8 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void renderRawJsonContent(String rawJson) {
+    boolean largePreviewActive =
+        workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent();
     boolean prettyLargePreviewEnabled =
         workflowService
             .currentView()
@@ -2006,8 +2013,8 @@ public class MainWindowController implements UiScreenController {
             .map(result -> result.largePreviewSession().prettyOnLargePreviewEnabled())
             .orElse(false);
     currentRawJsonPresentation =
-        prettyLargePreviewEnabled
-            ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
+        largePreviewActive
+            ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, prettyLargePreviewEnabled)
             : rawJsonPresentationService.present(rawJson);
     workflowService.currentView().ifPresent(this::syncBreadcrumbModelWithCurrentView);
     ViewerTextRenderPlan renderPlan =
@@ -2025,15 +2032,15 @@ public class MainWindowController implements UiScreenController {
                         renderPlan,
                         "raw-json-content",
                         formatFileMeta(
-                            result.importResult().sizeBytes(), result.importResult().sourceKind()))));
+                            result.importResult().sizeBytes(), result.importResult().sourceKind()),
+                        ViewerPresentationMode.RAW_JSON,
+                        currentBreadcrumbModel)));
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     currentPresentationMode = ViewerPresentationMode.RAW_JSON;
     rawJsonButton.setText(
-        workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()
-            ? "Raw page"
-            : "ASCII tree");
+        largePreviewActive ? "Raw page" : "ASCII tree");
     structureButton.setText("Structure");
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
@@ -2117,6 +2124,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void renderStructure(JsonViewerLoadResult result) {
+    syncBreadcrumbModelWithCurrentView(result);
     resolveStructureDocument(result)
         .ifPresentOrElse(
             document -> {
@@ -2133,7 +2141,9 @@ public class MainWindowController implements UiScreenController {
                       renderPlan,
                       "tree-content",
                       formatFileMeta(
-                          result.importResult().sizeBytes(), result.importResult().sourceKind())));
+                          result.importResult().sizeBytes(), result.importResult().sourceKind()),
+                      ViewerPresentationMode.STRUCTURE,
+                      currentBreadcrumbModel));
               richTextViewerSurface.scrollToTop();
               emptyStateLabel.setManaged(false);
               emptyStateLabel.setVisible(false);

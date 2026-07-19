@@ -1,60 +1,40 @@
 package com.davidpe.jsontree.application.service;
 
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
-import com.davidpe.jsontree.application.model.JsonSearchMatch;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import org.springframework.stereotype.Service;
 
 @Service
 public class JsonSearchWorkflowService {
 
   private final JsonViewerWorkflowService viewerWorkflowService;
+  private final RegexTextSearchService regexTextSearchService;
 
   private JsonSearchSession currentSession;
 
   public JsonSearchWorkflowService(JsonViewerWorkflowService viewerWorkflowService) {
+    this(viewerWorkflowService, new RegexTextSearchService());
+  }
+
+  public JsonSearchWorkflowService(
+      JsonViewerWorkflowService viewerWorkflowService,
+      RegexTextSearchService regexTextSearchService) {
     this.viewerWorkflowService = viewerWorkflowService;
+    this.regexTextSearchService = regexTextSearchService;
   }
 
   public JsonSearchExecutionResult activateSearch(String sourceIdentity, String rawQuery) {
-    String query = rawQuery == null ? "" : rawQuery.trim();
-    if (query.isBlank()) {
-      return JsonSearchExecutionResult.failure("Enter a regular expression.");
-    }
-
-    String rawJson =
-        viewerWorkflowService
-            .currentViewRawJson()
-            .orElse(null);
-    if (rawJson == null || rawJson.isBlank()) {
+    String sourceText = viewerWorkflowService.currentViewRawJson().orElse(null);
+    if (sourceText == null || sourceText.isBlank()) {
       return JsonSearchExecutionResult.failure("No JSON source is available for search.");
     }
-
-    Pattern pattern;
-    try {
-      pattern = Pattern.compile(query);
-    } catch (PatternSyntaxException exception) {
-      return JsonSearchExecutionResult.failure(
-          exception.getDescription() == null || exception.getDescription().isBlank()
-              ? "Invalid regular expression."
-              : exception.getDescription());
+    JsonSearchExecutionResult result =
+        regexTextSearchService.search(sourceIdentity, rawQuery, sourceText);
+    if (result.successful()) {
+      currentSession = result.session();
     }
-
-    List<JsonSearchMatch> matches = collectMatches(pattern, rawJson);
-    currentSession =
-        new JsonSearchSession(
-            sourceIdentity,
-            query,
-            matches,
-            matches.isEmpty() ? -1 : 0
-        );
-    return JsonSearchExecutionResult.success(currentSession);
+    return result;
   }
 
   public Optional<JsonSearchSession> currentSession() {
@@ -100,17 +80,5 @@ public class JsonSearchWorkflowService {
     if (!currentSession.sourceIdentity().equals(sourceIdentity)) {
       currentSession = null;
     }
-  }
-
-  private List<JsonSearchMatch> collectMatches(Pattern pattern, String rawJson) {
-    List<JsonSearchMatch> matches = new ArrayList<>();
-    Matcher matcher = pattern.matcher(rawJson);
-    while (matcher.find()) {
-      if (matcher.start() == matcher.end()) {
-        continue;
-      }
-      matches.add(new JsonSearchMatch(matcher.start(), matcher.end(), matcher.group()));
-    }
-    return matches;
   }
 }

@@ -116,8 +116,6 @@
                                 <Label fx:id="largePreviewTotalPagesLabel" styleClass="large-preview-page-meta" text="of 1" />
                                 <Button fx:id="largePreviewNextButton" disable="true" mnemonicParsing="false" onAction="#showNextLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Next" />
                             </HBox>
-                            <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Focus" />
-                            <Button disable="true" mnemonicParsing="false" styleClass="ghost-button" text="Density" />
                             <Button fx:id="zoomButton" disable="true" mnemonicParsing="false" onAction="#openZoomViewer" styleClass="ghost-button" text="Zoom" />
                             <Button fx:id="outlineToggleButton" mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
                         </HBox>
