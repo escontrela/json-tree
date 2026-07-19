@@ -190,6 +190,36 @@ class ClipboardJsonImportServiceTest {
     assertEquals(JsonDocumentSourceKind.CURL, result.loadResult().importResult().sourceKind());
   }
 
+  @Test
+  void preservesFriendlyCurlFailureMessageForFooterPresentation() {
+    ClipboardJsonImportService service =
+        new ClipboardJsonImportService(
+            readableClipboard("curl https://example.com/items"),
+            viewerWorkflowService(),
+            new CurlCommandParserService(),
+            new CurlDocumentImportService(
+                request ->
+                    CurlExecutionResult.success(
+                        403,
+                        request.url(),
+                        java.util.Map.of("Content-Type", java.util.List.of("application/json")),
+                        "{\"error\":\"denied\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        "application/json",
+                        "UTF-8"),
+                viewerWorkflowService(),
+                fixedClock(),
+                tempDir),
+            new ObjectMapper(),
+            fixedClock(),
+            tempDir);
+
+    ClipboardJsonImportResult result = service.importFromClipboard();
+
+    assertFalse(result.successful());
+    assertEquals(ClipboardJsonImportStatus.CURL_EXECUTION_FAILED, result.status());
+    assertEquals("HTTP 403: access denied by the remote endpoint.", result.message());
+  }
+
   private JsonViewerWorkflowService viewerWorkflowService() {
     return new JsonViewerWorkflowService(
         validValidationPort(),

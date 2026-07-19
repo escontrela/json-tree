@@ -73,14 +73,18 @@ public class CurlDocumentImportService {
     if (executionResult.statusCode() >= 400) {
       return CurlDocumentImportResult.failure(
           CurlDocumentImportStatus.EXECUTION_FAILED,
-          "Curl fetch failed with HTTP " + executionResult.statusCode() + ".");
+          composeHttpFailureMessage(executionResult.statusCode()),
+          executionResult.statusCode());
     }
 
     DocumentFormat documentFormat = detectDocumentFormat(executionResult);
     if (documentFormat == null) {
       return CurlDocumentImportResult.failure(
           CurlDocumentImportStatus.UNSUPPORTED_RESPONSE,
-          "Curl response is not a supported JSON or Markdown document.");
+          "HTTP "
+              + executionResult.statusCode()
+              + " returned content that is not a supported JSON or Markdown document.",
+          executionResult.statusCode());
     }
 
     Path materializedPath = materializeResponse(request, executionResult, documentFormat);
@@ -96,6 +100,16 @@ public class CurlDocumentImportService {
             documentFormat);
     return CurlDocumentImportResult.imported(
         workflowService.loadImportedFile(importResult, request.rawCommand()));
+  }
+
+  private String composeHttpFailureMessage(int statusCode) {
+    return switch (statusCode) {
+      case 401 -> "HTTP 401: remote endpoint requires authentication.";
+      case 403 -> "HTTP 403: access denied by the remote endpoint.";
+      case 404 -> "HTTP 404: remote resource not found.";
+      case 429 -> "HTTP 429: remote endpoint rate-limited the request.";
+      default -> "HTTP " + statusCode + ": curl fetch failed.";
+    };
   }
 
   private DocumentFormat detectDocumentFormat(CurlExecutionResult executionResult) {

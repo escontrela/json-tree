@@ -113,6 +113,32 @@ class CurlDocumentImportServiceTest {
 
     assertFalse(result.successful());
     assertEquals(CurlDocumentImportStatus.UNSUPPORTED_RESPONSE, result.status());
+    assertEquals(200, result.httpStatusCode());
+    assertTrue(result.message().contains("HTTP 200"));
+  }
+
+  @Test
+  void reportsAccessDeniedWithFriendlyHttpMessage() {
+    CurlDocumentImportService service =
+        new CurlDocumentImportService(
+            request ->
+                CurlExecutionResult.success(
+                    403,
+                    request.url(),
+                    Map.of("Content-Type", List.of("application/json")),
+                    "{\"message\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8),
+                    "application/json",
+                    "UTF-8"),
+            viewerWorkflowService(new RecordingHistoryRepository()),
+            fixedClock(),
+            tempDir);
+
+    CurlDocumentImportResult result = service.importRequest(sampleRequest());
+
+    assertFalse(result.successful());
+    assertEquals(CurlDocumentImportStatus.EXECUTION_FAILED, result.status());
+    assertEquals(403, result.httpStatusCode());
+    assertEquals("HTTP 403: access denied by the remote endpoint.", result.message());
   }
 
   private CurlExecutionRequest sampleRequest() {
