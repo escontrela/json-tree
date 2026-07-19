@@ -371,9 +371,12 @@ public class HistoryScreenController implements UiScreenController {
   }
 
   private String historyDocumentLabel(ImportedJsonFile item) {
+    String baseLabel;
     if (item.documentFormat().markdown()) {
-      return "Markdown";
+      baseLabel = "Markdown";
+    } else {
+      baseLabel = item.valid() ? "JSON" : "Invalid JSON";
     }
-    return item.valid() ? "JSON" : "Invalid JSON";
+    return item.curlBacked() ? baseLabel + " • curl fetch" : baseLabel;
   }
 }

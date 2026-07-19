@@ -89,6 +89,15 @@
 - Clipboard imports use deterministic temporary filenames, surface `Clipboard` as the active source in metadata and the status rail, and still follow the existing local history snapshot conventions after a successful render.
 - Empty, unreadable, or invalid clipboard contents fail without replacing the last valid selected document, while an empty workspace shows a readable clipboard-specific invalid state.
 
+## CURL-Backed Remote Imports
+
+- Clipboard text and dropped readable text files can now be recognized as one supported curl command and routed through an application-layer parser instead of being interpreted inside JavaFX controllers.
+- The supported curl subset normalizes URL, method, redirect preference, repeated headers, and request body into a reusable execution request while rejecting pipes, substitutions, chained commands, and other risky shell constructs.
+- Curl execution runs natively from Java through a dedicated transport adapter with curl-scoped insecure HTTPS support, redirect handling for `--location`, and readable transport-failure messages.
+- Supported curl responses are materialized into temporary local `.json` or `.md` files and then reopened through the ordinary viewer and history workflow instead of forking a second remote-document subsystem.
+- Persisted history metadata now keeps the original source kind plus the normalized curl command when the entry came from a remote fetch, while older history metadata still defaults safely back to ordinary local-file provenance.
+- Inline history, the dedicated history screen, and reopened snapshots now make curl provenance explicit with compact `curl fetch` source cues without changing favorites, delete, search-by-name, or reopen behavior.
+
 ## BMW Theme Tokens
 
 - The shared JavaFX theme now uses a BMW-inspired token baseline: white canvas, dark navy structure, BMW blue primary actions, neutral hairlines, and restrained grayscale body copy.
