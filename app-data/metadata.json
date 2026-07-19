@@ -6,7 +6,9 @@
   "lineCount" : 68,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-05-27_15-14-20_test.json",
   "originalName" : "test.json",
@@ -15,7 +17,9 @@
   "lineCount" : 68,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-06-04_23-04-40_test.json",
   "originalName" : "test.json",
@@ -24,7 +28,9 @@
   "lineCount" : 68,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-06-26_01-42-54_generated.json",
   "originalName" : "generated.json",
@@ -33,7 +39,9 @@
   "lineCount" : 274,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-03_00-08-18_clipboard-2026-07-03_00-08-18.json",
   "originalName" : "clipboard-2026-07-03_00-08-18.json",
@@ -42,7 +50,9 @@
   "lineCount" : 10,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-03_00-08-31_clipboard-2026-07-03_00-08-31.json",
   "originalName" : "clipboard-2026-07-03_00-08-31.json",
@@ -51,7 +61,9 @@
   "lineCount" : 10,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-04_10-54-35_Chess-Game-Dataset_1-level_12-MB_minified.json",
   "originalName" : "Chess-Game-Dataset_1-level_12-MB_minified.json",
@@ -60,7 +72,9 @@
   "lineCount" : 340987,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-04_10-56-23_Chess-Game-Dataset_1-level_1-MB_minified.json",
   "originalName" : "Chess-Game-Dataset_1-level_1-MB_minified.json",
@@ -69,7 +83,9 @@
   "lineCount" : 28136,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-04_11-00-30_Chess-Game-Dataset_1-level_10-KB_minified.json",
   "originalName" : "Chess-Game-Dataset_1-level_10-KB_minified.json",
@@ -78,7 +94,9 @@
   "lineCount" : 290,
   "valid" : true,
   "favorite" : false,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-19_01-16-02_za-reader-v1.json",
   "originalName" : "za-reader-v1.json",
@@ -87,7 +105,9 @@
   "lineCount" : 1874,
   "valid" : true,
   "favorite" : true,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-19_01-16-55_za-reader-pdp.json",
   "originalName" : "za-reader-pdp.json",
@@ -96,7 +116,9 @@
   "lineCount" : 2906,
   "valid" : true,
   "favorite" : true,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-19_01-17-00_za-navigat-menu.json",
   "originalName" : "za-navigat-menu.json",
@@ -105,7 +127,9 @@
   "lineCount" : 2061,
   "valid" : true,
   "favorite" : true,
-  "documentFormat" : "JSON"
+  "documentFormat" : "JSON",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
 }, {
   "storedName" : "2026-07-19_10-19-55_README.md",
   "originalName" : "README.md",
@@ -114,5 +138,29 @@
   "lineCount" : 406,
   "valid" : true,
   "favorite" : true,
-  "documentFormat" : "MARKDOWN"
+  "documentFormat" : "MARKDOWN",
+  "sourceKind" : "LOCAL_FILE",
+  "curlCommand" : null
+}, {
+  "storedName" : "2026-07-19_16-04-05_64KB-min-2026-07-19_16-04-05.json",
+  "originalName" : "64KB-min-2026-07-19_16-04-05.json",
+  "importedAt" : 1784469845.190906000,
+  "sizeBytes" : 57683,
+  "lineCount" : 1183,
+  "valid" : true,
+  "favorite" : false,
+  "documentFormat" : "JSON",
+  "sourceKind" : "CURL",
+  "curlCommand" : "curl  -H 'Accept: application/json' 'https://microsoftedge.github.io/Demos/json-dummy-data/64KB-min.json'"
+}, {
+  "storedName" : "2026-07-19_16-13-53_00085117-2026-07-19_16-13-53.json",
+  "originalName" : "00085117-2026-07-19_16-13-53.json",
+  "importedAt" : 1784470433.835190000,
+  "sizeBytes" : 12599,
+  "lineCount" : 402,
+  "valid" : true,
+  "favorite" : false,
+  "documentFormat" : "JSON",
+  "sourceKind" : "CURL",
+  "curlCommand" : "curl --location 'https://www.zara.com/itxrest/2/catalog/store/10701/product/00085117?locale=es_ES'"
 } ]
