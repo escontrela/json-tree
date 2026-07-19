@@ -2,6 +2,7 @@ package com.davidpe.jsontree.ui.support;
 
 public record ViewerCapabilityPresentation(
     boolean rawJsonEnabled,
+    boolean structureEnabled,
     boolean searchEnabled,
     boolean outlineEnabled,
     String copyButtonText,

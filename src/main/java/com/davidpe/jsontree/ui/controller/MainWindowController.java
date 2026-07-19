@@ -14,10 +14,12 @@ import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonBreadcrumbModelService;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.JsonSearchWorkflowService;
+import com.davidpe.jsontree.application.service.JsonStructureDocumentService;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.ui.model.BreadcrumbViewerMode;
+import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
@@ -124,6 +126,7 @@ public class MainWindowController implements UiScreenController {
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
   private final JsonBreadcrumbModelService breadcrumbModelService;
+  private final JsonStructureDocumentService structureDocumentService;
   private final JsonOutlineModelService outlineModelService;
   private final JsonBreadcrumbViewportResolver breadcrumbViewportResolver;
   private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
@@ -156,6 +159,7 @@ public class MainWindowController implements UiScreenController {
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
       JsonBreadcrumbModelService breadcrumbModelService,
+      JsonStructureDocumentService structureDocumentService,
       JsonOutlineModelService outlineModelService,
       JsonBreadcrumbViewportResolver breadcrumbViewportResolver,
       OutlineMinimapLayoutPlanner outlineLayoutPlanner,
@@ -184,6 +188,7 @@ public class MainWindowController implements UiScreenController {
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
     this.breadcrumbModelService = breadcrumbModelService;
+    this.structureDocumentService = structureDocumentService;
     this.outlineModelService = outlineModelService;
     this.breadcrumbViewportResolver = breadcrumbViewportResolver;
     this.outlineLayoutPlanner = outlineLayoutPlanner;
@@ -290,6 +295,8 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Button rawJsonButton;
 
+  @FXML private Button structureButton;
+
   @FXML private Button searchButton;
 
   @FXML private Button copyTreeButton;
@@ -325,12 +332,14 @@ public class MainWindowController implements UiScreenController {
   private String currentViewIdentity;
   private String autoHiddenLargePreviewOutlineIdentity;
   private boolean windowMetricsLoggingAttached;
-  private boolean showingRawJson = false;
+  private ViewerPresentationMode currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
   private RawJsonPresentation currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
   private JsonBreadcrumbModel currentBreadcrumbModel = JsonBreadcrumbModel.unavailable();
+  private AsciiTreeDocument currentStructureDocument;
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentBreadcrumbSourceIdentity;
+  private String currentStructureSourceIdentity;
   private String currentOutlineSourceIdentity;
   private boolean breadcrumbRefreshPending;
   private boolean outlineViewportRefreshPending;
@@ -645,11 +654,14 @@ public class MainWindowController implements UiScreenController {
         .currentView()
         .filter(result -> currentState == ViewerVisualState.VALID)
         .filter(result -> !result.usesLargePreview())
+        .filter(unused -> currentPresentationMode != ViewerPresentationMode.STRUCTURE)
         .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
         .ifPresentOrElse(
             result -> {
               BreadcrumbViewerMode viewerMode =
-                  showingRawJson ? BreadcrumbViewerMode.RAW_JSON : BreadcrumbViewerMode.ASCII_TREE;
+                  currentPresentationMode == ViewerPresentationMode.RAW_JSON
+                      ? BreadcrumbViewerMode.RAW_JSON
+                      : BreadcrumbViewerMode.ASCII_TREE;
               breadcrumbViewportResolver
                   .resolve(
                       currentBreadcrumbModel,
@@ -760,9 +772,10 @@ public class MainWindowController implements UiScreenController {
         viewerTextRenderPlanFactory.buildAsciiPlan(document, currentAsciiHighlightRanges(document));
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
     syncBreadcrumbModelWithCurrentView(result);
+    currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
-    resetViewModeIfNeeded();
+    resetPresentationArtifactsForNonRawMode();
     applyLargePreviewDocumentScrollShell(result);
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
     publishZoomSnapshot(
@@ -775,6 +788,8 @@ public class MainWindowController implements UiScreenController {
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
+    rawJsonButton.setText("Raw JSON");
+    structureButton.setText("Structure");
     updateOutlineShell(result, document);
     syncOutlinePanelVisibility(result);
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
@@ -817,7 +832,7 @@ public class MainWindowController implements UiScreenController {
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
-    resetViewModeIfNeeded();
+    resetPresentationState();
     applyState(ViewerVisualState.EMPTY);
     hideBreadcrumbLabel();
   }
@@ -854,6 +869,7 @@ public class MainWindowController implements UiScreenController {
     hideLargePreviewDocumentScrollShell();
     currentLoadedAt = Instant.now();
     currentViewIdentity = "loading:" + fileName;
+    preparePresentationStateForIncomingDocument();
     resetToolbarForNonRenderableState();
     showFileWarningIcon(false);
     updateFileNameLabel(fileName);
@@ -882,7 +898,6 @@ public class MainWindowController implements UiScreenController {
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
-    resetViewModeIfNeeded();
     applyState(ViewerVisualState.LOADING);
     hideBreadcrumbLabel();
   }
@@ -919,7 +934,7 @@ public class MainWindowController implements UiScreenController {
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     hideSearchModal();
-    resetViewModeIfNeeded();
+    resetPresentationState();
     applyState(ViewerVisualState.INVALID);
     hideBreadcrumbLabel();
   }
@@ -1085,7 +1100,9 @@ public class MainWindowController implements UiScreenController {
   private void presentLoadResult(JsonViewerLoadResult result) {
     updateFileSummary(result);
     searchWorkflowService.clearIfSourceChanged(currentViewIdentity(result));
-    if (!result.capabilities().searchAvailable()) {
+    if (!capabilityPresentationResolver
+        .resolve(result, effectivePresentationMode(result))
+        .searchEnabled()) {
       searchWorkflowService.clear();
       hideSearchModal();
     }
@@ -1099,7 +1116,7 @@ public class MainWindowController implements UiScreenController {
         renderLargePreviewRawChunk(result, 0.0);
         return;
       }
-      renderAsciiTree(result);
+      renderCurrentPresentation(result);
       return;
     }
     if (validationResult.status() == JsonValidationStatus.EMPTY) {
@@ -1170,7 +1187,8 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void updateFileSummary(JsonViewerLoadResult result) {
-    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
+    ViewerCapabilityPresentation presentation =
+        capabilityPresentationResolver.resolve(result, effectivePresentationMode(result));
     updateFileNameLabel(result.importResult().fileName());
     showFileWarningIcon(largePreviewIndicatorResolver.showForCurrentView(result));
     fileMetaLabel.setText(
@@ -1208,7 +1226,8 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void syncStatusRail(JsonViewerLoadResult result) {
-    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
+    ViewerCapabilityPresentation presentation =
+        capabilityPresentationResolver.resolve(result, effectivePresentationMode(result));
     String state =
         result.validationResult().status() == JsonValidationStatus.VALID
             ? presentation.statusState()
@@ -1334,28 +1353,29 @@ public class MainWindowController implements UiScreenController {
     if (workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()) {
       return;
     }
-    if (showingRawJson) {
-      workflowService
-          .currentView()
-          .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
-          .filter(JsonViewerLoadResult::hasRenderableTree)
-          .ifPresent(this::renderAsciiTree);
-    } else {
-      workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
-    }
+    switchPresentationMode(
+        currentPresentationMode == ViewerPresentationMode.RAW_JSON
+            ? ViewerPresentationMode.ASCII_TREE
+            : ViewerPresentationMode.RAW_JSON);
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
   }
 
-  private void resetViewModeIfNeeded() {
-    if (!showingRawJson) {
+  @FXML
+  void toggleStructureMode() {
+    if (structureButton.isDisable()) {
       return;
     }
-    rawJsonButton.setText("Raw JSON");
-    showingRawJson = false;
-    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+    switchPresentationMode(
+        currentPresentationMode == ViewerPresentationMode.STRUCTURE
+            ? ViewerPresentationMode.ASCII_TREE
+            : ViewerPresentationMode.STRUCTURE);
+    viewerScrollPane.setHvalue(0);
+    viewerScrollPane.setVvalue(0);
+    scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
   }
 
   private void setValidationBadge(String text, String styleClass) {
@@ -1583,22 +1603,13 @@ public class MainWindowController implements UiScreenController {
                 renderLargePreviewRawChunk(result, viewerScrollPane.getVvalue());
                 return;
               }
-              if (showingRawJson) {
-                if (result.capabilities().rawJsonAvailable()) {
-                  workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
-                  return;
-                }
-                resetViewModeIfNeeded();
-              }
-              if (result.hasRenderableTree()) {
-                renderAsciiTree(result);
-                return;
-              }
+              renderCurrentPresentation(result);
             });
   }
 
   private void handleViewerScrollValueChanged(double verticalScrollValue) {
-    if (suppressLargePreviewScrollHandling || showingRawJson) {
+    if (suppressLargePreviewScrollHandling
+        || currentPresentationMode != ViewerPresentationMode.ASCII_TREE) {
       return;
     }
     if (workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()) {
@@ -1838,6 +1849,7 @@ public class MainWindowController implements UiScreenController {
   private void renderLargePreviewRawChunk(
       JsonViewerLoadResult result, double targetVerticalScrollValue) {
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
+    currentPresentationMode = ViewerPresentationMode.RAW_JSON;
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
     applyLargePreviewDocumentScrollShell(result);
@@ -1846,6 +1858,7 @@ public class MainWindowController implements UiScreenController {
     renderRawJsonContent(
         workflowService.currentViewRawJson().orElse(result.asciiTreeDocument().content()));
     rawJsonButton.setText("Raw page");
+    structureButton.setText("Structure");
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
@@ -1887,10 +1900,12 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void applyCapabilityPresentation(JsonViewerLoadResult result) {
-    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
+    ViewerCapabilityPresentation presentation =
+        capabilityPresentationResolver.resolve(result, effectivePresentationMode(result));
     copyTreeButton.setText(presentation.copyButtonText());
     copyTreeButton.setDisable(false);
     rawJsonButton.setDisable(!presentation.rawJsonEnabled());
+    structureButton.setDisable(!presentation.structureEnabled());
     searchButton.setDisable(!presentation.searchEnabled());
     zoomButton.setDisable(!zoomActionAvailabilityResolver.shouldEnable(result));
     outlineToggleButton.setDisable(
@@ -1921,7 +1936,8 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void updateOutlineShell(JsonViewerLoadResult result, AsciiTreeDocument document) {
-    ViewerCapabilityPresentation presentation = capabilityPresentationResolver.resolve(result);
+    ViewerCapabilityPresentation presentation =
+        capabilityPresentationResolver.resolve(result, effectivePresentationMode(result));
     if (presentation.outlineEnabled()) {
       syncOutlineModelWithCurrentView();
       showOutlineValidShell(document);
@@ -1940,6 +1956,7 @@ public class MainWindowController implements UiScreenController {
     copyTreeButton.setText("Copy tree");
     copyTreeButton.setDisable(true);
     rawJsonButton.setDisable(true);
+    structureButton.setDisable(true);
     searchButton.setDisable(true);
     zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
@@ -2012,8 +2029,12 @@ public class MainWindowController implements UiScreenController {
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    rawJsonButton.setText("ASCII tree");
-    showingRawJson = true;
+    currentPresentationMode = ViewerPresentationMode.RAW_JSON;
+    rawJsonButton.setText(
+        workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()
+            ? "Raw page"
+            : "ASCII tree");
+    structureButton.setText("Structure");
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
   }
@@ -2049,7 +2070,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void scrollActiveHighlightIntoView() {
-    if (showingRawJson) {
+    if (currentPresentationMode == ViewerPresentationMode.RAW_JSON) {
       currentRawHighlightRanges().stream()
           .filter(SearchHighlightRange::active)
           .findFirst()
@@ -2067,6 +2088,140 @@ public class MainWindowController implements UiScreenController {
         .filter(SearchHighlightRange::active)
         .findFirst()
         .ifPresent(range -> richTextViewerSurface.scrollToOffset(range.startIndex()));
+  }
+
+  private void switchPresentationMode(ViewerPresentationMode targetMode) {
+    workflowService
+        .currentView()
+        .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
+        .ifPresent(
+            result -> {
+              currentPresentationMode = normalizePresentationMode(targetMode, result);
+              if (currentPresentationMode == ViewerPresentationMode.STRUCTURE) {
+                searchWorkflowService.clear();
+                hideSearchModal();
+                syncActiveSearchStrip();
+              }
+              renderCurrentPresentation(result);
+            });
+  }
+
+  private void renderCurrentPresentation(JsonViewerLoadResult result) {
+    ViewerPresentationMode mode = effectivePresentationMode(result);
+    currentPresentationMode = mode;
+    switch (mode) {
+      case RAW_JSON -> workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
+      case STRUCTURE -> renderStructure(result);
+      case ASCII_TREE -> renderAsciiTree(result);
+    }
+  }
+
+  private void renderStructure(JsonViewerLoadResult result) {
+    resolveStructureDocument(result)
+        .ifPresentOrElse(
+            document -> {
+              ViewerTextRenderPlan renderPlan =
+                  viewerTextRenderPlanFactory.buildAsciiPlan(document, List.of());
+              applyCapabilityPresentation(result);
+              syncLargePreviewPageControls(result);
+              applyLargePreviewDocumentScrollShell(result);
+              richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
+              publishZoomSnapshot(
+                  zoomViewerSnapshotFactory.renderable(
+                      result,
+                      "Structure",
+                      renderPlan,
+                      "tree-content",
+                      formatFileMeta(
+                          result.importResult().sizeBytes(), result.importResult().sourceKind())));
+              richTextViewerSurface.scrollToTop();
+              emptyStateLabel.setManaged(false);
+              emptyStateLabel.setVisible(false);
+              rawJsonButton.setText("Raw JSON");
+              structureButton.setText("ASCII tree");
+              currentPresentationMode = ViewerPresentationMode.STRUCTURE;
+              updateFooterStatusLabel("Rendered " + document.lineCount() + " structure lines");
+              setStatusRailValues(
+                  "STRUCTURE",
+                  ByteSizeFormatter.format(result.importResult().sizeBytes()),
+                  Integer.toString(document.lineCount()),
+                  sourceLabel(result.importResult().sourceKind()));
+              resetOutlineModel();
+              showOutlineShellState(
+                  "Outline unavailable",
+                  "Structure mode keeps the outline disabled in this iteration.",
+                  "Return to ASCII tree or Raw JSON to restore outline interactions.",
+                  null);
+              applyState(ViewerVisualState.VALID);
+              hideBreadcrumbLabel();
+            },
+            () -> renderAsciiTree(result));
+  }
+
+  private ViewerPresentationMode effectivePresentationMode(JsonViewerLoadResult result) {
+    return normalizePresentationMode(currentPresentationMode, result);
+  }
+
+  private ViewerPresentationMode normalizePresentationMode(
+      ViewerPresentationMode requestedMode, JsonViewerLoadResult result) {
+    if (result == null) {
+      return ViewerPresentationMode.ASCII_TREE;
+    }
+    if (result.usesLargePreview()) {
+      return ViewerPresentationMode.RAW_JSON;
+    }
+    if (requestedMode == ViewerPresentationMode.RAW_JSON
+        && result.capabilities().rawJsonAvailable()) {
+      return ViewerPresentationMode.RAW_JSON;
+    }
+    if (requestedMode == ViewerPresentationMode.STRUCTURE && result.hasRenderableTree()) {
+      return ViewerPresentationMode.STRUCTURE;
+    }
+    return ViewerPresentationMode.ASCII_TREE;
+  }
+
+  private java.util.Optional<AsciiTreeDocument> resolveStructureDocument(JsonViewerLoadResult result) {
+    if (result == null || result.usesLargePreview() || !result.hasRenderableTree()) {
+      resetStructureDocument();
+      return java.util.Optional.empty();
+    }
+
+    String sourceIdentity = currentViewIdentity(result);
+    if (sourceIdentity.equals(currentStructureSourceIdentity) && currentStructureDocument != null) {
+      return java.util.Optional.of(currentStructureDocument);
+    }
+
+    currentStructureDocument =
+        workflowService.currentViewRawJson().map(structureDocumentService::buildFromRawJson).orElse(null);
+    currentStructureSourceIdentity = sourceIdentity;
+    return java.util.Optional.ofNullable(currentStructureDocument);
+  }
+
+  private void resetStructureDocument() {
+    currentStructureDocument = null;
+    currentStructureSourceIdentity = null;
+  }
+
+  private void resetPresentationArtifactsForNonRawMode() {
+    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+  }
+
+  private void resetPresentationState() {
+    currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
+    rawJsonButton.setText("Raw JSON");
+    structureButton.setText("Structure");
+    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+    resetStructureDocument();
+  }
+
+  private void preparePresentationStateForIncomingDocument() {
+    if (currentPresentationMode != ViewerPresentationMode.STRUCTURE) {
+      currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
+    }
+    rawJsonButton.setText("Raw JSON");
+    structureButton.setText("Structure");
+    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+    resetStructureDocument();
   }
 
   private double clamp(double value) {

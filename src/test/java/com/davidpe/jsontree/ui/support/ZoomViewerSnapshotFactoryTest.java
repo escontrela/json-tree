@@ -64,6 +64,28 @@ class ZoomViewerSnapshotFactoryTest {
     assertTrue(snapshot.documentMeta().contains("byte-paged large preview"));
   }
 
+  @Test
+  void buildsStructureSnapshotsForZoomUsingTheSameSharedSnapshotContract() {
+    JsonViewerLoadResult result = renderableResult("schema.json", JsonInspectionMode.FULL);
+    ViewerTextRenderPlan renderPlan =
+        ViewerTextRenderPlan.normal(
+            List.of(
+                new ViewerTextRenderFragment(
+                    "root\n└─ user\n   └─ name", "tree-structure", "#2d333a", false, false)));
+
+    var snapshot =
+        factory.renderable(
+            result,
+            "Structure",
+            renderPlan,
+            "tree-content",
+            "1.0 KB • local import");
+
+    assertEquals("Structure", snapshot.modeLabel());
+    assertEquals("tree-content", snapshot.contentStyleClass());
+    assertTrue(snapshot.windowTitle().contains("schema.json"));
+  }
+
   private JsonViewerLoadResult renderableResult(String fileName, JsonInspectionMode mode) {
     return new JsonViewerLoadResult(
         new JsonImportResult(

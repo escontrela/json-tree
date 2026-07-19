@@ -146,6 +146,15 @@
 - Large-preview activation now depends strictly on the configured size threshold; files at or below that threshold stay in `FULL` mode and are no longer re-promoted by the legacy full-render guard.
 - The unsupported intermediate states `showing simplified tree` and `showing simplified raw JSON` are removed from the product flow; a valid JSON now stays on the normal full viewer path unless it is explicitly classified into `LARGE_PREVIEW`.
 
+## Structure Viewer Mode
+
+- The main workspace now exposes `Structure` as a third viewer mode alongside `ASCII tree` and `Raw JSON`, using the same shared `RichTextFX` surface rather than a parallel renderer.
+- Structure mode renders a schema-like ASCII tree with the exact original property names and no real JSON values, including representative `[0]` branches for arrays.
+- Arrays now merge the discovered shape of all elements into that single `[0]` branch, so heterogenous arrays expose the union of their fields while scalar-only arrays stay as a placeholder.
+- `Search` and outline interactions are intentionally disabled while `Structure` mode is active in the main viewer.
+- If the user keeps `Structure` selected and loads or reopens another normal JSON document, the structure presentation refreshes for the new document instead of falling back to a stale prior render.
+- The zoom window consumes the same structure render snapshots as the main viewer, so opening zoom from `Structure` or switching into `Structure` while zoom is open keeps both surfaces aligned.
+
 ## Outline Minimap Shell
 
 - The right rail outline panel now exposes a dedicated minimap preview shell instead of only a text placeholder.
