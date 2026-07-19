@@ -29,7 +29,7 @@
             <padding>
                 <Insets bottom="24.0" left="24.0" right="24.0" top="24.0" />
             </padding>
-            <StackPane fx:id="zoomViewerHost" managed="false" visible="false" />
+            <StackPane fx:id="zoomViewerHost" managed="false" styleClass="zoom-window-viewer-host" visible="false" />
             <Label fx:id="zoomStateLabel" styleClass="empty-state zoom-window-empty-state" text="The current JSON presentation will appear here once the zoom viewer content is wired." wrapText="true" />
         </StackPane>
     </center>

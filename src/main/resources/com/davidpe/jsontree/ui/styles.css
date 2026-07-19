@@ -126,6 +126,11 @@
     -fx-background-color: #ffffff;
 }
 
+.zoom-window-viewer-host {
+    -fx-max-width: Infinity;
+    -fx-max-height: Infinity;
+}
+
 .zoom-window-empty-state {
     -fx-max-width: 520;
     -fx-text-alignment: center;
