@@ -96,6 +96,7 @@ class ClipboardJsonImportServiceTest {
 
     assertFalse(result.successful());
     assertEquals(ClipboardJsonImportStatus.UNREADABLE_CLIPBOARD, result.status());
+    assertEquals("Clipboard text is not available right now: Clipboard unavailable", result.message());
   }
 
   @Test

@@ -83,7 +83,7 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
     } catch (RuntimeException exception) {
       return ClipboardJsonImportResult.failure(
           ClipboardJsonImportStatus.UNREADABLE_CLIPBOARD,
-          "Clipboard text is not available right now.");
+          composeUnreadableClipboardMessage(exception));
     }
 
     if (clipboardText.isEmpty() || clipboardText.get().isBlank()) {
@@ -172,6 +172,14 @@ public class ClipboardJsonImportService implements ImportClipboardJsonUseCase {
         + ", column "
         + exception.getLocation().getColumnNr()
         + ").";
+  }
+
+  private String composeUnreadableClipboardMessage(RuntimeException exception) {
+    String detail = exception.getMessage();
+    if (detail == null || detail.isBlank()) {
+      return "Clipboard text is not available right now.";
+    }
+    return "Clipboard text is not available right now: " + detail;
   }
 
   private long resolveSize(Path path) {
