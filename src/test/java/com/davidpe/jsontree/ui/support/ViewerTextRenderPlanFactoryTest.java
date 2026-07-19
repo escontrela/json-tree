@@ -49,11 +49,34 @@ class ViewerTextRenderPlanFactoryTest {
   @Test
   void buildsMarkdownPlansThroughTheSharedPipeline() {
     ViewerTextRenderPlan renderPlan =
-        factory.buildMarkdownPlan(
+        factory.buildRawMarkdownPlan(
             "# Heading\n- item\n> quote\n",
             List.of(new SearchHighlightRange(2, 9, true)));
 
     assertEquals("markdown-heading", renderPlan.fragments().getFirst().styleClass());
     assertTrue(renderPlan.fragments().stream().anyMatch(ViewerTextRenderFragment::highlighted));
+  }
+
+  @Test
+  void buildsRenderedMarkdownPlansThroughTheSharedPipeline() {
+    ViewerTextRenderPlan renderPlan =
+        factory.buildRenderedMarkdownPlan(
+            """
+            # Heading
+            - item
+            > quote
+            ```java
+            code
+            ```
+            """);
+
+    assertEquals("Heading\n", renderPlan.fragments().get(0).text());
+    assertEquals("markdown-rendered-heading-1", renderPlan.fragments().get(0).styleClass());
+    assertTrue(
+        renderPlan.fragments().stream()
+            .anyMatch(fragment -> "markdown-rendered-list".equals(fragment.styleClass())));
+    assertTrue(
+        renderPlan.fragments().stream()
+            .anyMatch(fragment -> "markdown-rendered-code".equals(fragment.styleClass())));
   }
 }

@@ -844,6 +844,44 @@
     -fx-fill: #1c69d4;
 }
 
+.text.markdown-rendered-paragraph,
+.rich-text-viewer .markdown-rendered-paragraph,
+.text.markdown-rendered-list,
+.rich-text-viewer .markdown-rendered-list {
+    -fx-fill: #2d333a;
+}
+
+.text.markdown-rendered-heading-1,
+.rich-text-viewer .markdown-rendered-heading-1 {
+    -fx-fill: #123e72;
+    -fx-font-weight: 800;
+}
+
+.text.markdown-rendered-heading-2,
+.rich-text-viewer .markdown-rendered-heading-2 {
+    -fx-fill: #1c69d4;
+    -fx-font-weight: 700;
+}
+
+.text.markdown-rendered-heading-3,
+.rich-text-viewer .markdown-rendered-heading-3 {
+    -fx-fill: #3569a3;
+    -fx-font-weight: 700;
+}
+
+.text.markdown-rendered-quote,
+.rich-text-viewer .markdown-rendered-quote {
+    -fx-fill: #5f6c79;
+    -fx-font-style: italic;
+}
+
+.text.markdown-rendered-code,
+.rich-text-viewer .markdown-rendered-code,
+.text.markdown-rendered-code-fence,
+.rich-text-viewer .markdown-rendered-code-fence {
+    -fx-fill: #1c69d4;
+}
+
 .rich-text-viewer .search-match {
     -fx-fill: #355c8a;
     -fx-underline: true;
@@ -1068,6 +1106,31 @@
 
 .night-mode .text.markdown-quote,
 .night-mode .rich-text-viewer .markdown-quote {
+    -fx-fill: #9fb0bf;
+}
+
+.night-mode .text.markdown-rendered-paragraph,
+.night-mode .rich-text-viewer .markdown-rendered-paragraph,
+.night-mode .text.markdown-rendered-list,
+.night-mode .rich-text-viewer .markdown-rendered-list {
+    -fx-fill: #dbe4ed;
+}
+
+.night-mode .text.markdown-rendered-heading-1,
+.night-mode .rich-text-viewer .markdown-rendered-heading-1,
+.night-mode .text.markdown-rendered-heading-2,
+.night-mode .rich-text-viewer .markdown-rendered-heading-2,
+.night-mode .text.markdown-rendered-heading-3,
+.night-mode .rich-text-viewer .markdown-rendered-heading-3,
+.night-mode .text.markdown-rendered-code,
+.night-mode .rich-text-viewer .markdown-rendered-code,
+.night-mode .text.markdown-rendered-code-fence,
+.night-mode .rich-text-viewer .markdown-rendered-code-fence {
+    -fx-fill: #7fb7ff;
+}
+
+.night-mode .text.markdown-rendered-quote,
+.night-mode .rich-text-viewer .markdown-rendered-quote {
     -fx-fill: #9fb0bf;
 }
 

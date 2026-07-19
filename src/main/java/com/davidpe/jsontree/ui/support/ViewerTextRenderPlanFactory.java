@@ -18,6 +18,7 @@ public class ViewerTextRenderPlanFactory {
   private final AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter;
   private final SearchTextSpanHighlighter searchTextSpanHighlighter;
   private final MarkdownTextSyntaxHighlighter markdownTextSyntaxHighlighter;
+  private final RenderedMarkdownTextRenderer renderedMarkdownTextRenderer;
   private final ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay;
 
   @Autowired
@@ -25,10 +26,12 @@ public class ViewerTextRenderPlanFactory {
       AsciiTreeSyntaxHighlighter asciiTreeSyntaxHighlighter,
       SearchTextSpanHighlighter searchTextSpanHighlighter,
       MarkdownTextSyntaxHighlighter markdownTextSyntaxHighlighter,
+      RenderedMarkdownTextRenderer renderedMarkdownTextRenderer,
       ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay) {
     this.asciiTreeSyntaxHighlighter = asciiTreeSyntaxHighlighter;
     this.searchTextSpanHighlighter = searchTextSpanHighlighter;
     this.markdownTextSyntaxHighlighter = markdownTextSyntaxHighlighter;
+    this.renderedMarkdownTextRenderer = renderedMarkdownTextRenderer;
     this.renderPlanSearchOverlay = renderPlanSearchOverlay;
   }
 
@@ -39,6 +42,7 @@ public class ViewerTextRenderPlanFactory {
         asciiTreeSyntaxHighlighter,
         searchTextSpanHighlighter,
         new MarkdownTextSyntaxHighlighter(),
+        new RenderedMarkdownTextRenderer(),
         new ViewerTextRenderPlanSearchOverlay(new SearchHighlightRangeNormalizer()));
   }
 
@@ -53,9 +57,13 @@ public class ViewerTextRenderPlanFactory {
         content, highlightRanges, RAW_JSON_BASE_STYLE_CLASS, RAW_JSON_BASE_COLOR);
   }
 
-  public ViewerTextRenderPlan buildMarkdownPlan(
+  public ViewerTextRenderPlan buildRawMarkdownPlan(
       String content, List<SearchHighlightRange> highlightRanges) {
     ViewerTextRenderPlan basePlan = markdownTextSyntaxHighlighter.buildRenderPlan(content);
     return renderPlanSearchOverlay.apply(basePlan, highlightRanges);
+  }
+
+  public ViewerTextRenderPlan buildRenderedMarkdownPlan(String content) {
+    return renderedMarkdownTextRenderer.buildRenderPlan(content);
   }
 }
