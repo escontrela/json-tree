@@ -8,12 +8,15 @@ import com.davidpe.jsontree.application.model.JsonInspectionMode;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
+import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import java.nio.file.Path;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class ViewerCapabilityPresentationResolverTest {
@@ -92,6 +95,46 @@ class ViewerCapabilityPresentationResolverTest {
     assertFalse(presentation.outlineEnabled());
   }
 
+  @Test
+  void resolvesRenderedMarkdownPresentationWithoutRegexSearch() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(markdownResult(), ViewerPresentationMode.MARKDOWN_RENDERED);
+
+    assertTrue(presentation.rawJsonEnabled());
+    assertFalse(presentation.structureEnabled());
+    assertFalse(presentation.searchEnabled());
+    assertTrue(presentation.outlineEnabled());
+    assertEquals("Copy markdown", presentation.copyButtonText());
+    assertEquals("Markdown", presentation.validationBadgeText());
+    assertEquals("MARKDOWN", presentation.statusState());
+    assertTrue(presentation.footerStatus().contains("reading view"));
+  }
+
+  @Test
+  void resolvesRawMarkdownPresentationWithSourceAlignedRegexSearch() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(markdownResult(), ViewerPresentationMode.RAW_MARKDOWN);
+
+    assertTrue(presentation.rawJsonEnabled());
+    assertFalse(presentation.structureEnabled());
+    assertTrue(presentation.searchEnabled());
+    assertTrue(presentation.outlineEnabled());
+    assertEquals("Copy raw", presentation.copyButtonText());
+    assertTrue(presentation.footerStatus().contains("raw Markdown source"));
+  }
+
+  @Test
+  void appendsCurlRequestToFooterStatusWhenCurrentViewIsCurlBacked() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(curlBackedFullResult(), ViewerPresentationMode.ASCII_TREE);
+
+    assertTrue(presentation.footerStatus().contains("Rendered 12 lines"));
+    assertTrue(
+        presentation
+            .footerStatus()
+            .contains("Request: curl -H 'Accept: application/json' 'https://example.com/data.json'"));
+  }
+
   private JsonViewerLoadResult fullResult() {
     return new JsonViewerLoadResult(
         new JsonImportResult(
@@ -142,6 +185,55 @@ class ViewerCapabilityPresentationResolverTest {
             JsonValidationStatus.PARSING_ERROR, "JSON file is not available.", null, null),
         null,
         null,
+        JsonInspectionMode.FULL,
+        JsonViewerCapabilities.full(),
+        null);
+  }
+
+  private JsonViewerLoadResult markdownResult() {
+    return new JsonViewerLoadResult(
+        new JsonImportResult(
+            Path.of("/tmp/readme.md"),
+            "readme.md",
+            256,
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.LOCAL_FILE,
+            DocumentFormat.MARKDOWN),
+        new JsonValidationResult(JsonValidationStatus.VALID, "Markdown ready.", null, null),
+        new AsciiTreeDocument("readme.md", "# Heading\n\ncontent", 3),
+        null,
+        JsonInspectionMode.FULL,
+        new JsonViewerCapabilities(true, true, true),
+        null);
+  }
+
+  private JsonViewerLoadResult curlBackedFullResult() {
+    ImportedJsonFile historyEntry =
+        new ImportedJsonFile(
+            "2026-07-19_15-00-00_data.json",
+            "data.json",
+            Instant.parse("2026-07-19T15:00:00Z"),
+            128,
+            12,
+            true,
+            false,
+            DocumentFormat.JSON,
+            JsonDocumentSourceKind.CURL,
+            "curl -H 'Accept: application/json' 'https://example.com/data.json'");
+    return new JsonViewerLoadResult(
+        new JsonImportResult(
+            Path.of("/tmp/data.json"),
+            "data.json",
+            128,
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.CURL),
+        new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
+        new AsciiTreeDocument("root", "root\n└─ name: \"small\"", 12),
+        historyEntry,
         JsonInspectionMode.FULL,
         JsonViewerCapabilities.full(),
         null);

@@ -16,6 +16,7 @@ import com.davidpe.jsontree.application.port.out.AsciiTreeRendererPort;
 import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
@@ -114,7 +115,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         exists,
         readable,
         regularFile,
-        JsonDocumentSourceKind.LOCAL_FILE);
+        JsonDocumentSourceKind.LOCAL_FILE,
+        classifyDocumentFormat(normalizedPath));
   }
 
   /**
@@ -128,6 +130,10 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return loadImportedFile(importResult);
   }
 
+  public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult, String curlCommand) {
+    return loadImportedFileInternal(importResult, curlCommand);
+  }
+
   /**
    * Persists a validated import into history and returns operation status.
    *
@@ -139,6 +145,18 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     if (!importResult.available()) {
       return HistoryJsonImportResult.failure(
           HistoryJsonImportStatus.UNREADABLE_FILE, "Selected JSON file is not available.");
+    }
+
+    if (importResult.documentFormat().markdown()) {
+      String markdownContent = readFileContents(importResult.path());
+      if (markdownContent.isBlank()) {
+        return HistoryJsonImportResult.failure(
+            HistoryJsonImportStatus.EMPTY_JSON, "Selected Markdown file is empty.");
+      }
+      ImportedJsonFile historyEntry =
+          createHistoryEntry(importResult, lineCountFor(markdownContent), true);
+      jsonHistoryRepository.save(historyEntry, markdownContent);
+      return HistoryJsonImportResult.imported(historyEntry);
     }
 
     JsonValidationResult validationResult = validationPort.validate(importResult.path());
@@ -155,7 +173,8 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     AsciiTreeDocument asciiTreeDocument = renderDocument(importResult.path(), inspectionMode);
-    ImportedJsonFile historyEntry = createHistoryEntry(importResult, asciiTreeDocument.lineCount());
+    ImportedJsonFile historyEntry =
+        createHistoryEntry(importResult, asciiTreeDocument.lineCount(), validationResult.valid());
     jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
     return HistoryJsonImportResult.imported(historyEntry);
   }
@@ -167,6 +186,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
    * @return full viewer state, including validation and rendered data when available.
    */
   public JsonViewerLoadResult loadImportedFile(JsonImportResult importResult) {
+    return loadImportedFileInternal(importResult, null);
+  }
+
+  private JsonViewerLoadResult loadImportedFileInternal(
+      JsonImportResult importResult, String curlCommand) {
     JsonInspectionMode inspectionMode = inspectionModeResolver.resolve(importResult);
     if (!importResult.available()) {
       JsonViewerLoadResult unavailableResult =
@@ -183,6 +207,13 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       return unavailableResult;
     }
 
+    if (importResult.documentFormat().markdown()) {
+      JsonViewerLoadResult markdownResult =
+          loadMarkdownImportedFile(importResult, inspectionMode, null, curlCommand);
+      replaceCurrentView(markdownResult);
+      return markdownResult;
+    }
+
     JsonValidationResult validationResult = validationPort.validate(importResult.path());
     AsciiTreeDocument asciiTreeDocument = null;
     ImportedJsonFile historyEntry = null;
@@ -194,7 +225,9 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
       inspectionMode = renderableLoadState.inspectionMode();
       asciiTreeDocument = renderableLoadState.document();
       largePreviewSession = renderableLoadState.largePreviewSession();
-      historyEntry = createHistoryEntry(importResult, renderableLoadState.historyLineCount());
+      historyEntry =
+          createHistoryEntry(
+              importResult, renderableLoadState.historyLineCount(), true, curlCommand);
       jsonHistoryRepository.save(historyEntry, readFileContents(importResult.path()));
     }
 
@@ -242,7 +275,15 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
             true,
             true,
             true,
-            JsonDocumentSourceKind.HISTORY);
+            JsonDocumentSourceKind.HISTORY,
+            historyEntry.get().documentFormat());
+
+    if (historyEntry.get().documentFormat().markdown()) {
+      JsonViewerLoadResult markdownResult =
+          loadMarkdownImportedFile(importResult, inspectionMode, historyEntry.get(), null);
+      replaceCurrentView(markdownResult);
+      return Optional.of(markdownResult);
+    }
 
     JsonValidationResult validationResult =
         new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);
@@ -306,6 +347,12 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
 
     if (currentView.usesLargePreview() && currentView.hasRenderableTree()) {
+      return Optional.ofNullable(currentView.asciiTreeDocument().content());
+    }
+
+    if (currentView.usesLargePreview()
+        && currentView.importResult().documentFormat().markdown()
+        && currentView.asciiTreeDocument() != null) {
       return Optional.ofNullable(currentView.asciiTreeDocument().content());
     }
 
@@ -376,7 +423,13 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     }
   }
 
-  private ImportedJsonFile createHistoryEntry(JsonImportResult importResult, int lineCount) {
+  private ImportedJsonFile createHistoryEntry(
+      JsonImportResult importResult, int lineCount, boolean valid) {
+    return createHistoryEntry(importResult, lineCount, valid, null);
+  }
+
+  private ImportedJsonFile createHistoryEntry(
+      JsonImportResult importResult, int lineCount, boolean valid, String curlCommand) {
     Instant importedAt = Instant.now(clock);
     return new ImportedJsonFile(
         buildStoredName(importedAt, importResult.fileName()),
@@ -384,8 +437,11 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
         importedAt,
         importResult.sizeBytes(),
         lineCount,
-        true,
-        false);
+        valid,
+        false,
+        importResult.documentFormat(),
+        importResult.sourceKind(),
+        importResult.sourceKind() == JsonDocumentSourceKind.CURL ? curlCommand : null);
   }
 
   private String buildStoredName(Instant importedAt, String originalName) {
@@ -444,6 +500,52 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return RenderableLoadState.full(fullDocument);
   }
 
+  private JsonViewerLoadResult loadMarkdownImportedFile(
+      JsonImportResult importResult,
+      JsonInspectionMode inspectionMode,
+      ImportedJsonFile existingHistoryEntry,
+      String curlCommand) {
+    String markdownContent = readFileContents(importResult.path());
+    JsonValidationResult validationResult =
+        markdownContent.isBlank()
+            ? new JsonValidationResult(JsonValidationStatus.EMPTY, "Markdown file is empty.", null, null)
+            : new JsonValidationResult(JsonValidationStatus.VALID, "Markdown ready.", null, null);
+    AsciiTreeDocument markdownDocument = null;
+    ImportedJsonFile historyEntry = existingHistoryEntry;
+    LargePreviewPagedSession largePreviewSession = null;
+    if (validationResult.valid()) {
+      if (inspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
+        RenderableLoadState renderableLoadState = openLargePreviewState(importResult, existingHistoryEntry);
+        inspectionMode = renderableLoadState.inspectionMode();
+        markdownDocument = renderableLoadState.document();
+        largePreviewSession = renderableLoadState.largePreviewSession();
+      } else {
+        markdownDocument =
+            new AsciiTreeDocument(
+                importResult.fileName(),
+                markdownContent,
+                lineCountFor(markdownContent));
+      }
+      if (historyEntry == null) {
+        historyEntry =
+            createHistoryEntry(
+                importResult,
+                markdownDocument == null ? lineCountFor(markdownContent) : markdownDocument.lineCount(),
+                true,
+                curlCommand);
+        jsonHistoryRepository.save(historyEntry, markdownContent);
+      }
+    }
+    return new JsonViewerLoadResult(
+        importResult,
+        validationResult,
+        markdownDocument,
+        historyEntry,
+        inspectionMode,
+        capabilitiesFor(importResult.documentFormat(), inspectionMode),
+        largePreviewSession);
+  }
+
   private RenderableLoadState openLargePreviewState(
       JsonImportResult importResult, ImportedJsonFile historyEntry) {
     LargePreviewPageLoadResult pageLoadResult =
@@ -463,6 +565,7 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     return switch (importResult.sourceKind()) {
       case LOCAL_FILE -> LargePreviewSessionSource.local(importResult.path());
       case CLIPBOARD -> LargePreviewSessionSource.clipboard(importResult.path());
+      case CURL -> LargePreviewSessionSource.curl(importResult.path());
       case HISTORY ->
           LargePreviewSessionSource.history(importResult.path(), historyEntry.storedName());
     };
@@ -483,10 +586,31 @@ public class JsonViewerWorkflowService implements ImportJsonUseCase, OpenHistory
     currentView = nextView;
   }
 
+  private JsonViewerCapabilities capabilitiesFor(
+      DocumentFormat documentFormat, JsonInspectionMode inspectionMode) {
+    if (inspectionMode == JsonInspectionMode.LARGE_PREVIEW) {
+      return JsonViewerCapabilities.largePreview();
+    }
+    return documentFormat.markdown()
+        ? new JsonViewerCapabilities(true, true, true)
+        : JsonViewerCapabilities.full();
+  }
+
   private JsonViewerCapabilities capabilitiesFor(JsonInspectionMode inspectionMode) {
-    return inspectionMode == JsonInspectionMode.LARGE_PREVIEW
+    return currentView != null
+        ? capabilitiesFor(currentView.importResult().documentFormat(), inspectionMode)
+        : inspectionMode == JsonInspectionMode.LARGE_PREVIEW
         ? JsonViewerCapabilities.largePreview()
         : JsonViewerCapabilities.full();
+  }
+
+  private DocumentFormat classifyDocumentFormat(Path path) {
+    String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+    return fileName.endsWith(".md") ? DocumentFormat.MARKDOWN : DocumentFormat.JSON;
+  }
+
+  private int lineCountFor(String content) {
+    return content == null || content.isEmpty() ? 0 : content.split("\\R", -1).length;
   }
 
   private record RenderableLoadState(

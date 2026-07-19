@@ -112,6 +112,20 @@
     -fx-padding: 0;
 }
 
+.zoom-search-strip {
+    -fx-alignment: center-left;
+}
+
+.zoom-search-count {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.zoom-breadcrumb-label {
+    -fx-max-width: Infinity;
+}
+
 .zoom-window-viewer-shell {
     -fx-background-color: #ffffff;
 }
@@ -470,6 +484,17 @@
     -fx-font-weight: 600;
 }
 
+.settings-scroll-pane,
+.settings-scroll-pane > .viewport,
+.settings-scroll-pane .corner {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+}
+
+.settings-scroll-content {
+    -fx-fill-width: true;
+}
+
 .history-import-feedback {
     -fx-padding: 0 0 4 0;
 }
@@ -503,6 +528,7 @@
 }
 
 .history-favorite-button,
+.history-curl-button,
 .history-delete-button {
     -fx-padding: 8 12 8 12;
 }
@@ -644,13 +670,37 @@
     -fx-border-color: #004a9f;
 }
 
+.curl-editor-shell {
+    -fx-min-width: 720;
+    -fx-min-height: 440;
+}
+
+.curl-editor-state {
+    -fx-padding: 0 0 4 0;
+}
+
+.curl-editor-text-area {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #c7ced7;
+    -fx-border-width: 1;
+    -fx-padding: 12 14 12 14;
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 13px;
+    -fx-font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+}
+
+.curl-editor-text-area .content {
+    -fx-background-color: #ffffff;
+}
+
 .search-strip-button {
     -fx-padding: 8 12 8 12;
 }
 
 .button:focused,
 .scroll-pane:focused,
-.text-field:focused {
+.text-field:focused,
+.text-area:focused {
     -fx-border-color: #1c69d4;
 }
 
@@ -762,9 +812,74 @@
     -fx-font-size: 14px;
 }
 
+.markdown-content {
+    -fx-font-family: "JetBrains Mono", "SFMono-Regular", "Menlo", monospace;
+    -fx-font-size: 14px;
+}
+
 .text.raw-json-text,
 .rich-text-viewer .raw-json-text {
     -fx-fill: #2d333a;
+}
+
+.text.markdown-heading,
+.rich-text-viewer .markdown-heading {
+    -fx-fill: #123e72;
+    -fx-font-weight: 700;
+}
+
+.text.markdown-list,
+.rich-text-viewer .markdown-list {
+    -fx-fill: #2d333a;
+}
+
+.text.markdown-quote,
+.rich-text-viewer .markdown-quote {
+    -fx-fill: #5f6c79;
+    -fx-font-style: italic;
+}
+
+.text.markdown-fence,
+.rich-text-viewer .markdown-fence {
+    -fx-fill: #1c69d4;
+}
+
+.text.markdown-rendered-paragraph,
+.rich-text-viewer .markdown-rendered-paragraph,
+.text.markdown-rendered-list,
+.rich-text-viewer .markdown-rendered-list {
+    -fx-fill: #2d333a;
+}
+
+.text.markdown-rendered-heading-1,
+.rich-text-viewer .markdown-rendered-heading-1 {
+    -fx-fill: #123e72;
+    -fx-font-weight: 800;
+}
+
+.text.markdown-rendered-heading-2,
+.rich-text-viewer .markdown-rendered-heading-2 {
+    -fx-fill: #1c69d4;
+    -fx-font-weight: 700;
+}
+
+.text.markdown-rendered-heading-3,
+.rich-text-viewer .markdown-rendered-heading-3 {
+    -fx-fill: #3569a3;
+    -fx-font-weight: 700;
+}
+
+.text.markdown-rendered-quote,
+.rich-text-viewer .markdown-rendered-quote {
+    -fx-fill: #5f6c79;
+    -fx-font-style: italic;
+}
+
+.text.markdown-rendered-code,
+.rich-text-viewer .markdown-rendered-code,
+.text.markdown-rendered-code-fence,
+.rich-text-viewer .markdown-rendered-code-fence {
+    -fx-fill: #1c69d4;
 }
 
 .rich-text-viewer .search-match {
@@ -775,4 +890,254 @@
 .rich-text-viewer .search-match-active {
     -fx-fill: #1c69d4;
     -fx-font-weight: 700;
+}
+
+.night-mode,
+.night-mode.root,
+.night-mode .app-shell,
+.night-mode .layout-shell {
+    -fx-background-color: #11161d;
+}
+
+.night-mode .rail-card,
+.night-mode .workspace-header,
+.night-mode .viewer-shell,
+.night-mode .status-rail,
+.night-mode .viewer-toolbar,
+.night-mode .search-modal-card,
+.night-mode .outline-preview-shell,
+.night-mode .list-view,
+.night-mode .viewer-content,
+.night-mode .viewer-scroll-pane,
+.night-mode .viewer-scroll-pane > .viewport,
+.night-mode .viewer-scroll-pane .corner,
+.night-mode .zoom-window-viewer-shell,
+.night-mode .zoom-window-viewer-shell > .rich-text-viewer-shell,
+.night-mode .zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll,
+.night-mode .zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll > .viewport,
+.night-mode .search-modal-card,
+.night-mode .active-search-strip,
+.night-mode .large-preview-page-strip,
+.night-mode .outline-preview-shell.outline-state-valid,
+.night-mode .outline-preview-shell.outline-state-loading,
+.night-mode .outline-preview-shell.outline-state-invalid {
+    -fx-background-color: #18202a;
+    -fx-border-color: #2c3846;
+}
+
+.night-mode .scroll-bar:horizontal .thumb,
+.night-mode .scroll-bar:vertical .thumb {
+    -fx-background-color: #516071;
+}
+
+.night-mode .card-divider,
+.night-mode .viewer-divider,
+.night-mode .list-cell,
+.night-mode .metric-row {
+    -fx-background-color: transparent;
+    -fx-border-color: #273240;
+}
+
+.night-mode .app-title,
+.night-mode .file-name,
+.night-mode .viewer-card-title,
+.night-mode .rail-placeholder-title,
+.night-mode .footer-status,
+.night-mode .metric-value,
+.night-mode .status-detail-value,
+.night-mode .search-modal-title,
+.night-mode .viewer-aid-title,
+.night-mode .history-inline-title,
+.night-mode .history-entry-title,
+.night-mode .active-search-query,
+.night-mode .large-preview-page-label {
+    -fx-text-fill: #eef3f8;
+}
+
+.night-mode .eyebrow-label,
+.night-mode .hero-support,
+.night-mode .file-meta,
+.night-mode .empty-state,
+.night-mode .rail-placeholder-body,
+.night-mode .rail-placeholder-meta,
+.night-mode .viewer-card-meta,
+.night-mode .history-inline-meta,
+.night-mode .history-entry-meta,
+.night-mode .viewer-aid-meta,
+.night-mode .viewer-toolbar-breadcrumb,
+.night-mode .zoom-search-count,
+.night-mode .active-search-occurrence,
+.night-mode .outline-state-label,
+.night-mode .status-detail-label,
+.night-mode .metric-label,
+.night-mode .large-preview-page-meta,
+.night-mode .settings-warning-label {
+    -fx-text-fill: #a8b4c1;
+}
+
+.night-mode .settings-field-label,
+.night-mode .settings-check-box,
+.night-mode .button,
+.night-mode .ghost-button,
+.night-mode .text-field,
+.night-mode .status-pill {
+    -fx-text-fill: #eef3f8;
+}
+
+.night-mode .ghost-button,
+.night-mode .text-field,
+.night-mode .status-pill,
+.night-mode .list-cell {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #334151;
+}
+
+.night-mode .ghost-button:hover,
+.night-mode .list-cell:filled:hover,
+.night-mode .list-cell:filled:selected {
+    -fx-background-color: #243243;
+    -fx-border-color: #5d8fd0;
+}
+
+.night-mode .ghost-button:pressed {
+    -fx-background-color: #2b3b4d;
+}
+
+.night-mode .text-field {
+    -fx-prompt-text-fill: #7e8b98;
+}
+
+.night-mode .button:focused,
+.night-mode .scroll-pane:focused,
+.night-mode .text-field:focused,
+.night-mode .outline-viewport-marker {
+    -fx-border-color: #6ba5f0;
+}
+
+.night-mode .status-pill.status-idle,
+.night-mode .status-pill.status-muted {
+    -fx-background-color: #1c2430;
+    -fx-text-fill: #a8b4c1;
+}
+
+.night-mode .status-pill.status-accent {
+    -fx-background-color: rgba(28, 105, 212, 0.18);
+    -fx-border-color: #6ba5f0;
+    -fx-text-fill: #7fb7ff;
+}
+
+.night-mode .status-pill.status-valid {
+    -fx-background-color: rgba(46, 139, 87, 0.16);
+    -fx-border-color: #55b37c;
+    -fx-text-fill: #9bd7b2;
+}
+
+.night-mode .status-pill.status-error,
+.night-mode .settings-warning-label.settings-warning-label-active,
+.night-mode .search-modal-error,
+.night-mode .settings-error-label {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: #ff8a80;
+}
+
+.night-mode .curl-editor-text-area,
+.night-mode .curl-editor-text-area .content {
+    -fx-background-color: #151c24;
+    -fx-border-color: #304050;
+    -fx-text-fill: #dbe4ed;
+}
+
+.night-mode .rich-text-viewer {
+    -fx-highlight-fill: #2d5f9d;
+    -fx-highlight-text-fill: #f4f8fb;
+}
+
+.night-mode .rich-text-viewer .content {
+    -fx-background-color: #151c24;
+}
+
+.night-mode .text.tree-prefix,
+.night-mode .rich-text-viewer .tree-prefix {
+    -fx-fill: #78889a;
+}
+
+.night-mode .text.tree-default,
+.night-mode .rich-text-viewer .tree-default,
+.night-mode .text.tree-key,
+.night-mode .rich-text-viewer .tree-key,
+.night-mode .text.raw-json-text,
+.night-mode .rich-text-viewer .raw-json-text,
+.night-mode .text.markdown-list,
+.night-mode .rich-text-viewer .markdown-list {
+    -fx-fill: #dbe4ed;
+}
+
+.night-mode .text.tree-structure,
+.night-mode .rich-text-viewer .tree-structure {
+    -fx-fill: #f4f8fb;
+}
+
+.night-mode .text.tree-array-count,
+.night-mode .rich-text-viewer .tree-array-count,
+.night-mode .text.tree-number,
+.night-mode .rich-text-viewer .tree-number,
+.night-mode .text.markdown-fence,
+.night-mode .rich-text-viewer .markdown-fence,
+.night-mode .text.markdown-heading,
+.night-mode .rich-text-viewer .markdown-heading {
+    -fx-fill: #7fb7ff;
+}
+
+.night-mode .text.tree-string,
+.night-mode .rich-text-viewer .tree-string {
+    -fx-fill: #96d0ff;
+}
+
+.night-mode .text.tree-boolean,
+.night-mode .rich-text-viewer .tree-boolean {
+    -fx-fill: #f4c56b;
+}
+
+.night-mode .text.tree-null,
+.night-mode .rich-text-viewer .tree-null {
+    -fx-fill: #ff8a80;
+}
+
+.night-mode .text.markdown-quote,
+.night-mode .rich-text-viewer .markdown-quote {
+    -fx-fill: #9fb0bf;
+}
+
+.night-mode .text.markdown-rendered-paragraph,
+.night-mode .rich-text-viewer .markdown-rendered-paragraph,
+.night-mode .text.markdown-rendered-list,
+.night-mode .rich-text-viewer .markdown-rendered-list {
+    -fx-fill: #dbe4ed;
+}
+
+.night-mode .text.markdown-rendered-heading-1,
+.night-mode .rich-text-viewer .markdown-rendered-heading-1,
+.night-mode .text.markdown-rendered-heading-2,
+.night-mode .rich-text-viewer .markdown-rendered-heading-2,
+.night-mode .text.markdown-rendered-heading-3,
+.night-mode .rich-text-viewer .markdown-rendered-heading-3,
+.night-mode .text.markdown-rendered-code,
+.night-mode .rich-text-viewer .markdown-rendered-code,
+.night-mode .text.markdown-rendered-code-fence,
+.night-mode .rich-text-viewer .markdown-rendered-code-fence {
+    -fx-fill: #7fb7ff;
+}
+
+.night-mode .text.markdown-rendered-quote,
+.night-mode .rich-text-viewer .markdown-rendered-quote {
+    -fx-fill: #9fb0bf;
+}
+
+.night-mode .rich-text-viewer .search-match {
+    -fx-fill: #9bc7ff;
+}
+
+.night-mode .rich-text-viewer .search-match-active {
+    -fx-fill: #d9ebff;
 }

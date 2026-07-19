@@ -13,6 +13,6 @@ public class ZoomActionAvailabilityResolver {
   public boolean shouldEnable(JsonViewerLoadResult result) {
     return result != null
         && result.validationResult().status() == JsonValidationStatus.VALID
-        && result.hasRenderableTree();
+        && (result.hasRenderableTree() || result.markdownDocument());
   }
 }

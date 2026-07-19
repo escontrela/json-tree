@@ -4,7 +4,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
+import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.infrastructure.config.AppDataProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Path;
@@ -116,6 +118,74 @@ class FileSystemJsonHistoryRepositoryTest {
 
         assertEquals(1, entries.size());
         assertFalse(entries.getFirst().favorite());
+        assertEquals(DocumentFormat.JSON, entries.getFirst().documentFormat());
+    }
+
+    @Test
+    void savesMarkdownSnapshotsWithFormatAwareMetadataAndExtension() {
+        FileSystemJsonHistoryRepository repository =
+                new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
+        ImportedJsonFile entry = new ImportedJsonFile(
+                "2026-07-19_12-00-00_notes.md",
+                "notes.md",
+                Instant.parse("2026-07-19T12:00:00Z"),
+                512L,
+                24,
+                true,
+                false,
+                DocumentFormat.MARKDOWN);
+
+        repository.save(entry, "# Heading\n\ncontent");
+
+        ImportedJsonFile stored = repository.findByStoredName(entry.storedName()).orElseThrow();
+        assertEquals(DocumentFormat.MARKDOWN, stored.documentFormat());
+        assertTrue(stored.storedName().endsWith(".md"));
+        assertEquals(
+                tempDir.resolve("history").resolve(entry.storedName()),
+                repository.resolveStoredJsonPath(entry.storedName()).orElseThrow());
+        assertEquals("# Heading\n\ncontent", repository.readStoredJson(entry.storedName()).orElseThrow());
+    }
+
+    @Test
+    void persistsCurlMetadataAndLoadsLegacyEntriesWithoutIt() throws Exception {
+        FileSystemJsonHistoryRepository repository =
+                new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
+        ImportedJsonFile curlEntry = new ImportedJsonFile(
+                "2026-07-19_12-10-00_remote.json",
+                "remote.json",
+                Instant.parse("2026-07-19T12:10:00Z"),
+                128L,
+                8,
+                true,
+                false,
+                DocumentFormat.JSON,
+                JsonDocumentSourceKind.CURL,
+                "curl https://example.com/items");
+
+        repository.save(curlEntry, "{\"remote\":true}");
+
+        ImportedJsonFile stored = repository.findByStoredName(curlEntry.storedName()).orElseThrow();
+        assertTrue(stored.curlBacked());
+        assertEquals("curl https://example.com/items", stored.curlCommand());
+
+        java.nio.file.Files.writeString(
+                tempDir.resolve("metadata.json"),
+                """
+                [ {
+                  "storedName" : "2026-05-27_00-10-00_sample.json",
+                  "originalName" : "sample.json",
+                  "importedAt" : 1779840600.000000000,
+                  "sizeBytes" : 20,
+                  "lineCount" : 4,
+                  "valid" : true,
+                  "favorite" : false,
+                  "documentFormat" : "JSON"
+                } ]
+                """
+        );
+        ImportedJsonFile legacy = repository.findAll().getFirst();
+        assertEquals(JsonDocumentSourceKind.LOCAL_FILE, legacy.sourceKind());
+        assertFalse(legacy.curlBacked());
     }
 
     private AppDataProperties properties() {

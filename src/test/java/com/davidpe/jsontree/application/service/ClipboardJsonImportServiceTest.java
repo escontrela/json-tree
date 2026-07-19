@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
 import com.davidpe.jsontree.application.model.ClipboardJsonImportStatus;
+import com.davidpe.jsontree.application.model.CurlExecutionResult;
 import com.davidpe.jsontree.application.model.LargePreviewMaterializationSnapshot;
 import com.davidpe.jsontree.application.model.LargePreviewPageContent;
 import com.davidpe.jsontree.application.model.LargePreviewPageDescriptor;
@@ -46,6 +47,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
             readableClipboard("{\"name\":\"json-tree\"}"),
             viewerWorkflowService(),
+            new CurlCommandParserService(),
+            unusedCurlImportService(),
             new ObjectMapper(),
             fixedClock(),
             tempDir);
@@ -53,7 +56,7 @@ class ClipboardJsonImportServiceTest {
     ClipboardJsonImportResult result = service.importFromClipboard();
 
     assertTrue(result.successful());
-    assertEquals(ClipboardJsonImportStatus.VALID_JSON, result.status());
+    assertEquals(ClipboardJsonImportStatus.IMPORTED, result.status());
     assertNotNull(result.loadResult());
     assertEquals(expectedClipboardFileName(), result.loadResult().importResult().fileName());
     assertEquals(JsonDocumentSourceKind.CLIPBOARD, result.loadResult().importResult().sourceKind());
@@ -67,6 +70,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
                 emptyClipboard(),
                 viewerWorkflowService(),
+                new CurlCommandParserService(),
+                unusedCurlImportService(),
                 new ObjectMapper(),
                 fixedClock(),
                 tempDir)
@@ -82,6 +87,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
                 failingClipboard(),
                 viewerWorkflowService(),
+                new CurlCommandParserService(),
+                unusedCurlImportService(),
                 new ObjectMapper(),
                 fixedClock(),
                 tempDir)
@@ -89,6 +96,7 @@ class ClipboardJsonImportServiceTest {
 
     assertFalse(result.successful());
     assertEquals(ClipboardJsonImportStatus.UNREADABLE_CLIPBOARD, result.status());
+    assertEquals("Clipboard text is not available right now: Clipboard unavailable", result.message());
   }
 
   @Test
@@ -97,6 +105,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
                 readableClipboard("{invalid"),
                 viewerWorkflowService(),
+                new CurlCommandParserService(),
+                unusedCurlImportService(),
                 new ObjectMapper(),
                 fixedClock(),
                 tempDir)
@@ -114,6 +124,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
             readableClipboard("{\"name\":\"json-tree\"}"),
             workflowService,
+            new CurlCommandParserService(),
+            unusedCurlImportService(),
             new ObjectMapper(),
             fixedClock(),
             tempDir);
@@ -135,6 +147,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
             readableClipboard("{\"name\":\"json-tree\"}"),
             workflowService,
+            new CurlCommandParserService(),
+            unusedCurlImportService(),
             new ObjectMapper(),
             fixedClock(),
             tempDir);
@@ -142,6 +156,8 @@ class ClipboardJsonImportServiceTest {
         new ClipboardJsonImportService(
             readableClipboard("{invalid"),
             workflowService,
+            new CurlCommandParserService(),
+            unusedCurlImportService(),
             new ObjectMapper(),
             fixedClock(),
             tempDir);
@@ -156,6 +172,56 @@ class ClipboardJsonImportServiceTest {
         workflowService.currentView().orElseThrow().importResult().fileName());
   }
 
+  @Test
+  void routesClipboardCurlThroughCurlWorkflow() {
+    ClipboardJsonImportService service =
+        new ClipboardJsonImportService(
+            readableClipboard("curl https://example.com/items"),
+            viewerWorkflowService(),
+            new CurlCommandParserService(),
+            curlImportService(),
+            new ObjectMapper(),
+            fixedClock(),
+            tempDir);
+
+    ClipboardJsonImportResult result = service.importFromClipboard();
+
+    assertTrue(result.successful());
+    assertEquals(ClipboardJsonImportStatus.IMPORTED, result.status());
+    assertEquals(JsonDocumentSourceKind.CURL, result.loadResult().importResult().sourceKind());
+  }
+
+  @Test
+  void preservesFriendlyCurlFailureMessageForFooterPresentation() {
+    ClipboardJsonImportService service =
+        new ClipboardJsonImportService(
+            readableClipboard("curl https://example.com/items"),
+            viewerWorkflowService(),
+            new CurlCommandParserService(),
+            new CurlDocumentImportService(
+                request ->
+                    CurlExecutionResult.success(
+                        403,
+                        request.url(),
+                        java.util.Map.of("Content-Type", java.util.List.of("application/json")),
+                        "{\"error\":\"denied\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                        "application/json",
+                        "UTF-8"),
+                viewerWorkflowService(),
+                fixedClock(),
+                tempDir),
+            new ObjectMapper(),
+            fixedClock(),
+            tempDir);
+
+    ClipboardJsonImportResult result = service.importFromClipboard();
+
+    assertFalse(result.successful());
+    assertEquals(ClipboardJsonImportStatus.CURL_EXECUTION_FAILED, result.status());
+    assertTrue(result.message().contains("HTTP 403: access denied by the remote endpoint."));
+    assertTrue(result.message().contains("Request: curl https://example.com/items"));
+  }
+
   private JsonViewerWorkflowService viewerWorkflowService() {
     return new JsonViewerWorkflowService(
         validValidationPort(),
@@ -165,6 +231,31 @@ class ClipboardJsonImportServiceTest {
         new LargePreviewSessionService(
             new NoOpLargePreviewSessionStore(), 2, new DirectExecutorService()),
         fixedClock());
+  }
+
+  private CurlDocumentImportService unusedCurlImportService() {
+    return new CurlDocumentImportService(
+        request -> {
+          throw new AssertionError("Curl workflow should not be used in this test.");
+        },
+        viewerWorkflowService(),
+        fixedClock(),
+        tempDir);
+  }
+
+  private CurlDocumentImportService curlImportService() {
+    return new CurlDocumentImportService(
+        request ->
+            CurlExecutionResult.success(
+                200,
+                request.url(),
+                java.util.Map.of("Content-Type", java.util.List.of("application/json")),
+                "{\"remote\":true}".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                "application/json",
+                "UTF-8"),
+        viewerWorkflowService(),
+        fixedClock(),
+        tempDir);
   }
 
   private JsonInspectionModeResolver inspectionModeResolver() {

@@ -7,6 +7,7 @@ import com.davidpe.jsontree.application.service.ProcessMemoryReferenceService;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.service.ApplicationThemeService;
 import com.davidpe.jsontree.ui.support.SettingsFormState;
 import com.davidpe.jsontree.ui.support.SettingsFormStateResolver;
 import javafx.collections.ObservableList;
@@ -33,17 +34,21 @@ public class SettingsScreenController implements UiScreenController {
   private final SaveLargePreviewSettingsUseCase saveLargePreviewSettingsUseCase;
   private final ProcessMemoryReferenceService processMemoryReferenceService;
   private final SettingsFormStateResolver settingsFormStateResolver;
+  private final ApplicationThemeService applicationThemeService;
 
   private boolean applyingSnapshot;
 
   @FXML private BorderPane rootPane;
   @FXML private TextField largePreviewThresholdField;
   @FXML private TextField viewerChunkBytesField;
+  @FXML private TextField defaultCurlUserAgentField;
   @FXML private CheckBox prettyLargePreviewCheckBox;
+  @FXML private CheckBox nightModeCheckBox;
   @FXML private Label memoryReferenceLabel;
   @FXML private Label memoryWarningLabel;
   @FXML private Label thresholdErrorLabel;
   @FXML private Label chunkErrorLabel;
+  @FXML private Label defaultCurlUserAgentErrorLabel;
   @FXML private Button applyButton;
 
   public SettingsScreenController(
@@ -51,12 +56,14 @@ public class SettingsScreenController implements UiScreenController {
       SaveLargePreviewSettingsUseCase saveLargePreviewSettingsUseCase,
       ProcessMemoryReferenceService processMemoryReferenceService,
       SettingsFormStateResolver settingsFormStateResolver,
+      ApplicationThemeService applicationThemeService,
       @Lazy UiFlowManager uiFlowManager) {
     this.uiFlowManager = uiFlowManager;
     this.viewLargePreviewSettingsUseCase = viewLargePreviewSettingsUseCase;
     this.saveLargePreviewSettingsUseCase = saveLargePreviewSettingsUseCase;
     this.processMemoryReferenceService = processMemoryReferenceService;
     this.settingsFormStateResolver = settingsFormStateResolver;
+    this.applicationThemeService = applicationThemeService;
   }
 
   @FXML
@@ -68,7 +75,13 @@ public class SettingsScreenController implements UiScreenController {
     viewerChunkBytesField
         .textProperty()
         .addListener((unused, oldValue, newValue) -> refreshFormState());
+    defaultCurlUserAgentField
+        .textProperty()
+        .addListener((unused, oldValue, newValue) -> refreshFormState());
     prettyLargePreviewCheckBox
+        .selectedProperty()
+        .addListener((unused, oldValue, newValue) -> refreshFormState());
+    nightModeCheckBox
         .selectedProperty()
         .addListener((unused, oldValue, newValue) -> refreshFormState());
   }
@@ -92,7 +105,10 @@ public class SettingsScreenController implements UiScreenController {
         new LargePreviewSettingsSnapshot(
             Long.parseLong(largePreviewThresholdField.getText().trim()),
             Integer.parseInt(viewerChunkBytesField.getText().trim()),
-            prettyLargePreviewCheckBox.isSelected()));
+            defaultCurlUserAgentField.getText().trim(),
+            prettyLargePreviewCheckBox.isSelected(),
+            nightModeCheckBox.isSelected()));
+    applicationThemeService.refreshRegisteredRoots();
     loadCurrentSettings();
   }
 
@@ -105,7 +121,9 @@ public class SettingsScreenController implements UiScreenController {
     applyingSnapshot = true;
     largePreviewThresholdField.setText(state.thresholdText());
     viewerChunkBytesField.setText(state.chunkText());
+    defaultCurlUserAgentField.setText(state.defaultCurlUserAgentText());
     prettyLargePreviewCheckBox.setSelected(state.prettyLargePreviewSelected());
+    nightModeCheckBox.setSelected(state.nightModeSelected());
     applyingSnapshot = false;
     applyFormState(state);
   }
@@ -118,7 +136,9 @@ public class SettingsScreenController implements UiScreenController {
         settingsFormStateResolver.resolve(
             largePreviewThresholdField.getText(),
             viewerChunkBytesField.getText(),
+            defaultCurlUserAgentField.getText(),
             prettyLargePreviewCheckBox.isSelected(),
+            nightModeCheckBox.isSelected(),
             processMemoryReferenceService.startupMaxMemoryBytes()));
   }
 
@@ -128,6 +148,7 @@ public class SettingsScreenController implements UiScreenController {
     applyWarningStyle(state.warningActive());
     syncErrorLabel(thresholdErrorLabel, state.thresholdErrorText());
     syncErrorLabel(chunkErrorLabel, state.chunkErrorText());
+    syncErrorLabel(defaultCurlUserAgentErrorLabel, state.defaultCurlUserAgentErrorText());
     applyButton.setDisable(!state.applyEnabled());
   }
 

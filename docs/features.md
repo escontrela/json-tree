@@ -6,6 +6,31 @@
 - Import metadata is normalized into a workflow-friendly result object with absolute path, filename, size, and basic availability flags.
 - JavaFX controllers are expected to consume the use case result instead of reading file metadata directly from the filesystem.
 
+## Markdown Document Support
+
+- The import boundary now accepts `.md` files alongside `.json` and classifies the source once into an explicit document format before the rest of the workflow runs.
+- Markdown follows the same main import, drag-and-drop, file-chooser, history, reopen, copy, and zoom flows as JSON where raw-text inspection makes sense, without forking controller logic on file extensions.
+- Non-empty Markdown opens by default in a lightweight rendered reading presentation through the shared RichTextFX viewer pipeline; it still skips JSON validation and ASCII-tree rendering.
+- Empty Markdown files surface through the same empty-document UX channel as JSON empties, while unreadable files still fail through the existing safe load path.
+- Markdown history entries stay in the same filesystem-backed archive as JSON snapshots, preserve their `.md` stored extension, and default safely back to `JSON` when legacy metadata lacks the new format field.
+- The history rail and dedicated history screen now label Markdown entries as Markdown instead of pretending they are `Valid JSON`, while filename, timestamp, size, favorites, delete, and search-by-name behavior stay shared.
+- Markdown now has two first-class viewer modes: a rendered reading mode and a `Raw Markdown` source mode. The toolbar toggle swaps between them without inventing a Markdown-only side channel outside the shared presentation model.
+- Markdown raw rendering keeps the original source text byte-for-byte while applying lightweight source-centric styling for headings, list markers, block quotes, and fenced-code delimiters.
+- Markdown rendered mode stays intentionally lightweight and deterministic on RichTextFX. It improves readability for headings, ordered and unordered lists, block quotes, fenced code blocks, and ordinary paragraphs without introducing `WebView` or HTML preview.
+- Regex search stays aligned with raw-source semantics: it is available in `Raw Markdown`, disabled in rendered Markdown, and the current mode is mirrored coherently into zoom snapshots.
+- For non-large Markdown files, the outline rail stays active through a dedicated heading-based outline model. ATX headings become anchors with preserved depth and source-line positions, and heading-less documents fall back to compact source-line anchors so the minimap remains usable.
+- Clicking the Markdown minimap moves the active Markdown viewer to the corresponding heading or fallback anchor, while ordinary viewer scrolling continues to update the minimap viewport marker through the shared outline shell.
+- Large Markdown files reuse the existing byte-paged `LARGE_PREVIEW` raw workflow instead of trying to fully materialize an unsupported tree. In that mode, Markdown follows the same current product rule as other large previews: raw page available, search and outline disabled.
+
+## Runtime Settings And Night Mode
+
+- The settings workspace is now vertically scrollable through a proper `ScrollPane` shell, so smaller stage heights can still reach the lowest controls and actions without introducing horizontal scrolling in the supported layout.
+- Scrollbars on the settings screen remain conditional: they appear only when the form overflows and disappear automatically again when the content fits after a resize or maximize.
+- The editable runtime settings snapshot now persists three large-preview controls and one presentation control together: threshold bytes, chunk bytes, opt-in pretty-on-large-preview, and `Night Mode`.
+- `Night Mode` is staged like the other settings: toggling it in the form does nothing until `Apply`, while `Back` discards the pending visual change.
+- After `Apply`, the current main screen, history screen, settings screen, and zoom window all switch coherently to a BMW-aligned night variant through one shared theme service and CSS class instead of ad hoc per-controller styling.
+- Persisted settings restore on the next application launch, so the chosen night variant becomes the visual baseline only when the user explicitly enabled it previously.
+
 ## Validation States
 
 - JSON validation is delegated to a dedicated service boundary backed by Jackson parsing.
@@ -65,6 +90,18 @@
 - `Command+P` or `Command+V` on macOS and `Ctrl+P` or `Ctrl+V` on Windows or Linux now materialize valid clipboard JSON as a temporary local document and route it through the standard validation and rendering workflow.
 - Clipboard imports use deterministic temporary filenames, surface `Clipboard` as the active source in metadata and the status rail, and still follow the existing local history snapshot conventions after a successful render.
 - Empty, unreadable, or invalid clipboard contents fail without replacing the last valid selected document, while an empty workspace shows a readable clipboard-specific invalid state.
+
+## CURL-Backed Remote Imports
+
+- Clipboard text and dropped readable text files can now be recognized as one supported curl command and routed through an application-layer parser instead of being interpreted inside JavaFX controllers.
+- The supported curl subset normalizes URL, method, redirect preference, repeated headers, and request body into a reusable execution request while rejecting pipes, substitutions, chained commands, and other risky shell constructs.
+- Curl execution runs natively from Java through a dedicated transport adapter with curl-scoped insecure HTTPS support, redirect handling for `--location`, and readable transport-failure messages.
+- Supported curl responses are materialized into temporary local `.json` or `.md` files and then reopened through the ordinary viewer and history workflow instead of forking a second remote-document subsystem.
+- Persisted history metadata now keeps the original source kind plus the normalized curl command when the entry came from a remote fetch, while older history metadata still defaults safely back to ordinary local-file provenance.
+- Inline history, the dedicated history screen, and reopened snapshots now make curl provenance explicit with compact `curl fetch` source cues without changing favorites, delete, search-by-name, or reopen behavior.
+- The history screen now exposes a reusable `New curl` modal entry point so manual curl commands can be typed or pasted without going through clipboard or drag-and-drop first.
+- Curl-backed history rows now expose `Edit curl`, which reopens the same reusable modal prefilled with the stored original curl command for safe manual reruns.
+- Submitting the modal reuses the same parser, Java transport, response materialization, and history persistence workflow as clipboard and dropped-file curls, so rerunning the same request always creates a fresh snapshot instead of mutating the old one.
 
 ## BMW Theme Tokens
 
@@ -246,7 +283,7 @@
 - The workflow now classifies each inspection as `FULL` or `LARGE_PREVIEW` before building the full ASCII tree and before populating the shared viewer surface, using `json-tree.large-preview.full-render-max-bytes` as a strict `>` primary gate.
 - Oversized files now stay on a byte-paginated path: the large session builds an offset index first, then loads bounded chunks directly from the original file on demand instead of materializing a full ASCII tree in memory.
 - The visible chunk is capped by byte budget rather than line budget, so huge payloads remain inspectable without pretending that the full document is currently expanded or resident.
-- `LARGE_PREVIEW` now stays fixed on the current page raw view. The app always attempts local Jackson pretty-print when the active chunk parses cleanly as standalone JSON.
+- `LARGE_PREVIEW` now stays fixed on the current page raw view. By default the active chunk stays unmodified, and best-effort pretty formatting is only applied when the dedicated setting is explicitly enabled.
 - A persisted `Pretty on large preview` setting can additionally enable a deterministic best-effort formatter for incomplete standalone chunks; when disabled, the old plain-raw fallback remains in place.
 - Regex search and the outline/minimap are intentionally disabled in this variant of `LARGE_PREVIEW`.
 - Because that outline rail is non-functional in byte-paged `LARGE_PREVIEW`, the right-side panel now starts hidden for large files. The `Outline` button stays available so the user can still reopen the unavailable shell manually if they want the extra context rail visible.
@@ -314,9 +351,11 @@
 ## Settings Screen
 
 - The top toolbar now exposes a dedicated `Settings` screen integrated through the normal `UiScreenId` and `UiFlowManager` flow instead of a modal dialog.
-- Settings currently edit two runtime values: the large-preview activation threshold and the byte-paged visible chunk size.
+- Settings currently edit two numeric runtime values: the large-preview activation threshold and the byte-paged visible chunk size.
+- Settings also expose the default fallback `User-Agent` used by curl-backed imports whenever the pasted or dropped curl command did not declare one explicitly.
 - Settings also expose `Pretty on large preview`, a persisted toggle that enables best-effort formatting for invalid standalone large-preview raw chunks on future JSON loads.
 - `Back` always discards unsaved form edits and returns to the main screen.
 - `Apply` persists the edited values to local file-based settings storage and updates the runtime snapshot used by the next JSON import or history reopen.
 - The currently opened document is not reprocessed in place after `Apply`; the new values start affecting the next load only.
 - The screen also shows the JVM startup memory reference and highlights the threshold advisory in red when the configured large-file threshold exceeds that startup reference.
+- Curl-backed imports preserve any explicit `User-Agent` header already present in the normalized request; the fallback only applies when that header is missing.

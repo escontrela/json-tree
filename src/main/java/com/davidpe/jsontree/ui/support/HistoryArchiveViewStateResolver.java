@@ -42,7 +42,7 @@ public class HistoryArchiveViewStateResolver {
             + searchResult.query()
             + "\"";
     String emptyMessage =
-        "No stored JSON matches \""
+        "No stored document matches \""
             + searchResult.query()
             + "\".\nClear the search field or try a different phrase.";
 

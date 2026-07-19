@@ -35,18 +35,26 @@ public class RawJsonPresentationService {
     }
   }
 
+  public RawJsonPresentation presentPlainText(String rawText) {
+    if (rawText == null || rawText.isEmpty()) {
+      return new RawJsonPresentation("", new int[] {0});
+    }
+    return new RawJsonPresentation(rawText, identityBoundaries(rawText.length()));
+  }
+
   public RawJsonPresentation presentLargePreviewChunk(
       String rawJson, boolean prettyOnLargePreviewEnabled) {
     if (rawJson == null || rawJson.isEmpty()) {
       return new RawJsonPresentation("", new int[] {0});
     }
 
+    if (!prettyOnLargePreviewEnabled) {
+      return new RawJsonPresentation(rawJson, identityBoundaries(rawJson.length()));
+    }
+
     try {
       return prettyPrintedPresentation(rawJson);
     } catch (JsonProcessingException exception) {
-      if (!prettyOnLargePreviewEnabled) {
-        return new RawJsonPresentation(rawJson, identityBoundaries(rawJson.length()));
-      }
       String formattedChunk = bestEffortJsonPrettyPrinter.prettyPrint(rawJson);
       return new RawJsonPresentation(formattedChunk, buildBoundaryMap(rawJson, formattedChunk));
     }

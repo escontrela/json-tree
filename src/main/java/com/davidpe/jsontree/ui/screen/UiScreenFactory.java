@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.screen;
 
 import com.davidpe.jsontree.bootstrap.SpringFxmlLoader;
+import com.davidpe.jsontree.ui.service.ApplicationThemeService;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
@@ -14,14 +15,20 @@ public class UiScreenFactory {
 
   private final Stage primaryStage;
   private final SpringFxmlLoader springFxmlLoader;
+  private final ApplicationThemeService applicationThemeService;
 
-  public UiScreenFactory(Stage primaryStage, SpringFxmlLoader springFxmlLoader) {
+  public UiScreenFactory(
+      Stage primaryStage,
+      SpringFxmlLoader springFxmlLoader,
+      ApplicationThemeService applicationThemeService) {
     this.primaryStage = primaryStage;
     this.springFxmlLoader = springFxmlLoader;
+    this.applicationThemeService = applicationThemeService;
   }
 
   public UiScreen create(UiScreenId uiScreenId) {
     Parent root = springFxmlLoader.load(uiScreenId.fxmlPath());
+    applicationThemeService.register(root);
     UiScreenController controller = (UiScreenController) root.getProperties().get("controller");
 
     Scene scene = primaryStage.getScene();

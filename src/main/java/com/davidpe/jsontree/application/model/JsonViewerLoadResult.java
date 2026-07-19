@@ -16,7 +16,9 @@ public record JsonViewerLoadResult(
 ) {
 
     public boolean hasRenderableTree() {
-        return asciiTreeDocument != null && validationResult.valid();
+        return asciiTreeDocument != null
+                && validationResult.valid()
+                && importResult.documentFormat().json();
     }
 
     public boolean usesLargePreview() {
@@ -25,6 +27,10 @@ public record JsonViewerLoadResult(
 
     public boolean hasLargePreviewSession() {
         return largePreviewSession != null;
+    }
+
+    public boolean markdownDocument() {
+        return importResult.documentFormat().markdown();
     }
 
     public JsonViewerLoadResult withLargePreviewSession(LargePreviewPagedSession nextLargePreviewSession) {

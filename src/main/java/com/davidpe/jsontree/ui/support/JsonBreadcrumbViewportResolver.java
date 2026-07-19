@@ -44,8 +44,9 @@ public class JsonBreadcrumbViewportResolver {
   }
 
   private int lineIndexFor(JsonBreadcrumbAnchor anchor, BreadcrumbViewerMode viewerMode) {
-    return viewerMode == BreadcrumbViewerMode.RAW_JSON
-        ? anchor.rawDisplayLineIndex()
-        : anchor.asciiLineIndex();
+    return switch (viewerMode) {
+      case RAW_JSON -> anchor.rawDisplayLineIndex();
+      case ASCII_TREE, STRUCTURE -> anchor.asciiLineIndex();
+    };
   }
 }

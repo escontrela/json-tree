@@ -2,6 +2,7 @@ package com.davidpe.jsontree.bootstrap;
 
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenFactory;
+import com.davidpe.jsontree.ui.service.ApplicationThemeService;
 import javafx.stage.Stage;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,8 +23,11 @@ public class ApplicationConfig {
 
     @Bean
     @Lazy
-    public UiScreenFactory uiScreenFactory(Stage primaryStage, SpringFxmlLoader springFxmlLoader) {
-        return new UiScreenFactory(primaryStage, springFxmlLoader);
+    public UiScreenFactory uiScreenFactory(
+            Stage primaryStage,
+            SpringFxmlLoader springFxmlLoader,
+            ApplicationThemeService applicationThemeService) {
+        return new UiScreenFactory(primaryStage, springFxmlLoader, applicationThemeService);
     }
 
     @Bean

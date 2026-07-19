@@ -16,6 +16,9 @@ import java.time.Instant;
  * @param lineCount number of lines detected for the stored content.
  * @param valid whether the stored JSON content is valid.
  * @param favorite whether the history entry is marked as favorite.
+ * @param documentFormat classified format for the persisted entry.
+ * @param sourceKind original source kind from which the persisted entry was created.
+ * @param curlCommand stored curl provenance when the entry originated from a curl fetch.
  */
 public record ImportedJsonFile(
     String storedName,
@@ -24,7 +27,62 @@ public record ImportedJsonFile(
     long sizeBytes,
     int lineCount,
     boolean valid,
-    boolean favorite) {
+    boolean favorite,
+    DocumentFormat documentFormat,
+    JsonDocumentSourceKind sourceKind,
+    String curlCommand) {
+
+  public ImportedJsonFile(
+      String storedName,
+      String originalName,
+      Instant importedAt,
+      long sizeBytes,
+      int lineCount,
+      boolean valid,
+      boolean favorite) {
+    this(
+        storedName,
+        originalName,
+        importedAt,
+        sizeBytes,
+        lineCount,
+        valid,
+        favorite,
+        DocumentFormat.JSON,
+        JsonDocumentSourceKind.LOCAL_FILE,
+        null);
+  }
+
+  public ImportedJsonFile(
+      String storedName,
+      String originalName,
+      Instant importedAt,
+      long sizeBytes,
+      int lineCount,
+      boolean valid,
+      boolean favorite,
+      DocumentFormat documentFormat) {
+    this(
+        storedName,
+        originalName,
+        importedAt,
+        sizeBytes,
+        lineCount,
+        valid,
+        favorite,
+        documentFormat,
+        JsonDocumentSourceKind.LOCAL_FILE,
+        null);
+  }
+
+  public ImportedJsonFile {
+    if (documentFormat == null) {
+      documentFormat = DocumentFormat.JSON;
+    }
+    if (sourceKind == null) {
+      sourceKind = JsonDocumentSourceKind.LOCAL_FILE;
+    }
+  }
 
   /**
    * Creates a new immutable instance with an updated favorite flag.
@@ -34,6 +92,19 @@ public record ImportedJsonFile(
    */
   public ImportedJsonFile withFavorite(boolean nextFavorite) {
     return new ImportedJsonFile(
-        storedName, originalName, importedAt, sizeBytes, lineCount, valid, nextFavorite);
+        storedName,
+        originalName,
+        importedAt,
+        sizeBytes,
+        lineCount,
+        valid,
+        nextFavorite,
+        documentFormat,
+        sourceKind,
+        curlCommand);
+  }
+
+  public boolean curlBacked() {
+    return sourceKind == JsonDocumentSourceKind.CURL;
   }
 }

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -27,6 +28,7 @@ public class AsciiTreeSyntaxHighlighter {
     this(largePreviewProperties, new SearchHighlightRangeNormalizer());
   }
 
+  @Autowired
   AsciiTreeSyntaxHighlighter(
       LargePreviewProperties largePreviewProperties,
       SearchHighlightRangeNormalizer highlightRangeNormalizer) {

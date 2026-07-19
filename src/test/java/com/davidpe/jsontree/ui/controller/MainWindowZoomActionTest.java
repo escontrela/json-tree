@@ -29,7 +29,9 @@ class MainWindowZoomActionTest {
         new MainWindowController(
             null,
             null,
+            null,
             new StaticWorkflowService(Optional.empty()),
+            null,
             null,
             null,
             null,
@@ -69,7 +71,9 @@ class MainWindowZoomActionTest {
         new MainWindowController(
             null,
             null,
+            null,
             new StaticWorkflowService(Optional.of(renderableResult())),
+            null,
             null,
             null,
             null,

@@ -15,23 +15,30 @@ public class SettingsFormStateResolver {
     return resolve(
         Long.toString(snapshot.largePreviewThresholdBytes()),
         Integer.toString(snapshot.viewerChunkBytes()),
+        snapshot.defaultCurlUserAgent(),
         snapshot.prettyOnLargePreviewEnabled(),
+        snapshot.nightModeEnabled(),
         startupMaxMemoryBytes);
   }
 
   public SettingsFormState resolve(
       String thresholdText,
       String chunkText,
+      String defaultCurlUserAgentText,
       boolean prettyLargePreviewSelected,
+      boolean nightModeSelected,
       long startupMaxMemoryBytes) {
     ParsedLong threshold = parsePositiveLong(thresholdText);
     ParsedInt chunk = parsePositiveInt(chunkText);
+    ParsedText userAgent = parseRequiredText(defaultCurlUserAgentText);
     boolean warningActive =
         threshold.valid() && threshold.value() > 0L && threshold.value() > startupMaxMemoryBytes;
     return new SettingsFormState(
         safeText(thresholdText),
         safeText(chunkText),
+        safeText(defaultCurlUserAgentText),
         prettyLargePreviewSelected,
+        nightModeSelected,
         "Startup JVM reference: " + ByteSizeFormatter.format(startupMaxMemoryBytes),
         warningActive
             ? "Large preview threshold exceeds the startup JVM memory reference."
@@ -39,7 +46,8 @@ public class SettingsFormStateResolver {
         warningActive,
         threshold.errorText(),
         chunk.errorText(),
-        threshold.valid() && chunk.valid());
+        userAgent.errorText(),
+        threshold.valid() && chunk.valid() && userAgent.valid());
   }
 
   private ParsedLong parsePositiveLong(String value) {
@@ -77,6 +85,14 @@ public class SettingsFormStateResolver {
   private String safeText(String value) {
     return value == null ? "" : value;
   }
+
+  private ParsedText parseRequiredText(String value) {
+    if (value == null || value.isBlank()) {
+      return ParsedText.invalid("Enter a default User-Agent.");
+    }
+    return ParsedText.valid(value.trim());
+  }
+
   private record ParsedLong(boolean valid, long value, String errorText) {
 
     private static ParsedLong valid(long value) {
@@ -96,6 +112,17 @@ public class SettingsFormStateResolver {
 
     private static ParsedInt invalid(String errorText) {
       return new ParsedInt(false, 0, errorText);
+    }
+  }
+
+  private record ParsedText(boolean valid, String value, String errorText) {
+
+    private static ParsedText valid(String value) {
+      return new ParsedText(true, value, "");
+    }
+
+    private static ParsedText invalid(String errorText) {
+      return new ParsedText(false, "", errorText);
     }
   }
 }

@@ -29,6 +29,10 @@ public record LargePreviewSessionSource(
     return new LargePreviewSessionSource(path, JsonDocumentSourceKind.CLIPBOARD, null);
   }
 
+  public static LargePreviewSessionSource curl(Path path) {
+    return new LargePreviewSessionSource(path, JsonDocumentSourceKind.CURL, null);
+  }
+
   public static LargePreviewSessionSource history(Path path, String storedSnapshotName) {
     return new LargePreviewSessionSource(
         path, JsonDocumentSourceKind.HISTORY, storedSnapshotName);

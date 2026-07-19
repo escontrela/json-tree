@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +10,7 @@ public class ViewerCapabilityPresentationResolver {
 
   public ViewerCapabilityPresentation resolve(
       JsonViewerLoadResult result, ViewerPresentationMode presentationMode) {
+    DocumentFormat documentFormat = result.importResult().documentFormat();
     if (result.usesLargePreview()) {
       return new ViewerCapabilityPresentation(
           false,
@@ -18,12 +20,43 @@ public class ViewerCapabilityPresentationResolver {
           "Copy preview",
           "Preview",
           "status-accent",
-          " • byte-paged large preview",
-          "Showing the current large-file page as a raw byte chunk",
+          documentFormat.markdown()
+              ? " • byte-paged large preview • markdown"
+              : " • byte-paged large preview",
+          withCurlRequest(
+              result,
+              documentFormat.markdown()
+                  ? "Showing the current large-file page as a raw Markdown chunk"
+                  : "Showing the current large-file page as a raw byte chunk"),
           "PREVIEW",
           "Outline unavailable",
           "Large preview disables the outline and minimap while the viewer stays focused on the active page chunk.",
           "Large preview stays locked to the active page raw view. Regex search stays disabled.");
+    }
+
+    if (documentFormat.markdown()) {
+      int renderedLines = result.asciiTreeDocument() == null ? 0 : result.asciiTreeDocument().lineCount();
+      boolean rawMarkdownMode = presentationMode == ViewerPresentationMode.RAW_MARKDOWN;
+      return new ViewerCapabilityPresentation(
+          true,
+          false,
+          rawMarkdownMode && result.capabilities().searchAvailable(),
+          result.capabilities().outlineAvailable(),
+          rawMarkdownMode ? "Copy raw" : "Copy markdown",
+          "Markdown",
+          "status-accent",
+          "",
+          withCurlRequest(
+              result,
+              rawMarkdownMode
+                  ? "Rendered raw Markdown source (" + renderedLines + " lines)"
+                  : "Rendered Markdown reading view (" + renderedLines + " lines)"),
+          "MARKDOWN",
+          "Markdown outline",
+          "The Markdown outline follows heading anchors when available and falls back to source segments otherwise.",
+          rawMarkdownMode
+              ? "Markdown raw mode keeps regex search aligned with the exact source while Structure stays unavailable."
+              : "Rendered Markdown keeps Structure unavailable and disables regex search so highlights do not drift away from the interpreted reading view.");
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;
@@ -37,10 +70,21 @@ public class ViewerCapabilityPresentationResolver {
         "Valid",
         "status-valid",
         "",
-        "Rendered " + renderedLines + " lines",
+        withCurlRequest(result, "Rendered " + renderedLines + " lines"),
         "VALID",
         "JSON outline",
         "",
         "");
+  }
+
+  private String withCurlRequest(JsonViewerLoadResult result, String baseStatus) {
+    if (result.historyEntry() == null || !result.historyEntry().curlBacked()) {
+      return baseStatus;
+    }
+    String curlCommand = result.historyEntry().curlCommand();
+    if (curlCommand == null || curlCommand.isBlank()) {
+      return baseStatus;
+    }
+    return baseStatus + " • Request: " + curlCommand;
   }
 }

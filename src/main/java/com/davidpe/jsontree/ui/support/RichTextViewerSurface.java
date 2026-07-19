@@ -20,7 +20,7 @@ import org.fxmisc.richtext.model.StyleSpansBuilder;
 public final class RichTextViewerSurface {
 
   private static final List<String> CONTENT_STYLE_CLASSES =
-      List.of("tree-content", "raw-json-content");
+      List.of("tree-content", "raw-json-content", "markdown-content");
 
   private final CodeArea codeArea;
   private final StackPane container;
@@ -125,6 +125,15 @@ public final class RichTextViewerSurface {
   public void scrollToOffset(int offset) {
     int clampedOffset = Math.max(0, Math.min(offset, codeArea.getLength()));
     codeArea.moveTo(clampedOffset);
+    codeArea.requestFollowCaret();
+  }
+
+  public void scrollToParagraph(int paragraphIndex) {
+    if (codeArea.getParagraphs().isEmpty()) {
+      return;
+    }
+    int clampedParagraph = Math.max(0, Math.min(paragraphIndex, codeArea.getParagraphs().size() - 1));
+    codeArea.moveTo(clampedParagraph, 0);
     codeArea.requestFollowCaret();
   }
 

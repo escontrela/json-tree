@@ -7,7 +7,7 @@ public record ClipboardJsonImportResult(
 ) {
 
   public ClipboardJsonImportResult {
-    if ((status == ClipboardJsonImportStatus.VALID_JSON) != (loadResult != null)) {
+    if ((status == ClipboardJsonImportStatus.IMPORTED) != (loadResult != null)) {
       throw new IllegalArgumentException(
           "Successful clipboard imports must provide a load result, and failures must not.");
     }
@@ -15,8 +15,8 @@ public record ClipboardJsonImportResult(
 
   public static ClipboardJsonImportResult success(JsonViewerLoadResult loadResult) {
     return new ClipboardJsonImportResult(
-        ClipboardJsonImportStatus.VALID_JSON,
-        "Clipboard JSON imported successfully.",
+        ClipboardJsonImportStatus.IMPORTED,
+        "Clipboard content imported successfully.",
         loadResult);
   }
 
@@ -28,6 +28,6 @@ public record ClipboardJsonImportResult(
   }
 
   public boolean successful() {
-    return status == ClipboardJsonImportStatus.VALID_JSON;
+    return status == ClipboardJsonImportStatus.IMPORTED;
   }
 }

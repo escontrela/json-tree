@@ -6,5 +6,15 @@ package com.davidpe.jsontree.ui.model;
 public enum ViewerPresentationMode {
   ASCII_TREE,
   RAW_JSON,
-  STRUCTURE
+  STRUCTURE,
+  MARKDOWN_RENDERED,
+  RAW_MARKDOWN;
+
+  public boolean rawTextMode() {
+    return this == RAW_JSON || this == RAW_MARKDOWN;
+  }
+
+  public boolean markdownMode() {
+    return this == MARKDOWN_RENDERED || this == RAW_MARKDOWN;
+  }
 }

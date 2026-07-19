@@ -19,6 +19,10 @@ class ZoomWindowLayoutContractTest {
             StandardCharsets.UTF_8);
 
     assertTrue(fxml.contains("fx:id=\"zoomViewerHost\""));
+    assertTrue(fxml.contains("fx:id=\"zoomSearchField\""));
+    assertTrue(fxml.contains("fx:id=\"zoomSearchPreviousButton\""));
+    assertTrue(fxml.contains("fx:id=\"zoomSearchNextButton\""));
+    assertTrue(fxml.contains("fx:id=\"zoomBreadcrumbLabel\""));
     assertTrue(fxml.contains("text=\"Close\""));
     assertFalse(fxml.contains("outlineToggleButton"));
     assertFalse(fxml.contains("searchButton"));
