@@ -4,6 +4,8 @@ import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
+import java.util.Objects;
+import java.util.function.Consumer;
 import org.springframework.stereotype.Component;
 
 /**
@@ -34,5 +36,14 @@ public class ZoomViewerStateBridge {
 
   public void removeListener(ChangeListener<ZoomViewerSnapshot> listener) {
     currentSnapshot.removeListener(listener);
+  }
+
+  public Runnable subscribe(Consumer<ZoomViewerSnapshot> consumer) {
+    Objects.requireNonNull(consumer, "consumer must not be null");
+    ChangeListener<ZoomViewerSnapshot> listener =
+        (unused, oldValue, newValue) -> consumer.accept(newValue);
+    currentSnapshot.addListener(listener);
+    consumer.accept(currentSnapshot());
+    return () -> currentSnapshot.removeListener(listener);
   }
 }

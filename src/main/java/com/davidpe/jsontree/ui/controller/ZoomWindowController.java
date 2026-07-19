@@ -4,7 +4,6 @@ import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
-import javafx.beans.value.ChangeListener;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
@@ -22,10 +21,8 @@ public class ZoomWindowController {
   private final RichTextViewerFactory richTextViewerFactory;
   private final ZoomViewerStateBridge zoomViewerStateBridge;
 
-  private final ChangeListener<ZoomViewerSnapshot> snapshotListener =
-      (unused, oldValue, newValue) -> presentSnapshot(newValue);
-
   private RichTextViewerSurface richTextViewerSurface;
+  private Runnable zoomSubscriptionRelease;
 
   @FXML private BorderPane rootPane;
 
@@ -50,8 +47,7 @@ public class ZoomWindowController {
     rootPane.getProperties().put("controller", this);
     richTextViewerSurface = richTextViewerFactory.create();
     zoomViewerHost.getChildren().setAll(richTextViewerSurface.view());
-    zoomViewerStateBridge.addListener(snapshotListener);
-    presentSnapshot(zoomViewerStateBridge.currentSnapshot());
+    showAwaitingDocument();
   }
 
   @FXML
@@ -66,6 +62,21 @@ public class ZoomWindowController {
             "Zoom viewer",
             "Expanded reading surface",
             "Open a JSON in the main workspace to populate this reading surface."));
+  }
+
+  public void activate() {
+    if (zoomSubscriptionRelease != null) {
+      return;
+    }
+    zoomSubscriptionRelease = zoomViewerStateBridge.subscribe(this::presentSnapshot);
+  }
+
+  public void deactivate() {
+    if (zoomSubscriptionRelease == null) {
+      return;
+    }
+    zoomSubscriptionRelease.run();
+    zoomSubscriptionRelease = null;
   }
 
   String viewerText() {

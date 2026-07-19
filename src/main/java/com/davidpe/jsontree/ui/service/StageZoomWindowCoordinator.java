@@ -69,7 +69,12 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
     stage.setMinWidth(860.0);
     stage.setMinHeight(560.0);
     stage.setScene(new Scene(view.root(), INITIAL_WIDTH, INITIAL_HEIGHT));
-    stage.setOnShown(unused -> centerRelativeToOwner(stage));
+    stage.setOnShown(
+        unused -> {
+          centerRelativeToOwner(stage);
+          view.controller().activate();
+        });
+    stage.setOnHidden(unused -> view.controller().deactivate());
     zoomStage = stage;
     return zoomStage;
   }
