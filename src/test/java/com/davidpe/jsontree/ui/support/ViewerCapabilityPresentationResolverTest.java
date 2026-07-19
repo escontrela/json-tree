@@ -96,18 +96,31 @@ class ViewerCapabilityPresentationResolverTest {
   }
 
   @Test
-  void resolvesMarkdownPresentationAsRawOnlyWithOutlineAndSearch() {
+  void resolvesRenderedMarkdownPresentationWithoutRegexSearch() {
     ViewerCapabilityPresentation presentation =
-        resolver.resolve(markdownResult(), ViewerPresentationMode.RAW_JSON);
+        resolver.resolve(markdownResult(), ViewerPresentationMode.MARKDOWN_RENDERED);
 
-    assertFalse(presentation.rawJsonEnabled());
+    assertTrue(presentation.rawJsonEnabled());
+    assertFalse(presentation.structureEnabled());
+    assertFalse(presentation.searchEnabled());
+    assertTrue(presentation.outlineEnabled());
+    assertEquals("Copy markdown", presentation.copyButtonText());
+    assertEquals("Markdown", presentation.validationBadgeText());
+    assertEquals("MARKDOWN", presentation.statusState());
+    assertTrue(presentation.footerStatus().contains("reading view"));
+  }
+
+  @Test
+  void resolvesRawMarkdownPresentationWithSourceAlignedRegexSearch() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(markdownResult(), ViewerPresentationMode.RAW_MARKDOWN);
+
+    assertTrue(presentation.rawJsonEnabled());
     assertFalse(presentation.structureEnabled());
     assertTrue(presentation.searchEnabled());
     assertTrue(presentation.outlineEnabled());
     assertEquals("Copy raw", presentation.copyButtonText());
-    assertEquals("Markdown", presentation.validationBadgeText());
-    assertEquals("MARKDOWN", presentation.statusState());
-    assertTrue(presentation.footerStatus().contains("markdown lines"));
+    assertTrue(presentation.footerStatus().contains("raw Markdown source"));
   }
 
   @Test

@@ -36,20 +36,27 @@ public class ViewerCapabilityPresentationResolver {
 
     if (documentFormat.markdown()) {
       int renderedLines = result.asciiTreeDocument() == null ? 0 : result.asciiTreeDocument().lineCount();
+      boolean rawMarkdownMode = presentationMode == ViewerPresentationMode.RAW_MARKDOWN;
       return new ViewerCapabilityPresentation(
+          true,
           false,
-          false,
-          result.capabilities().searchAvailable(),
+          rawMarkdownMode && result.capabilities().searchAvailable(),
           result.capabilities().outlineAvailable(),
-          "Copy raw",
+          rawMarkdownMode ? "Copy raw" : "Copy markdown",
           "Markdown",
           "status-accent",
           "",
-          withCurlRequest(result, "Rendered " + renderedLines + " markdown lines"),
+          withCurlRequest(
+              result,
+              rawMarkdownMode
+                  ? "Rendered raw Markdown source (" + renderedLines + " lines)"
+                  : "Rendered Markdown reading view (" + renderedLines + " lines)"),
           "MARKDOWN",
           "Markdown outline",
           "The Markdown outline follows heading anchors when available and falls back to source segments otherwise.",
-          "Markdown stays in raw-source mode. Structure stays unavailable while regex search and outline remain active.");
+          rawMarkdownMode
+              ? "Markdown raw mode keeps regex search aligned with the exact source while Structure stays unavailable."
+              : "Rendered Markdown keeps Structure unavailable and disables regex search so highlights do not drift away from the interpreted reading view.");
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;

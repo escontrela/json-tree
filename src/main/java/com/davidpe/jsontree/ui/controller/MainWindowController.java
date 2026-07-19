@@ -58,6 +58,7 @@ import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
 import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityResolver;
 import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityState;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
+import com.davidpe.jsontree.ui.support.ViewerPresentationModeResolver;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
@@ -158,6 +159,8 @@ public class MainWindowController implements UiScreenController {
   private final ZoomWindowCoordinator zoomWindowCoordinator;
   private final ZoomViewerStateBridge zoomViewerStateBridge;
   private final ZoomViewerSnapshotFactory zoomViewerSnapshotFactory;
+  private final ViewerPresentationModeResolver viewerPresentationModeResolver =
+      new ViewerPresentationModeResolver();
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
@@ -709,7 +712,7 @@ public class MainWindowController implements UiScreenController {
         .ifPresentOrElse(
             result -> {
               BreadcrumbViewerMode viewerMode =
-                  currentPresentationMode == ViewerPresentationMode.RAW_JSON
+                  currentPresentationMode.rawTextMode()
                       ? BreadcrumbViewerMode.RAW_JSON
                       : BreadcrumbViewerMode.ASCII_TREE;
               breadcrumbViewportResolver
@@ -1529,13 +1532,15 @@ public class MainWindowController implements UiScreenController {
     if (workflowService.currentView().filter(JsonViewerLoadResult::usesLargePreview).isPresent()) {
       return;
     }
-    if (workflowService.currentView().filter(JsonViewerLoadResult::markdownDocument).isPresent()) {
-      return;
-    }
-    switchPresentationMode(
-        currentPresentationMode == ViewerPresentationMode.RAW_JSON
-            ? ViewerPresentationMode.ASCII_TREE
-            : ViewerPresentationMode.RAW_JSON);
+    ViewerPresentationMode targetMode =
+        workflowService.currentView().filter(JsonViewerLoadResult::markdownDocument).isPresent()
+            ? currentPresentationMode == ViewerPresentationMode.RAW_MARKDOWN
+                ? ViewerPresentationMode.MARKDOWN_RENDERED
+                : ViewerPresentationMode.RAW_MARKDOWN
+            : currentPresentationMode == ViewerPresentationMode.RAW_JSON
+                ? ViewerPresentationMode.ASCII_TREE
+                : ViewerPresentationMode.RAW_JSON;
+    switchPresentationMode(targetMode);
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
     scheduleOutlineViewportRefresh();
@@ -2219,10 +2224,12 @@ public class MainWindowController implements UiScreenController {
     workflowService.currentView().ifPresent(this::syncBreadcrumbModelWithCurrentView);
     ViewerTextRenderPlan renderPlan =
         documentFormat.markdown()
-            ? viewerTextRenderPlanFactory.buildMarkdownPlan(
+            ? viewerTextRenderPlanFactory.buildRawMarkdownPlan(
                 currentRawJsonPresentation.content(), currentRawHighlightRanges())
             : viewerTextRenderPlanFactory.buildRawPlan(
                 currentRawJsonPresentation.content(), currentRawHighlightRanges());
+    ViewerPresentationMode rawPresentationMode =
+        documentFormat.markdown() ? ViewerPresentationMode.RAW_MARKDOWN : ViewerPresentationMode.RAW_JSON;
     richTextViewerSurface.showStyledText(
         renderPlan.fragments(), documentFormat.markdown() ? "markdown-content" : "raw-json-content");
     workflowService
@@ -2250,18 +2257,18 @@ public class MainWindowController implements UiScreenController {
                           result.importResult().sizeBytes(),
                           result.importResult().sourceKind(),
                           result.historyEntry()),
-                      ViewerPresentationMode.RAW_JSON,
+                      rawPresentationMode,
                       currentBreadcrumbModel));
             });
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    currentPresentationMode = ViewerPresentationMode.RAW_JSON;
+    currentPresentationMode = rawPresentationMode;
     rawJsonButton.setText(
         largePreviewActive
             ? "Raw page"
             : documentFormat.markdown()
-                ? "Raw Markdown"
+                ? "Markdown"
                 : "ASCII tree");
     structureButton.setText("Structure");
     applyState(ViewerVisualState.VALID);
@@ -2300,7 +2307,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void scrollActiveHighlightIntoView() {
-    if (currentPresentationMode == ViewerPresentationMode.RAW_JSON) {
+    if (currentPresentationMode.rawTextMode()) {
       currentRawHighlightRanges().stream()
           .filter(SearchHighlightRange::active)
           .findFirst()
@@ -2327,7 +2334,9 @@ public class MainWindowController implements UiScreenController {
         .ifPresent(
             result -> {
               currentPresentationMode = normalizePresentationMode(targetMode, result);
-              if (currentPresentationMode == ViewerPresentationMode.STRUCTURE) {
+              if (!capabilityPresentationResolver
+                  .resolve(result, currentPresentationMode)
+                  .searchEnabled()) {
                 searchWorkflowService.clear();
                 hideSearchModal();
                 syncActiveSearchStrip();
@@ -2340,10 +2349,48 @@ public class MainWindowController implements UiScreenController {
     ViewerPresentationMode mode = effectivePresentationMode(result);
     currentPresentationMode = mode;
     switch (mode) {
-      case RAW_JSON -> workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
+      case RAW_JSON, RAW_MARKDOWN ->
+          workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
+      case MARKDOWN_RENDERED ->
+          workflowService.currentViewRawJson()
+              .ifPresent(markdownSource -> renderMarkdownContent(result, markdownSource));
       case STRUCTURE -> renderStructure(result);
       case ASCII_TREE -> renderAsciiTree(result);
     }
+  }
+
+  private void renderMarkdownContent(JsonViewerLoadResult result, String markdownSource) {
+    syncBreadcrumbModelWithCurrentView(result);
+    ViewerTextRenderPlan renderPlan =
+        viewerTextRenderPlanFactory.buildRenderedMarkdownPlan(markdownSource);
+    applyCapabilityPresentation(result);
+    syncLargePreviewPageControls(result);
+    resetPresentationArtifactsForNonRawMode();
+    applyLargePreviewDocumentScrollShell(result);
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "markdown-content");
+    publishZoomSnapshot(
+        zoomViewerSnapshotFactory.renderable(
+            result,
+            "Markdown",
+            renderPlan,
+            "markdown-content",
+            formatFileMeta(
+                result.importResult().sizeBytes(),
+                result.importResult().sourceKind(),
+                result.historyEntry()),
+            ViewerPresentationMode.MARKDOWN_RENDERED,
+            currentBreadcrumbModel));
+    richTextViewerSurface.scrollToTop();
+    emptyStateLabel.setManaged(false);
+    emptyStateLabel.setVisible(false);
+    rawJsonButton.setText("Raw Markdown");
+    structureButton.setText("Structure");
+    currentPresentationMode = ViewerPresentationMode.MARKDOWN_RENDERED;
+    updateOutlineShell(result, result.asciiTreeDocument());
+    syncOutlinePanelVisibility(result);
+    applyState(ViewerVisualState.VALID);
+    scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
   }
 
   private void renderStructure(JsonViewerLoadResult result) {
@@ -2399,23 +2446,7 @@ public class MainWindowController implements UiScreenController {
 
   private ViewerPresentationMode normalizePresentationMode(
       ViewerPresentationMode requestedMode, JsonViewerLoadResult result) {
-    if (result == null) {
-      return ViewerPresentationMode.ASCII_TREE;
-    }
-    if (result.usesLargePreview()) {
-      return ViewerPresentationMode.RAW_JSON;
-    }
-    if (result.importResult().documentFormat().markdown()) {
-      return ViewerPresentationMode.RAW_JSON;
-    }
-    if (requestedMode == ViewerPresentationMode.RAW_JSON
-        && result.capabilities().rawJsonAvailable()) {
-      return ViewerPresentationMode.RAW_JSON;
-    }
-    if (requestedMode == ViewerPresentationMode.STRUCTURE && result.hasRenderableTree()) {
-      return ViewerPresentationMode.STRUCTURE;
-    }
-    return ViewerPresentationMode.ASCII_TREE;
+    return viewerPresentationModeResolver.resolve(requestedMode, result);
   }
 
   private java.util.Optional<AsciiTreeDocument> resolveStructureDocument(JsonViewerLoadResult result) {
