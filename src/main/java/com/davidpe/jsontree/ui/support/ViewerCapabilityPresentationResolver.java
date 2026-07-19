@@ -1,14 +1,17 @@
 package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
+import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import org.springframework.stereotype.Component;
 
 @Component
 public class ViewerCapabilityPresentationResolver {
 
-  public ViewerCapabilityPresentation resolve(JsonViewerLoadResult result) {
+  public ViewerCapabilityPresentation resolve(
+      JsonViewerLoadResult result, ViewerPresentationMode presentationMode) {
     if (result.usesLargePreview()) {
       return new ViewerCapabilityPresentation(
+          false,
           false,
           false,
           false,
@@ -24,10 +27,12 @@ public class ViewerCapabilityPresentationResolver {
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;
+    boolean structureActive = presentationMode == ViewerPresentationMode.STRUCTURE;
     return new ViewerCapabilityPresentation(
         result.capabilities().rawJsonAvailable(),
-        result.capabilities().searchAvailable(),
-        result.capabilities().outlineAvailable(),
+        result.hasRenderableTree(),
+        !structureActive && result.capabilities().searchAvailable(),
+        !structureActive && result.capabilities().outlineAvailable(),
         "Copy tree",
         "Valid",
         "status-valid",

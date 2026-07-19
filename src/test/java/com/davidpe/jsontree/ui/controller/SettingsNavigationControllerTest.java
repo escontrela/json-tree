@@ -46,6 +46,7 @@ class SettingsNavigationControllerTest {
             null,
             null,
             null,
+            null,
             new TypewriterLabelRevealService(),
             null,
             new ZoomActionAvailabilityResolver(),

@@ -34,6 +34,7 @@
                 </HBox>
                 <Button fx:id="copyTreeButton" mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button" text="Copy tree" />
                 <Button fx:id="rawJsonButton" disable="true" mnemonicParsing="false" onAction="#toggleRawJson" styleClass="ghost-button" text="Raw JSON" />
+                <Button fx:id="structureButton" disable="true" mnemonicParsing="false" onAction="#toggleStructureMode" styleClass="ghost-button" text="Structure" />
                 <Button fx:id="searchButton" disable="true" mnemonicParsing="false" onAction="#openSearchModal" styleClass="ghost-button" text="Search" />
                 <Button mnemonicParsing="false" onAction="#openSettings" styleClass="ghost-button" text="Settings" />
             </HBox>

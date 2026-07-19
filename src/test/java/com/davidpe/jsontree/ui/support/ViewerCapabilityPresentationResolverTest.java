@@ -12,6 +12,7 @@ import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
 
@@ -22,9 +23,11 @@ class ViewerCapabilityPresentationResolverTest {
 
   @Test
   void resolvesFullModePresentation() {
-    ViewerCapabilityPresentation presentation = resolver.resolve(fullResult());
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(fullResult(), ViewerPresentationMode.ASCII_TREE);
 
     assertTrue(presentation.rawJsonEnabled());
+    assertTrue(presentation.structureEnabled());
     assertTrue(presentation.searchEnabled());
     assertTrue(presentation.outlineEnabled());
     assertEquals("Copy tree", presentation.copyButtonText());
@@ -37,9 +40,11 @@ class ViewerCapabilityPresentationResolverTest {
 
   @Test
   void resolvesLargePreviewPresentation() {
-    ViewerCapabilityPresentation presentation = resolver.resolve(largePreviewResult());
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(largePreviewResult(), ViewerPresentationMode.RAW_JSON);
 
     assertFalse(presentation.rawJsonEnabled());
+    assertFalse(presentation.structureEnabled());
     assertFalse(presentation.searchEnabled());
     assertFalse(presentation.outlineEnabled());
     assertEquals("Copy preview", presentation.copyButtonText());
@@ -53,8 +58,10 @@ class ViewerCapabilityPresentationResolverTest {
 
   @Test
   void restoresFullModePresentationAfterLargePreview() {
-    ViewerCapabilityPresentation largePreview = resolver.resolve(largePreviewResult());
-    ViewerCapabilityPresentation full = resolver.resolve(fullResult());
+    ViewerCapabilityPresentation largePreview =
+        resolver.resolve(largePreviewResult(), ViewerPresentationMode.RAW_JSON);
+    ViewerCapabilityPresentation full =
+        resolver.resolve(fullResult(), ViewerPresentationMode.ASCII_TREE);
 
     assertFalse(largePreview.rawJsonEnabled());
     assertTrue(full.rawJsonEnabled());
@@ -64,12 +71,25 @@ class ViewerCapabilityPresentationResolverTest {
 
   @Test
   void resolvesNonRenderableFullModeWithoutAsciiTree() {
-    ViewerCapabilityPresentation presentation = resolver.resolve(unreadableFullResult());
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(unreadableFullResult(), ViewerPresentationMode.ASCII_TREE);
 
     assertTrue(presentation.rawJsonEnabled());
+    assertFalse(presentation.structureEnabled());
     assertTrue(presentation.searchEnabled());
     assertTrue(presentation.outlineEnabled());
     assertEquals("Rendered 0 lines", presentation.footerStatus());
+  }
+
+  @Test
+  void disablesSearchAndOutlineWhileKeepingStructureEntryPointAvailable() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(fullResult(), ViewerPresentationMode.STRUCTURE);
+
+    assertTrue(presentation.rawJsonEnabled());
+    assertTrue(presentation.structureEnabled());
+    assertFalse(presentation.searchEnabled());
+    assertFalse(presentation.outlineEnabled());
   }
 
   private JsonViewerLoadResult fullResult() {
