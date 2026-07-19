@@ -9,12 +9,14 @@ import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.DocumentFormat;
+import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import java.nio.file.Path;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class ViewerCapabilityPresentationResolverTest {
@@ -108,6 +110,18 @@ class ViewerCapabilityPresentationResolverTest {
     assertTrue(presentation.footerStatus().contains("markdown lines"));
   }
 
+  @Test
+  void appendsCurlRequestToFooterStatusWhenCurrentViewIsCurlBacked() {
+    ViewerCapabilityPresentation presentation =
+        resolver.resolve(curlBackedFullResult(), ViewerPresentationMode.ASCII_TREE);
+
+    assertTrue(presentation.footerStatus().contains("Rendered 12 lines"));
+    assertTrue(
+        presentation
+            .footerStatus()
+            .contains("Request: curl -H 'Accept: application/json' 'https://example.com/data.json'"));
+  }
+
   private JsonViewerLoadResult fullResult() {
     return new JsonViewerLoadResult(
         new JsonImportResult(
@@ -179,6 +193,36 @@ class ViewerCapabilityPresentationResolverTest {
         null,
         JsonInspectionMode.FULL,
         new JsonViewerCapabilities(true, true, true),
+        null);
+  }
+
+  private JsonViewerLoadResult curlBackedFullResult() {
+    ImportedJsonFile historyEntry =
+        new ImportedJsonFile(
+            "2026-07-19_15-00-00_data.json",
+            "data.json",
+            Instant.parse("2026-07-19T15:00:00Z"),
+            128,
+            12,
+            true,
+            false,
+            DocumentFormat.JSON,
+            JsonDocumentSourceKind.CURL,
+            "curl -H 'Accept: application/json' 'https://example.com/data.json'");
+    return new JsonViewerLoadResult(
+        new JsonImportResult(
+            Path.of("/tmp/data.json"),
+            "data.json",
+            128,
+            true,
+            true,
+            true,
+            JsonDocumentSourceKind.CURL),
+        new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null),
+        new AsciiTreeDocument("root", "root\n└─ name: \"small\"", 12),
+        historyEntry,
+        JsonInspectionMode.FULL,
+        JsonViewerCapabilities.full(),
         null);
   }
 }

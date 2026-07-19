@@ -74,4 +74,21 @@ class CurlCommandParserServiceTest {
     assertEquals(CurlCommandParseStatus.INVALID, result.status());
     assertTrue(result.message().contains("Missing value"));
   }
+
+  @Test
+  void parsesClipboardCurlExampleWithShortHeaderAndQuotedUrl() {
+    CurlCommandParseResult result =
+        service.detectAndParse(
+            "curl  -H 'Accept: application/json' 'https://microsoftedge.github.io/Demos/json-dummy-data/64KB-min.json'",
+            CurlCommandSource.clipboard());
+
+    assertTrue(result.successful());
+    assertEquals("GET", result.request().method());
+    assertEquals(
+        "https://microsoftedge.github.io/Demos/json-dummy-data/64KB-min.json",
+        result.request().url().toString());
+    assertEquals(1, result.request().headers().size());
+    assertEquals("Accept", result.request().headers().getFirst().name());
+    assertEquals("application/json", result.request().headers().getFirst().value());
+  }
 }

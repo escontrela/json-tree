@@ -23,9 +23,11 @@ public class ViewerCapabilityPresentationResolver {
           documentFormat.markdown()
               ? " • byte-paged large preview • markdown"
               : " • byte-paged large preview",
-          documentFormat.markdown()
-              ? "Showing the current large-file page as a raw Markdown chunk"
-              : "Showing the current large-file page as a raw byte chunk",
+          withCurlRequest(
+              result,
+              documentFormat.markdown()
+                  ? "Showing the current large-file page as a raw Markdown chunk"
+                  : "Showing the current large-file page as a raw byte chunk"),
           "PREVIEW",
           "Outline unavailable",
           "Large preview disables the outline and minimap while the viewer stays focused on the active page chunk.",
@@ -43,7 +45,7 @@ public class ViewerCapabilityPresentationResolver {
           "Markdown",
           "status-accent",
           "",
-          "Rendered " + renderedLines + " markdown lines",
+          withCurlRequest(result, "Rendered " + renderedLines + " markdown lines"),
           "MARKDOWN",
           "Markdown outline",
           "The Markdown outline follows heading anchors when available and falls back to source segments otherwise.",
@@ -61,10 +63,21 @@ public class ViewerCapabilityPresentationResolver {
         "Valid",
         "status-valid",
         "",
-        "Rendered " + renderedLines + " lines",
+        withCurlRequest(result, "Rendered " + renderedLines + " lines"),
         "VALID",
         "JSON outline",
         "",
         "");
+  }
+
+  private String withCurlRequest(JsonViewerLoadResult result, String baseStatus) {
+    if (result.historyEntry() == null || !result.historyEntry().curlBacked()) {
+      return baseStatus;
+    }
+    String curlCommand = result.historyEntry().curlCommand();
+    if (curlCommand == null || curlCommand.isBlank()) {
+      return baseStatus;
+    }
+    return baseStatus + " • Request: " + curlCommand;
   }
 }
