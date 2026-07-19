@@ -2,7 +2,7 @@
 
 Desktop application for visualizing JSON files as ASCII trees with syntax highlighting, built with **JavaFX 21** + **Spring Boot 3.3** + **Java 22**.
 
-![JSON Tree Viewer](assets/demo.png)
+![JSON Tree Viewer](mocks/main-screen.png)
 
 ## 🎯 Overview
 
