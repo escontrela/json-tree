@@ -11,10 +11,18 @@ import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 public record LargePreviewSettingsSnapshot(
     long largePreviewThresholdBytes,
     int viewerChunkBytes,
-    boolean prettyOnLargePreviewEnabled) {
+    boolean prettyOnLargePreviewEnabled,
+    boolean nightModeEnabled) {
 
   public LargePreviewSettingsSnapshot(long largePreviewThresholdBytes, int viewerChunkBytes) {
-    this(largePreviewThresholdBytes, viewerChunkBytes, false);
+    this(largePreviewThresholdBytes, viewerChunkBytes, false, false);
+  }
+
+  public LargePreviewSettingsSnapshot(
+      long largePreviewThresholdBytes,
+      int viewerChunkBytes,
+      boolean prettyOnLargePreviewEnabled) {
+    this(largePreviewThresholdBytes, viewerChunkBytes, prettyOnLargePreviewEnabled, false);
   }
 
   public LargePreviewSettingsSnapshot {
@@ -32,6 +40,7 @@ public record LargePreviewSettingsSnapshot(
     return new LargePreviewSettingsSnapshot(
         sanitizeThreshold(properties.getFullRenderMaxBytes()),
         sanitizeViewerChunkBytes(properties.getVisibleChunkBytes()),
+        false,
         false);
   }
 
@@ -39,7 +48,8 @@ public record LargePreviewSettingsSnapshot(
     return new LargePreviewSettingsSnapshot(
         sanitizeThreshold(largePreviewThresholdBytes),
         sanitizeViewerChunkBytes(viewerChunkBytes),
-        prettyOnLargePreviewEnabled);
+        prettyOnLargePreviewEnabled,
+        nightModeEnabled);
   }
 
   private static long sanitizeThreshold(long thresholdBytes) {

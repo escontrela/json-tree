@@ -10,6 +10,7 @@ import com.davidpe.jsontree.application.service.ProcessMemoryReferenceService;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenFactory;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.service.ApplicationThemeService;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
@@ -71,6 +72,7 @@ class SettingsNavigationControllerTest {
             saveUseCase,
             new ProcessMemoryReferenceService(),
             new SettingsFormStateResolver(),
+            new ApplicationThemeService(new StaticViewUseCase(new LargePreviewSettingsSnapshot(2_048L, 4_096))),
             uiFlowManager);
 
     controller.backToMain();

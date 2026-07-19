@@ -7,6 +7,7 @@ public record SettingsFormState(
     String thresholdText,
     String chunkText,
     boolean prettyLargePreviewSelected,
+    boolean nightModeSelected,
     String memoryReferenceText,
     String warningText,
     boolean warningActive,

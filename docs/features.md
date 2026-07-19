@@ -20,6 +20,15 @@
 - Clicking the Markdown minimap moves the raw viewer to the corresponding heading or fallback anchor, while ordinary viewer scrolling continues to update the minimap viewport marker through the shared outline shell.
 - Large Markdown files reuse the existing byte-paged `LARGE_PREVIEW` raw workflow instead of trying to fully materialize an unsupported tree. In that mode, Markdown follows the same current product rule as other large previews: raw page available, search and outline disabled.
 
+## Runtime Settings And Night Mode
+
+- The settings workspace is now vertically scrollable through a proper `ScrollPane` shell, so smaller stage heights can still reach the lowest controls and actions without introducing horizontal scrolling in the supported layout.
+- Scrollbars on the settings screen remain conditional: they appear only when the form overflows and disappear automatically again when the content fits after a resize or maximize.
+- The editable runtime settings snapshot now persists three large-preview controls and one presentation control together: threshold bytes, chunk bytes, opt-in pretty-on-large-preview, and `Night Mode`.
+- `Night Mode` is staged like the other settings: toggling it in the form does nothing until `Apply`, while `Back` discards the pending visual change.
+- After `Apply`, the current main screen, history screen, settings screen, and zoom window all switch coherently to a BMW-aligned night variant through one shared theme service and CSS class instead of ad hoc per-controller styling.
+- Persisted settings restore on the next application launch, so the chosen night variant becomes the visual baseline only when the user explicitly enabled it previously.
+
 ## Validation States
 
 - JSON validation is delegated to a dedicated service boundary backed by Jackson parsing.

@@ -21,6 +21,7 @@ public class FileSystemLargePreviewSettingsStore implements LargePreviewSettings
   private static final String THRESHOLD_KEY = "largePreviewThresholdBytes";
   private static final String VIEWER_CHUNK_KEY = "viewerChunkBytes";
   private static final String PRETTY_LARGE_PREVIEW_KEY = "prettyOnLargePreviewEnabled";
+  private static final String NIGHT_MODE_KEY = "nightModeEnabled";
 
   private final AppDataProperties appDataProperties;
 
@@ -45,11 +46,13 @@ public class FileSystemLargePreviewSettingsStore implements LargePreviewSettings
       }
       String prettyLargePreviewValue =
           properties.getProperty(PRETTY_LARGE_PREVIEW_KEY, Boolean.FALSE.toString());
+      String nightModeValue = properties.getProperty(NIGHT_MODE_KEY, Boolean.FALSE.toString());
       return Optional.of(
           new LargePreviewSettingsSnapshot(
               Long.parseLong(thresholdValue.trim()),
               Integer.parseInt(viewerChunkValue.trim()),
-              Boolean.parseBoolean(prettyLargePreviewValue.trim())));
+              Boolean.parseBoolean(prettyLargePreviewValue.trim()),
+              Boolean.parseBoolean(nightModeValue.trim())));
     } catch (IOException | IllegalArgumentException exception) {
       return Optional.empty();
     }
@@ -65,6 +68,7 @@ public class FileSystemLargePreviewSettingsStore implements LargePreviewSettings
       properties.setProperty(VIEWER_CHUNK_KEY, Integer.toString(snapshot.viewerChunkBytes()));
       properties.setProperty(
           PRETTY_LARGE_PREVIEW_KEY, Boolean.toString(snapshot.prettyOnLargePreviewEnabled()));
+      properties.setProperty(NIGHT_MODE_KEY, Boolean.toString(snapshot.nightModeEnabled()));
       try (OutputStream outputStream = Files.newOutputStream(settingsPath())) {
         properties.store(outputStream, "JSON TREE large preview settings");
       }

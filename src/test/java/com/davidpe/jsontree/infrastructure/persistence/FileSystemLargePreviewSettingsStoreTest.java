@@ -25,7 +25,7 @@ class FileSystemLargePreviewSettingsStoreTest {
   void savesAndLoadsSettingsRoundTrip() {
     FileSystemLargePreviewSettingsStore store = new FileSystemLargePreviewSettingsStore(properties());
     LargePreviewSettingsSnapshot snapshot =
-        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true);
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true, true);
 
     store.save(snapshot);
 
@@ -35,7 +35,7 @@ class FileSystemLargePreviewSettingsStoreTest {
   @Test
   void persistedSettingsRemainAvailableForANewStoreInstance() {
     LargePreviewSettingsSnapshot snapshot =
-        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true);
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, true, true);
 
     new FileSystemLargePreviewSettingsStore(properties()).save(snapshot);
 
@@ -54,7 +54,8 @@ class FileSystemLargePreviewSettingsStoreTest {
         """);
 
     assertEquals(
-        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, false), store.load().orElseThrow());
+        new LargePreviewSettingsSnapshot(8_388_608L, 262_144, false, false),
+        store.load().orElseThrow());
   }
 
   @Test

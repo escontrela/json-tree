@@ -44,7 +44,7 @@ class LargePreviewSettingsServiceTest {
     LargePreviewSettingsService service =
         new LargePreviewSettingsService(store, new LargePreviewSettingsSnapshot(2_048L, 4_096));
     LargePreviewSettingsSnapshot updatedSnapshot =
-        new LargePreviewSettingsSnapshot(8_192L, 16_384, true);
+        new LargePreviewSettingsSnapshot(8_192L, 16_384, true, true);
 
     LargePreviewSettingsSnapshot savedSnapshot = service.saveAndApply(updatedSnapshot);
 
@@ -67,6 +67,13 @@ class LargePreviewSettingsServiceTest {
 
     assertEquals(updatedSnapshot, reloadedSnapshot);
     assertSame(reloadedSnapshot, service.current());
+  }
+
+  @Test
+  void defaultsNightModeToDisabledWhenLegacyConstructorsAreUsed() {
+    LargePreviewSettingsSnapshot snapshot = new LargePreviewSettingsSnapshot(2_048L, 4_096, true);
+
+    assertEquals(new LargePreviewSettingsSnapshot(2_048L, 4_096, true, false), snapshot);
   }
 
   private LargePreviewSettingsStore emptyStore() {
