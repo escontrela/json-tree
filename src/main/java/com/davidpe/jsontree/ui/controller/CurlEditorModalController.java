@@ -15,6 +15,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
 import javafx.stage.Window;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
 /**
@@ -40,7 +41,7 @@ public class CurlEditorModalController {
   @FXML private Button cancelButton;
 
   public CurlEditorModalController(
-      SubmitCurlCommandUseCase submitCurlCommandUseCase, UiFlowManager uiFlowManager) {
+      SubmitCurlCommandUseCase submitCurlCommandUseCase, @Lazy UiFlowManager uiFlowManager) {
     this.submitCurlCommandUseCase = submitCurlCommandUseCase;
     this.uiFlowManager = uiFlowManager;
   }
