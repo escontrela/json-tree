@@ -150,6 +150,17 @@ public final class RichTextViewerSurface {
         viewportScrollResolver.scrollOffset(scrollValue, viewportHeight(), totalContentHeightEstimate()));
   }
 
+  public int firstVisibleParagraphIndex() {
+    if (codeArea.getParagraphs().isEmpty()) {
+      return 0;
+    }
+    try {
+      return Math.max(0, codeArea.visibleParToAllParIndex(0));
+    } catch (RuntimeException exception) {
+      return 0;
+    }
+  }
+
   public void addViewportChangeListener(Runnable listener) {
     Objects.requireNonNull(listener, "listener must not be null");
     ChangeListener<Number> metricsListener = (unused, oldValue, newValue) -> listener.run();

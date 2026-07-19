@@ -253,6 +253,23 @@
     -fx-alignment: center-right;
 }
 
+.viewer-toolbar-actions {
+    -fx-spacing: 8px;
+}
+
+.viewer-toolbar-button-row {
+    -fx-alignment: center-right;
+}
+
+.viewer-toolbar-breadcrumb {
+    -fx-alignment: center-right;
+    -fx-text-alignment: right;
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 500;
+    -fx-max-width: 520px;
+}
+
 .active-search-strip {
     -fx-alignment: center-left;
     -fx-background-color: #f4f7fb;

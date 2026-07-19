@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
+import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
@@ -10,11 +11,13 @@ import com.davidpe.jsontree.application.model.RawJsonPresentation;
 import com.davidpe.jsontree.application.port.in.ImportClipboardJsonUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
+import com.davidpe.jsontree.application.service.JsonBreadcrumbModelService;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.JsonSearchWorkflowService;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
 import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.ui.model.BreadcrumbViewerMode;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
@@ -33,6 +36,7 @@ import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
 import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
+import com.davidpe.jsontree.ui.support.JsonBreadcrumbViewportResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
 import com.davidpe.jsontree.ui.support.LargePreviewPageNavigationState;
@@ -119,7 +123,9 @@ public class MainWindowController implements UiScreenController {
   private final ImportClipboardJsonUseCase importClipboardJsonUseCase;
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
+  private final JsonBreadcrumbModelService breadcrumbModelService;
   private final JsonOutlineModelService outlineModelService;
+  private final JsonBreadcrumbViewportResolver breadcrumbViewportResolver;
   private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
   private final OutlineMinimapScrollMapper outlineScrollMapper;
   private final OutlineViewportProjector outlineViewportProjector;
@@ -149,7 +155,9 @@ public class MainWindowController implements UiScreenController {
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
+      JsonBreadcrumbModelService breadcrumbModelService,
       JsonOutlineModelService outlineModelService,
+      JsonBreadcrumbViewportResolver breadcrumbViewportResolver,
       OutlineMinimapLayoutPlanner outlineLayoutPlanner,
       OutlineMinimapScrollMapper outlineScrollMapper,
       OutlineViewportProjector outlineViewportProjector,
@@ -175,7 +183,9 @@ public class MainWindowController implements UiScreenController {
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
+    this.breadcrumbModelService = breadcrumbModelService;
     this.outlineModelService = outlineModelService;
+    this.breadcrumbViewportResolver = breadcrumbViewportResolver;
     this.outlineLayoutPlanner = outlineLayoutPlanner;
     this.outlineScrollMapper = outlineScrollMapper;
     this.outlineViewportProjector = outlineViewportProjector;
@@ -225,6 +235,8 @@ public class MainWindowController implements UiScreenController {
   @FXML private Label activeSearchOccurrenceLabel;
 
   @FXML private Label emptyStateLabel;
+
+  @FXML private Label breadcrumbLabel;
 
   @FXML private Label footerStatusLabel;
 
@@ -315,9 +327,12 @@ public class MainWindowController implements UiScreenController {
   private boolean windowMetricsLoggingAttached;
   private boolean showingRawJson = false;
   private RawJsonPresentation currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+  private JsonBreadcrumbModel currentBreadcrumbModel = JsonBreadcrumbModel.unavailable();
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
+  private String currentBreadcrumbSourceIdentity;
   private String currentOutlineSourceIdentity;
+  private boolean breadcrumbRefreshPending;
   private boolean outlineViewportRefreshPending;
   private boolean suppressLargePreviewScrollHandling;
   private boolean largePreviewPageLoadInFlight;
@@ -440,7 +455,11 @@ public class MainWindowController implements UiScreenController {
     outlinePreviewShell.heightProperty().addListener(resizeListener);
     outlinePreviewShell.setOnMousePressed(this::handleOutlineInteraction);
     outlinePreviewShell.setOnMouseDragged(this::handleOutlineInteraction);
-    richTextViewerSurface.addViewportChangeListener(this::scheduleOutlineViewportRefresh);
+    richTextViewerSurface.addViewportChangeListener(
+        () -> {
+          scheduleOutlineViewportRefresh();
+          scheduleBreadcrumbRefresh();
+        });
     viewerScrollPane
         .vvalueProperty()
         .addListener(
@@ -593,6 +612,7 @@ public class MainWindowController implements UiScreenController {
             nonLargeViewportHeight(),
             nonLargeContentHeight());
     richTextViewerSurface.scrollToVerticalValue(scrollValue);
+    scheduleBreadcrumbRefresh();
     event.consume();
   }
 
@@ -606,6 +626,55 @@ public class MainWindowController implements UiScreenController {
           outlineViewportRefreshPending = false;
           refreshOutlineViewportMarker();
         });
+  }
+
+  private void scheduleBreadcrumbRefresh() {
+    if (breadcrumbRefreshPending) {
+      return;
+    }
+    breadcrumbRefreshPending = true;
+    Platform.runLater(
+        () -> {
+          breadcrumbRefreshPending = false;
+          refreshBreadcrumbLabel();
+        });
+  }
+
+  private void refreshBreadcrumbLabel() {
+    workflowService
+        .currentView()
+        .filter(result -> currentState == ViewerVisualState.VALID)
+        .filter(result -> !result.usesLargePreview())
+        .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
+        .ifPresentOrElse(
+            result -> {
+              BreadcrumbViewerMode viewerMode =
+                  showingRawJson ? BreadcrumbViewerMode.RAW_JSON : BreadcrumbViewerMode.ASCII_TREE;
+              breadcrumbViewportResolver
+                  .resolve(
+                      currentBreadcrumbModel,
+                      viewerMode,
+                      richTextViewerSurface.firstVisibleParagraphIndex())
+                  .map(path -> path.displayLabel())
+                  .ifPresentOrElse(this::showBreadcrumbLabel, this::hideBreadcrumbLabel);
+            },
+            this::hideBreadcrumbLabel);
+  }
+
+  private void showBreadcrumbLabel(String breadcrumbText) {
+    if (breadcrumbText == null || breadcrumbText.isBlank()) {
+      hideBreadcrumbLabel();
+      return;
+    }
+    breadcrumbLabel.setText(breadcrumbText);
+    breadcrumbLabel.setManaged(true);
+    breadcrumbLabel.setVisible(true);
+  }
+
+  private void hideBreadcrumbLabel() {
+    breadcrumbLabel.setText("");
+    breadcrumbLabel.setManaged(false);
+    breadcrumbLabel.setVisible(false);
   }
 
   private void refreshOutlineViewportMarker() {
@@ -690,6 +759,7 @@ public class MainWindowController implements UiScreenController {
     ViewerTextRenderPlan renderPlan =
         viewerTextRenderPlanFactory.buildAsciiPlan(document, currentAsciiHighlightRanges(document));
     syncLargePreviewViewportState(result, targetVerticalScrollValue);
+    syncBreadcrumbModelWithCurrentView(result);
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
     resetViewModeIfNeeded();
@@ -710,10 +780,12 @@ public class MainWindowController implements UiScreenController {
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
   }
 
   public void showEmptyViewer() {
     cancelLargePreviewLoadingAffordance();
+    resetBreadcrumbModel();
     resetOutlineModel();
     clearLargePreviewViewportState();
     hideLargePreviewPageControls();
@@ -747,10 +819,12 @@ public class MainWindowController implements UiScreenController {
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.EMPTY);
+    hideBreadcrumbLabel();
   }
 
   public void showDraggingState() {
     cancelLargePreviewLoadingAffordance();
+    resetBreadcrumbModel();
     showFileWarningIcon(false);
     emptyStateLabel.setText("Release to inspect this JSON file");
     showOutlineShellState(
@@ -768,10 +842,12 @@ public class MainWindowController implements UiScreenController {
             "Expanded reading surface",
             "Release the file in the main workspace to prepare the zoom reader."));
     applyState(ViewerVisualState.DRAGGING);
+    hideBreadcrumbLabel();
   }
 
   public void showLoadingState(String fileName) {
     cancelLargePreviewLoadingAffordance();
+    resetBreadcrumbModel();
     resetOutlineModel();
     clearLargePreviewViewportState();
     hideLargePreviewPageControls();
@@ -808,10 +884,12 @@ public class MainWindowController implements UiScreenController {
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.LOADING);
+    hideBreadcrumbLabel();
   }
 
   public void showInvalidState(String message) {
     cancelLargePreviewLoadingAffordance();
+    resetBreadcrumbModel();
     resetOutlineModel();
     clearLargePreviewViewportState();
     hideLargePreviewPageControls();
@@ -843,6 +921,7 @@ public class MainWindowController implements UiScreenController {
     hideSearchModal();
     resetViewModeIfNeeded();
     applyState(ViewerVisualState.INVALID);
+    hideBreadcrumbLabel();
   }
 
   public void showEmptyFileState() {
@@ -1267,6 +1346,7 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setHvalue(0);
     viewerScrollPane.setVvalue(0);
     scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
   }
 
   private void resetViewModeIfNeeded() {
@@ -1439,6 +1519,27 @@ public class MainWindowController implements UiScreenController {
             this::resetOutlineModel);
   }
 
+  private void syncBreadcrumbModelWithCurrentView(JsonViewerLoadResult result) {
+    if (result == null
+        || result.usesLargePreview()
+        || result.validationResult().status() != JsonValidationStatus.VALID) {
+      resetBreadcrumbModel();
+      return;
+    }
+
+    String breadcrumbIdentity = currentViewIdentity(result);
+    if (breadcrumbIdentity.equals(currentBreadcrumbSourceIdentity)) {
+      return;
+    }
+
+    currentBreadcrumbModel =
+        workflowService
+            .currentViewRawJson()
+            .map(breadcrumbModelService::buildFromRawJson)
+            .orElse(JsonBreadcrumbModel.unavailable());
+    currentBreadcrumbSourceIdentity = breadcrumbIdentity;
+  }
+
   private JsonOutlineModel outlineModelForCurrentView(JsonViewerLoadResult result) {
     if (result.usesLargePreview()) {
       return workflowService
@@ -1465,6 +1566,11 @@ public class MainWindowController implements UiScreenController {
     currentOutlineModel = JsonOutlineModel.empty();
     currentOutlineLayout = OutlineMinimapLayout.empty();
     currentOutlineSourceIdentity = null;
+  }
+
+  private void resetBreadcrumbModel() {
+    currentBreadcrumbModel = JsonBreadcrumbModel.unavailable();
+    currentBreadcrumbSourceIdentity = null;
   }
 
   private void refreshCurrentViewerContent() {
@@ -1886,6 +1992,7 @@ public class MainWindowController implements UiScreenController {
         prettyLargePreviewEnabled
             ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, true)
             : rawJsonPresentationService.present(rawJson);
+    workflowService.currentView().ifPresent(this::syncBreadcrumbModelWithCurrentView);
     ViewerTextRenderPlan renderPlan =
         viewerTextRenderPlanFactory.buildRawPlan(
             currentRawJsonPresentation.content(), currentRawHighlightRanges());
@@ -1908,6 +2015,7 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
   }
 
   private void publishZoomSnapshot(ZoomViewerSnapshot snapshot) {
