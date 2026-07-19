@@ -13,20 +13,21 @@ class DroppedJsonPathResolverTest {
     private final DroppedJsonPathResolver resolver = new DroppedJsonPathResolver();
 
     @Test
-    void resolvesFirstSupportedJsonFileFromDroppedPayload() {
+    void resolvesFirstSupportedImportFileFromDroppedPayload() {
         Path resolved = resolver.resolve(List.of(
                 Path.of("/tmp/notes.txt").toFile(),
+                Path.of("/tmp/readme.md").toFile(),
                 Path.of("/tmp/example.JSON").toFile(),
                 Path.of("/tmp/ignored.json").toFile()
         )).orElseThrow();
 
-        assertEquals(Path.of("/tmp/example.JSON"), resolved);
+        assertEquals(Path.of("/tmp/readme.md"), resolved);
     }
 
     @Test
     void ignoresUnsupportedOrEmptyPayloadsGracefully() {
         assertTrue(resolver.resolve(List.of(
-                Path.of("/tmp/readme.md").toFile(),
+                Path.of("/tmp/readme.txt").toFile(),
                 Path.of("/tmp/data.yaml").toFile()
         )).isEmpty());
         assertTrue(resolver.resolve(List.<File>of()).isEmpty());

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.infrastructure.config.AppDataProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -116,6 +117,32 @@ class FileSystemJsonHistoryRepositoryTest {
 
         assertEquals(1, entries.size());
         assertFalse(entries.getFirst().favorite());
+        assertEquals(DocumentFormat.JSON, entries.getFirst().documentFormat());
+    }
+
+    @Test
+    void savesMarkdownSnapshotsWithFormatAwareMetadataAndExtension() {
+        FileSystemJsonHistoryRepository repository =
+                new FileSystemJsonHistoryRepository(properties(), new ObjectMapper().findAndRegisterModules());
+        ImportedJsonFile entry = new ImportedJsonFile(
+                "2026-07-19_12-00-00_notes.md",
+                "notes.md",
+                Instant.parse("2026-07-19T12:00:00Z"),
+                512L,
+                24,
+                true,
+                false,
+                DocumentFormat.MARKDOWN);
+
+        repository.save(entry, "# Heading\n\ncontent");
+
+        ImportedJsonFile stored = repository.findByStoredName(entry.storedName()).orElseThrow();
+        assertEquals(DocumentFormat.MARKDOWN, stored.documentFormat());
+        assertTrue(stored.storedName().endsWith(".md"));
+        assertEquals(
+                tempDir.resolve("history").resolve(entry.storedName()),
+                repository.resolveStoredJsonPath(entry.storedName()).orElseThrow());
+        assertEquals("# Heading\n\ncontent", repository.readStoredJson(entry.storedName()).orElseThrow());
     }
 
     private AppDataProperties properties() {

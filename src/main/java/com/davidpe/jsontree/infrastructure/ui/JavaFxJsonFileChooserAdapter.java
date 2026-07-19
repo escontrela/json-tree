@@ -21,11 +21,13 @@ public class JavaFxJsonFileChooserAdapter implements JsonFileChooserPort {
   @Override
   public Optional<Path> chooseJsonFile() {
     FileChooser chooser = new FileChooser();
-    chooser.setTitle("Import JSON");
+    chooser.setTitle("Import JSON or Markdown");
     chooser
         .getExtensionFilters()
         .addAll(
             new FileChooser.ExtensionFilter("JSON files", "*.json"),
+            new FileChooser.ExtensionFilter("Markdown files", "*.md"),
+            new FileChooser.ExtensionFilter("JSON and Markdown files", "*.json", "*.md"),
             new FileChooser.ExtensionFilter("All files", "*.*"));
 
     File selectedFile = chooser.showOpenDialog(stageProvider.getIfAvailable());

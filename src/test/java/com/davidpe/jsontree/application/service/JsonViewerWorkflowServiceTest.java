@@ -18,6 +18,7 @@ import com.davidpe.jsontree.application.port.out.JsonHistoryRepository;
 import com.davidpe.jsontree.application.port.out.JsonValidationPort;
 import com.davidpe.jsontree.application.port.out.LargePreviewSessionStorePort;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.domain.model.DocumentFormat;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonImportResult;
@@ -84,6 +85,16 @@ class JsonViewerWorkflowServiceTest {
   }
 
   @Test
+  void classifiesMarkdownAtTheImportBoundary() throws IOException {
+    Path markdownFile = Files.writeString(tempDir.resolve("notes.md"), "# Heading\n\ncontent");
+
+    JsonImportResult result = service.importFile(markdownFile);
+
+    assertEquals(DocumentFormat.MARKDOWN, result.documentFormat());
+    assertEquals("notes.md", result.fileName());
+  }
+
+  @Test
   void loadsImportedFileUsingExistingImportResultObject() throws IOException {
     JsonViewerWorkflowService workflowService =
         new JsonViewerWorkflowService(
@@ -113,6 +124,69 @@ class JsonViewerWorkflowServiceTest {
     assertTrue(result.capabilities().rawJsonAvailable());
     assertTrue(result.capabilities().searchAvailable());
     assertFalse(result.hasLargePreviewSession());
+  }
+
+  @Test
+  void loadsMarkdownWithoutCallingJsonValidationOrTreeRenderer() throws IOException {
+    AtomicBoolean validationCalled = new AtomicBoolean(false);
+    AtomicBoolean rendererCalled = new AtomicBoolean(false);
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            path -> {
+              validationCalled.set(true);
+              return new JsonValidationResult(JsonValidationStatus.VALID, "Valid JSON.", null, null);
+            },
+            new InMemoryHistoryRepository(),
+            path -> {
+              rendererCalled.set(true);
+              return new AsciiTreeDocument("root", "root", 1);
+            },
+            inspectionModeResolver(1024L),
+            largePreviewSessionService(new TrackingLargePreviewSessionStore()));
+    Path markdownFile = Files.writeString(tempDir.resolve("notes.md"), "# Heading\n\ncontent");
+
+    JsonViewerLoadResult result = workflowService.loadFile(markdownFile);
+
+    assertEquals(DocumentFormat.MARKDOWN, result.importResult().documentFormat());
+    assertTrue(result.markdownDocument());
+    assertFalse(result.hasRenderableTree());
+    assertEquals(3, result.asciiTreeDocument().lineCount());
+    assertFalse(validationCalled.get());
+    assertFalse(rendererCalled.get());
+  }
+
+  @Test
+  void reopensMarkdownHistoryEntriesThroughTheMarkdownWorkflow() throws IOException {
+    InMemoryHistoryRepository repository = new InMemoryHistoryRepository();
+    ImportedJsonFile historyEntry =
+        new ImportedJsonFile(
+            "2026-07-19_12-00-00_notes.md",
+            "notes.md",
+            Instant.parse("2026-07-19T12:00:00Z"),
+            64L,
+            3,
+            true,
+            false,
+            DocumentFormat.MARKDOWN);
+    repository.entry = historyEntry;
+    repository.storedJson = "# Heading\n\ncontent";
+    repository.storedJsonPath =
+        Files.writeString(tempDir.resolve(historyEntry.storedName()), repository.storedJson);
+    JsonViewerWorkflowService workflowService =
+        new JsonViewerWorkflowService(
+            unusedValidationPort(),
+            repository,
+            unusedRendererPort(),
+            inspectionModeResolver(1024L),
+            largePreviewSessionService(new TrackingLargePreviewSessionStore()));
+
+    JsonViewerLoadResult result =
+        workflowService.reopenHistoryEntry(historyEntry.storedName()).orElseThrow();
+
+    assertEquals(DocumentFormat.MARKDOWN, result.importResult().documentFormat());
+    assertTrue(result.markdownDocument());
+    assertEquals("# Heading\n\ncontent", workflowService.currentViewRawJson().orElseThrow());
+    assertTrue(result.capabilities().outlineAvailable());
   }
 
   @Test

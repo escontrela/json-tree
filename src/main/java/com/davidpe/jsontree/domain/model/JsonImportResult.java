@@ -16,6 +16,7 @@ import java.nio.file.Path;
  * @param readable whether the source can be read.
  * @param regularFile whether the source is a regular file.
  * @param sourceKind origin of the JSON content.
+ * @param documentFormat classified format for the imported source.
  */
 public record JsonImportResult(
     Path path,
@@ -24,12 +25,27 @@ public record JsonImportResult(
     boolean exists,
     boolean readable,
     boolean regularFile,
-    JsonDocumentSourceKind sourceKind) {
+    JsonDocumentSourceKind sourceKind,
+    DocumentFormat documentFormat) {
+
+  public JsonImportResult(
+      Path path,
+      String fileName,
+      long sizeBytes,
+      boolean exists,
+      boolean readable,
+      boolean regularFile,
+      JsonDocumentSourceKind sourceKind) {
+    this(path, fileName, sizeBytes, exists, readable, regularFile, sourceKind, DocumentFormat.JSON);
+  }
 
   /** Validates mandatory fields for the import result state. */
   public JsonImportResult {
     if (sourceKind == null) {
       throw new IllegalArgumentException("Import source kind is required.");
+    }
+    if (documentFormat == null) {
+      documentFormat = DocumentFormat.JSON;
     }
   }
 

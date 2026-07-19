@@ -16,6 +16,7 @@ import java.time.Instant;
  * @param lineCount number of lines detected for the stored content.
  * @param valid whether the stored JSON content is valid.
  * @param favorite whether the history entry is marked as favorite.
+ * @param documentFormat classified format for the persisted entry.
  */
 public record ImportedJsonFile(
     String storedName,
@@ -24,7 +25,33 @@ public record ImportedJsonFile(
     long sizeBytes,
     int lineCount,
     boolean valid,
-    boolean favorite) {
+    boolean favorite,
+    DocumentFormat documentFormat) {
+
+  public ImportedJsonFile(
+      String storedName,
+      String originalName,
+      Instant importedAt,
+      long sizeBytes,
+      int lineCount,
+      boolean valid,
+      boolean favorite) {
+    this(
+        storedName,
+        originalName,
+        importedAt,
+        sizeBytes,
+        lineCount,
+        valid,
+        favorite,
+        DocumentFormat.JSON);
+  }
+
+  public ImportedJsonFile {
+    if (documentFormat == null) {
+      documentFormat = DocumentFormat.JSON;
+    }
+  }
 
   /**
    * Creates a new immutable instance with an updated favorite flag.
@@ -34,6 +61,13 @@ public record ImportedJsonFile(
    */
   public ImportedJsonFile withFavorite(boolean nextFavorite) {
     return new ImportedJsonFile(
-        storedName, originalName, importedAt, sizeBytes, lineCount, valid, nextFavorite);
+        storedName,
+        originalName,
+        importedAt,
+        sizeBytes,
+        lineCount,
+        valid,
+        nextFavorite,
+        documentFormat);
   }
 }

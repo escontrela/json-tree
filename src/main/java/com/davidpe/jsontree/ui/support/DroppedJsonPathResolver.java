@@ -16,11 +16,12 @@ public class DroppedJsonPathResolver {
         }
         return files.stream()
                 .map(File::toPath)
-                .filter(this::isSupportedJsonFile)
+                .filter(this::isSupportedImportFile)
                 .findFirst();
     }
 
-    private boolean isSupportedJsonFile(Path path) {
-        return path.getFileName().toString().toLowerCase(Locale.ROOT).endsWith(".json");
+    private boolean isSupportedImportFile(Path path) {
+        String fileName = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        return fileName.endsWith(".json") || fileName.endsWith(".md");
     }
 }
