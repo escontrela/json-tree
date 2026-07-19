@@ -20,10 +20,13 @@ import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
 import com.davidpe.jsontree.ui.model.ViewerVisualState;
+import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
+import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
+import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
@@ -53,6 +56,8 @@ import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
+import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
+import com.davidpe.jsontree.ui.support.ZoomViewerSnapshotFactory;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
@@ -133,6 +138,10 @@ public class MainWindowController implements UiScreenController {
   private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final RichTextViewerFactory richTextViewerFactory;
   private final TypewriterLabelRevealService typewriterLabelRevealService;
+  private final ZoomActionAvailabilityResolver zoomActionAvailabilityResolver;
+  private final ZoomWindowCoordinator zoomWindowCoordinator;
+  private final ZoomViewerStateBridge zoomViewerStateBridge;
+  private final ZoomViewerSnapshotFactory zoomViewerSnapshotFactory;
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
 
@@ -158,6 +167,10 @@ public class MainWindowController implements UiScreenController {
       ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
       TypewriterLabelRevealService typewriterLabelRevealService,
       RichTextViewerFactory richTextViewerFactory,
+      ZoomActionAvailabilityResolver zoomActionAvailabilityResolver,
+      ZoomWindowCoordinator zoomWindowCoordinator,
+      ZoomViewerStateBridge zoomViewerStateBridge,
+      ZoomViewerSnapshotFactory zoomViewerSnapshotFactory,
       @Lazy UiFlowManager uiFlowManager) {
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importJsonUseCase = importJsonUseCase;
@@ -180,6 +193,10 @@ public class MainWindowController implements UiScreenController {
     this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
     this.typewriterLabelRevealService = typewriterLabelRevealService;
     this.richTextViewerFactory = richTextViewerFactory;
+    this.zoomActionAvailabilityResolver = zoomActionAvailabilityResolver;
+    this.zoomWindowCoordinator = zoomWindowCoordinator;
+    this.zoomViewerStateBridge = zoomViewerStateBridge;
+    this.zoomViewerSnapshotFactory = zoomViewerSnapshotFactory;
     this.uiFlowManager = uiFlowManager;
   }
 
@@ -266,6 +283,8 @@ public class MainWindowController implements UiScreenController {
   @FXML private Button copyTreeButton;
 
   @FXML private Button outlineToggleButton;
+
+  @FXML private Button zoomButton;
 
   @FXML private Button previousSearchButton;
 
@@ -676,6 +695,13 @@ public class MainWindowController implements UiScreenController {
     resetViewModeIfNeeded();
     applyLargePreviewDocumentScrollShell(result);
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
+    publishZoomSnapshot(
+        zoomViewerSnapshotFactory.renderable(
+            result,
+            "ASCII tree",
+            renderPlan,
+            "tree-content",
+            formatFileMeta(result.importResult().sizeBytes(), result.importResult().sourceKind())));
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
@@ -709,6 +735,12 @@ public class MainWindowController implements UiScreenController {
     setValidationBadge("Waiting", "status-idle");
     updateFooterStatusLabel("No JSON loaded");
     setStatusRailValues("EMPTY", "--", "--", "Waiting for import");
+    publishZoomSnapshot(
+        ZoomViewerSnapshot.empty(
+            "JSON -> TREE • Zoom",
+            "Zoom viewer",
+            "Expanded reading surface",
+            "Open a JSON in the main workspace to populate this reading surface."));
     viewerContentBox.autosize();
     searchWorkflowService.clear();
     syncActiveSearchStrip();
@@ -729,6 +761,12 @@ public class MainWindowController implements UiScreenController {
     setValidationBadge("Drop ready", "status-accent");
     updateFooterStatusLabel("Waiting for JSON drop");
     setStatusRailValues("DROP READY", "--", "--", "Drag payload");
+    publishZoomSnapshot(
+        ZoomViewerSnapshot.empty(
+            "JSON -> TREE • Zoom",
+            "Zoom viewer",
+            "Expanded reading surface",
+            "Release the file in the main workspace to prepare the zoom reader."));
     applyState(ViewerVisualState.DRAGGING);
   }
 
@@ -754,6 +792,12 @@ public class MainWindowController implements UiScreenController {
     setValidationBadge("Loading", "status-muted");
     updateFooterStatusLabel("Parsing JSON");
     setStatusRailValues("LOADING", "--", "--", "Local file");
+    publishZoomSnapshot(
+        ZoomViewerSnapshot.empty(
+            "JSON -> TREE • Zoom",
+            "Zoom viewer",
+            fileName,
+            "The zoom reader will activate once the current JSON finishes loading."));
     emptyStateLabel.setText("Loading JSON preview...");
     richTextViewerSurface.clear();
     richTextViewerSurface.hide();
@@ -780,6 +824,12 @@ public class MainWindowController implements UiScreenController {
         "outline-state-invalid");
     setValidationBadge("Invalid", "status-error");
     updateFooterStatusLabel("JSON needs attention");
+    publishZoomSnapshot(
+        ZoomViewerSnapshot.empty(
+            "JSON -> TREE • Zoom",
+            "Zoom viewer",
+            currentViewIdentity == null ? "Expanded reading surface" : fileNameLabel.getText(),
+            message));
     if ("VALID".equals(statusStateValueLabel.getText())) {
       statusStateValueLabel.setText("INVALID");
     }
@@ -1353,6 +1403,17 @@ public class MainWindowController implements UiScreenController {
     }
   }
 
+  @FXML
+  void openZoomViewer() {
+    if (workflowService == null) {
+      return;
+    }
+    if (workflowService.currentView().filter(zoomActionAvailabilityResolver::shouldEnable).isEmpty()) {
+      return;
+    }
+    zoomWindowCoordinator.openOrFocus();
+  }
+
   private void hideSearchModal() {
     searchModalCard.setManaged(false);
     searchModalCard.setVisible(false);
@@ -1725,6 +1786,7 @@ public class MainWindowController implements UiScreenController {
     copyTreeButton.setDisable(false);
     rawJsonButton.setDisable(!presentation.rawJsonEnabled());
     searchButton.setDisable(!presentation.searchEnabled());
+    zoomButton.setDisable(!zoomActionAvailabilityResolver.shouldEnable(result));
     outlineToggleButton.setDisable(
         result.usesLargePreview() ? false : !presentation.outlineEnabled());
     setValidationBadge(
@@ -1773,6 +1835,7 @@ public class MainWindowController implements UiScreenController {
     copyTreeButton.setDisable(true);
     rawJsonButton.setDisable(true);
     searchButton.setDisable(true);
+    zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
   }
 
@@ -1827,12 +1890,28 @@ public class MainWindowController implements UiScreenController {
         viewerTextRenderPlanFactory.buildRawPlan(
             currentRawJsonPresentation.content(), currentRawHighlightRanges());
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "raw-json-content");
+    workflowService
+        .currentView()
+        .ifPresent(
+            result ->
+                publishZoomSnapshot(
+                    zoomViewerSnapshotFactory.renderable(
+                        result,
+                        result.usesLargePreview() ? "Raw page" : "Raw JSON",
+                        renderPlan,
+                        "raw-json-content",
+                        formatFileMeta(
+                            result.importResult().sizeBytes(), result.importResult().sourceKind()))));
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("ASCII tree");
     showingRawJson = true;
     scheduleOutlineViewportRefresh();
+  }
+
+  private void publishZoomSnapshot(ZoomViewerSnapshot snapshot) {
+    zoomViewerStateBridge.publish(snapshot);
   }
 
   private List<SearchHighlightRange> currentAsciiHighlightRanges(AsciiTreeDocument document) {

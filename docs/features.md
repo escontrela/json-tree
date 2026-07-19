@@ -36,6 +36,12 @@
 - The effect is centralized in a reusable UI presentation service so rapid state changes can cancel stale animations cleanly without leaving partial text behind.
 - The service is intentionally scoped to lightweight labels only and does not animate the ASCII viewer or raw JSON body.
 
+## Zoom Viewer Window
+
+- The main workspace now exposes a dedicated `Zoom` action in the viewer toolbar, enabled only when a renderable JSON presentation is on screen.
+- Zoom opens a single owned secondary reader window that reuses the RichTextFX viewer path for the exact active presentation: `ASCII tree`, `Raw JSON`, or the current `LARGE_PREVIEW` page or chunk.
+- The zoom window consumes presentation snapshots from a shared UI bridge, so mode changes, history reopen flows, and non-renderable resets stay coherent without reparsing JSON inside the zoom controller.
+
 ## ASCII Syntax Highlighting
 
 - The viewer highlights structural labels, keys, strings, numbers, booleans, nulls, and array counts with distinct colors in the dark theme.
