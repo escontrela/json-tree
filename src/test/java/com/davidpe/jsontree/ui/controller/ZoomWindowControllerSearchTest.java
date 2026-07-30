@@ -5,12 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.service.RegexTextSearchService;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.JavaFxThreadTestSupport;
 import com.davidpe.jsontree.ui.support.JsonBreadcrumbViewportResolver;
+import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
+import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
+import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRangeNormalizer;
@@ -95,7 +99,10 @@ class ZoomWindowControllerSearchTest {
             bridge,
             new RegexTextSearchService(),
             new ViewerTextRenderPlanSearchOverlay(new SearchHighlightRangeNormalizer()),
-            new JsonBreadcrumbViewportResolver());
+            new JsonBreadcrumbViewportResolver(),
+            new OutlineMinimapLayoutPlanner(),
+            new OutlineMinimapScrollMapper(),
+            new OutlineViewportProjector());
     setField(controller, "rootPane", new BorderPane());
     setField(controller, "zoomModeLabel", new Label());
     setField(controller, "zoomTitleLabel", new Label());
@@ -108,6 +115,14 @@ class ZoomWindowControllerSearchTest {
     setField(controller, "zoomBreadcrumbLabel", new Label());
     setField(controller, "zoomViewerHost", new StackPane());
     setField(controller, "zoomStateLabel", new Label());
+    setField(controller, "zoomOutlineToggleButton", new Button("Outline"));
+    setField(controller, "zoomOutlineVBox", new javafx.scene.layout.VBox());
+    setField(controller, "zoomOutlineTitleLabel", new Label());
+    setField(controller, "zoomOutlinePreviewShell", new StackPane());
+    setField(controller, "zoomOutlineCanvas", new javafx.scene.canvas.Canvas());
+    setField(controller, "zoomOutlineViewportMarker", new javafx.scene.layout.Region());
+    setField(controller, "zoomOutlineStateLabel", new Label());
+    setField(controller, "zoomOutlineMetaLabel", new Label());
     return controller;
   }
 
@@ -122,7 +137,8 @@ class ZoomWindowControllerSearchTest {
             List.of(new ViewerTextRenderFragment(text, "tree-default", "#2d333a", false, false))),
         "tree-content",
         ViewerPresentationMode.ASCII_TREE,
-        JsonBreadcrumbModel.unavailable());
+        JsonBreadcrumbModel.unavailable(),
+        JsonOutlineModel.empty());
   }
 
   private RichTextViewerSurface richTextSurface(ZoomWindowController controller) {

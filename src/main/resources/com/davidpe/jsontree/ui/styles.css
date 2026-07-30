@@ -130,13 +130,15 @@
     -fx-background-color: #ffffff;
 }
 
-.zoom-window-viewer-shell > .rich-text-viewer-shell {
+.zoom-window-viewer-host {
     -fx-background-color: #ffffff;
 }
 
-.zoom-window-viewer-shell > .rich-text-viewer-shell,
-.zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll,
-.zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll > .viewport {
+.zoom-window-viewer-shell .rich-text-viewer,
+.zoom-window-viewer-shell .rich-text-viewer-shell,
+.zoom-window-viewer-shell .rich-text-viewer-shell .rich-text-viewer-scroll,
+.zoom-window-viewer-shell .rich-text-viewer-shell .rich-text-viewer-scroll .viewport,
+.zoom-window-viewer-shell .rich-text-viewer .content {
     -fx-background-color: #ffffff;
 }
 
@@ -912,9 +914,12 @@
 .night-mode .viewer-scroll-pane > .viewport,
 .night-mode .viewer-scroll-pane .corner,
 .night-mode .zoom-window-viewer-shell,
-.night-mode .zoom-window-viewer-shell > .rich-text-viewer-shell,
-.night-mode .zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll,
-.night-mode .zoom-window-viewer-shell > .rich-text-viewer-shell > .rich-text-viewer-scroll > .viewport,
+.night-mode .zoom-window-viewer-host,
+.night-mode .zoom-window-viewer-shell .rich-text-viewer,
+.night-mode .zoom-window-viewer-shell .rich-text-viewer-shell,
+.night-mode .zoom-window-viewer-shell .rich-text-viewer-shell .rich-text-viewer-scroll,
+.night-mode .zoom-window-viewer-shell .rich-text-viewer-shell .rich-text-viewer-scroll .viewport,
+.night-mode .zoom-window-viewer-shell .rich-text-viewer .content,
 .night-mode .search-modal-card,
 .night-mode .active-search-strip,
 .night-mode .large-preview-page-strip,

@@ -23,26 +23,25 @@ import com.davidpe.jsontree.application.service.MarkdownOutlineModelService;
 import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
 import com.davidpe.jsontree.domain.model.DocumentFormat;
-import com.davidpe.jsontree.ui.model.BreadcrumbViewerMode;
-import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.domain.model.ImportedJsonFile;
 import com.davidpe.jsontree.domain.model.JsonDocumentSourceKind;
 import com.davidpe.jsontree.domain.model.JsonValidationResult;
 import com.davidpe.jsontree.domain.model.JsonValidationStatus;
+import com.davidpe.jsontree.ui.model.BreadcrumbViewerMode;
+import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ViewerVisualState;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
-import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
-import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
+import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
+import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewStateResolver;
-import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.support.JsonBreadcrumbViewportResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewLoadingAffordance;
@@ -58,16 +57,16 @@ import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
 import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityResolver;
 import com.davidpe.jsontree.ui.support.OutlinePanelVisibilityState;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
-import com.davidpe.jsontree.ui.support.ViewerPresentationModeResolver;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
-import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
-import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
+import com.davidpe.jsontree.ui.support.ViewerPresentationModeResolver;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
 import com.davidpe.jsontree.ui.support.ZoomViewerSnapshotFactory;
 import java.nio.file.Path;
@@ -77,7 +76,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.OptionalInt;
 import java.util.concurrent.CompletableFuture;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -347,7 +345,8 @@ public class MainWindowController implements UiScreenController {
   private String autoHiddenLargePreviewOutlineIdentity;
   private boolean windowMetricsLoggingAttached;
   private ViewerPresentationMode currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
-  private RawJsonPresentation currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+  private RawJsonPresentation currentRawJsonPresentation =
+      new RawJsonPresentation("", new int[] {0});
   private JsonBreadcrumbModel currentBreadcrumbModel = JsonBreadcrumbModel.unavailable();
   private AsciiTreeDocument currentStructureDocument;
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
@@ -576,7 +575,9 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void refreshOutlineCanvas() {
-    if (outlineStateLabel.isVisible() || currentOutlineModel.emptyModel() || !outlineCanvas.isVisible()) {
+    if (outlineStateLabel.isVisible()
+        || currentOutlineModel.emptyModel()
+        || !outlineCanvas.isVisible()) {
       currentOutlineLayout = OutlineMinimapLayout.empty();
       drawOutlineShellPlaceholder();
       hideOutlineViewportMarker();
@@ -637,7 +638,8 @@ public class MainWindowController implements UiScreenController {
               outlinePreviewShell.getHeight(),
               viewportHeight,
               contentHeight)
-          .ifPresent(targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
+          .ifPresent(
+              targetViewportState -> navigateLargePreviewToState(targetViewportState, false));
       event.consume();
       return;
     }
@@ -652,7 +654,9 @@ public class MainWindowController implements UiScreenController {
               row ->
                   richTextViewerSurface.scrollToParagraph(
                       markdownOutlineModelService.anchorLineForPointer(
-                          currentMarkdownOutlineModel, row.sourceIndexStart(), row.sourceIndexEnd())),
+                          currentMarkdownOutlineModel,
+                          row.sourceIndexStart(),
+                          row.sourceIndexEnd())),
               () -> {
                 double scrollValue =
                     outlineScrollMapper.scrollValueForPointer(
@@ -831,6 +835,8 @@ public class MainWindowController implements UiScreenController {
     resetPresentationArtifactsForNonRawMode();
     applyLargePreviewDocumentScrollShell(result);
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
+    updateOutlineShell(result, document);
+    syncOutlinePanelVisibility(result);
     publishZoomSnapshot(
         zoomViewerSnapshotFactory.renderable(
             result,
@@ -842,14 +848,13 @@ public class MainWindowController implements UiScreenController {
                 result.importResult().sourceKind(),
                 result.historyEntry()),
             ViewerPresentationMode.ASCII_TREE,
-            currentBreadcrumbModel));
+            currentBreadcrumbModel,
+            currentOutlineModel));
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("Raw JSON");
     structureButton.setText("Structure");
-    updateOutlineShell(result, document);
-    syncOutlinePanelVisibility(result);
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
@@ -885,7 +890,8 @@ public class MainWindowController implements UiScreenController {
             "JSON -> TREE • Zoom",
             "Zoom viewer",
             "Expanded reading surface",
-            "Open a JSON or Markdown file in the main workspace to populate this reading surface."));
+            "Open a JSON or Markdown file in the main workspace to populate this reading"
+                + " surface."));
     viewerContentBox.autosize();
     searchWorkflowService.clear();
     syncActiveSearchStrip();
@@ -1009,7 +1015,8 @@ public class MainWindowController implements UiScreenController {
                   "The selected file exists but does not contain any "
                       + formatLabel
                       + " content to render.");
-              outlineStateLabel.setText("The outline minimap cannot render because the file is empty.");
+              outlineStateLabel.setText(
+                  "The outline minimap cannot render because the file is empty.");
               updateFooterStatusLabel("The " + formatLabel + " file is empty");
             },
             () -> showInvalidState("The selected file is empty."));
@@ -1105,12 +1112,12 @@ public class MainWindowController implements UiScreenController {
     workflowService.currentView().ifPresentOrElse(this::presentLoadResult, this::showEmptyViewer);
   }
 
-  private void loadImportedFileAsync(com.davidpe.jsontree.domain.model.JsonImportResult importResult) {
+  private void loadImportedFileAsync(
+      com.davidpe.jsontree.domain.model.JsonImportResult importResult) {
     showLoadingState(importResult.fileName());
     beginLargePreviewLoadingAffordance();
     long requestSequence = ++viewerWorkflowLoadSequence;
-    CompletableFuture
-        .supplyAsync(() -> workflowService.loadImportedFile(importResult))
+    CompletableFuture.supplyAsync(() -> workflowService.loadImportedFile(importResult))
         .whenComplete(
             (result, throwable) ->
                 Platform.runLater(
@@ -1123,8 +1130,7 @@ public class MainWindowController implements UiScreenController {
     showLoadingState(path.getFileName().toString());
     beginLargePreviewLoadingAffordance();
     long requestSequence = ++viewerWorkflowLoadSequence;
-    CompletableFuture
-        .supplyAsync(() -> importDroppedFileUseCase.importDroppedFile(path))
+    CompletableFuture.supplyAsync(() -> importDroppedFileUseCase.importDroppedFile(path))
         .whenComplete(
             (result, throwable) ->
                 Platform.runLater(
@@ -1137,20 +1143,15 @@ public class MainWindowController implements UiScreenController {
     showLoadingState("Clipboard");
     beginLargePreviewLoadingAffordance();
     long requestSequence = ++viewerWorkflowLoadSequence;
-    CompletableFuture
-        .supplyAsync(importClipboardJsonUseCase::importFromClipboard)
+    CompletableFuture.supplyAsync(importClipboardJsonUseCase::importFromClipboard)
         .whenComplete(
             (result, throwable) ->
                 Platform.runLater(
-                    () ->
-                        handleClipboardImportResult(requestSequence, result, throwable)));
+                    () -> handleClipboardImportResult(requestSequence, result, throwable)));
   }
 
   private void handleImportedFileLoadResult(
-      long requestSequence,
-      String fileName,
-      JsonViewerLoadResult result,
-      Throwable throwable) {
+      long requestSequence, String fileName, JsonViewerLoadResult result, Throwable throwable) {
     if (requestSequence != viewerWorkflowLoadSequence) {
       return;
     }
@@ -1164,10 +1165,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void handleDroppedFileImportResult(
-      long requestSequence,
-      String fileName,
-      DroppedFileImportResult result,
-      Throwable throwable) {
+      long requestSequence, String fileName, DroppedFileImportResult result, Throwable throwable) {
     if (requestSequence != viewerWorkflowLoadSequence) {
       return;
     }
@@ -1290,7 +1288,8 @@ public class MainWindowController implements UiScreenController {
     currentViewIdentity = "drop-error:" + currentLoadedAt.toEpochMilli();
     showFileWarningIcon(false);
     updateFileNameLabel("Dropped file");
-    fileMetaLabel.setText("Drop a .json, .md, or a text file that contains one supported curl command.");
+    fileMetaLabel.setText(
+        "Drop a .json, .md, or a text file that contains one supported curl command.");
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(currentLoadedAt));
     fileSourceValueLabel.setText("Drag and drop");
     showInvalidState(result.message());
@@ -1304,11 +1303,14 @@ public class MainWindowController implements UiScreenController {
   }
 
   private String clipboardImportGuidance(ClipboardJsonImportResult result) {
-    if (result.status() == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.INVALID_CURL
+    if (result.status()
+            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.INVALID_CURL
         || result.status()
-            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.CURL_EXECUTION_FAILED
+            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus
+                .CURL_EXECUTION_FAILED
         || result.status()
-            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.UNSUPPORTED_RESPONSE) {
+            == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus
+                .UNSUPPORTED_RESPONSE) {
       return "Paste valid JSON or one supported curl command using Command+P / Command+V on macOS,"
           + " Ctrl+P / Ctrl+V elsewhere.";
     }
@@ -1366,7 +1368,8 @@ public class MainWindowController implements UiScreenController {
                 result.historyEntry())
             + presentation.fileMetaSuffix());
     fileLoadedAtValueLabel.setText(FILE_TIME_FORMATTER.format(resolveLoadedAt(result)));
-    fileSourceValueLabel.setText(sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
+    fileSourceValueLabel.setText(
+        sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
   }
 
   private Instant resolveLoadedAt(JsonViewerLoadResult result) {
@@ -1409,7 +1412,8 @@ public class MainWindowController implements UiScreenController {
               case VALID -> presentation.statusState();
             };
     String lines =
-        (result.hasRenderableTree() || result.markdownDocument()) && result.asciiTreeDocument() != null
+        (result.hasRenderableTree() || result.markdownDocument())
+                && result.asciiTreeDocument() != null
             ? Integer.toString(result.asciiTreeDocument().lineCount())
             : "--";
     setStatusRailValues(
@@ -1470,8 +1474,7 @@ public class MainWindowController implements UiScreenController {
     setStatusRailValues("LOADING", "--", "--", "History");
     beginLargePreviewLoadingAffordance();
     long requestSequence = ++viewerWorkflowLoadSequence;
-    CompletableFuture
-        .supplyAsync(() -> workflowService.reopenHistoryEntry(entry.storedName()))
+    CompletableFuture.supplyAsync(() -> workflowService.reopenHistoryEntry(entry.storedName()))
         .whenComplete(
             (result, throwable) ->
                 Platform.runLater(
@@ -1701,7 +1704,10 @@ public class MainWindowController implements UiScreenController {
     if (workflowService == null) {
       return;
     }
-    if (workflowService.currentView().filter(zoomActionAvailabilityResolver::shouldEnable).isEmpty()) {
+    if (workflowService
+        .currentView()
+        .filter(zoomActionAvailabilityResolver::shouldEnable)
+        .isEmpty()) {
       return;
     }
     zoomWindowCoordinator.openOrFocus();
@@ -1832,7 +1838,9 @@ public class MainWindowController implements UiScreenController {
 
   private void navigateLargePreviewToState(
       LargePreviewViewportState targetViewportState, boolean viewerScrollAlreadyApplied) {
-    if (largePreviewPageLoadInFlight || targetViewportState == null || !targetViewportState.active()) {
+    if (largePreviewPageLoadInFlight
+        || targetViewportState == null
+        || !targetViewportState.active()) {
       return;
     }
     workflowService
@@ -1862,9 +1870,10 @@ public class MainWindowController implements UiScreenController {
     largePreviewPageLoadInFlight = true;
     beginLargePreviewLoadingAffordance();
     String sessionId = result.largePreviewSession().sessionId();
-    CompletableFuture
-        .supplyAsync(
-            () -> workflowService.loadLargePreviewPage(sessionId, targetViewportState.currentPageIndex()))
+    CompletableFuture.supplyAsync(
+            () ->
+                workflowService.loadLargePreviewPage(
+                    sessionId, targetViewportState.currentPageIndex()))
         .whenComplete(
             (pageResult, throwable) ->
                 Platform.runLater(
@@ -1966,8 +1975,7 @@ public class MainWindowController implements UiScreenController {
           largePreviewLoaderAnimationTimeline =
               new Timeline(
                   new KeyFrame(
-                      javafx.util.Duration.millis(
-                          LARGE_PREVIEW_LOADER_FRAME_INTERVAL.toMillis()),
+                      javafx.util.Duration.millis(LARGE_PREVIEW_LOADER_FRAME_INTERVAL.toMillis()),
                       event ->
                           largePreviewLoadingAffordance.advanceFrame(
                               currentLargePreviewLoaderRequestSequence)));
@@ -2217,7 +2225,8 @@ public class MainWindowController implements UiScreenController {
             .orElse(false);
     currentRawJsonPresentation =
         largePreviewActive
-            ? rawJsonPresentationService.presentLargePreviewChunk(rawJson, prettyLargePreviewEnabled)
+            ? rawJsonPresentationService.presentLargePreviewChunk(
+                rawJson, prettyLargePreviewEnabled)
             : documentFormat.markdown()
                 ? rawJsonPresentationService.presentPlainText(rawJson)
                 : rawJsonPresentationService.present(rawJson);
@@ -2229,9 +2238,12 @@ public class MainWindowController implements UiScreenController {
             : viewerTextRenderPlanFactory.buildRawPlan(
                 currentRawJsonPresentation.content(), currentRawHighlightRanges());
     ViewerPresentationMode rawPresentationMode =
-        documentFormat.markdown() ? ViewerPresentationMode.RAW_MARKDOWN : ViewerPresentationMode.RAW_JSON;
+        documentFormat.markdown()
+            ? ViewerPresentationMode.RAW_MARKDOWN
+            : ViewerPresentationMode.RAW_JSON;
     richTextViewerSurface.showStyledText(
-        renderPlan.fragments(), documentFormat.markdown() ? "markdown-content" : "raw-json-content");
+        renderPlan.fragments(),
+        documentFormat.markdown() ? "markdown-content" : "raw-json-content");
     workflowService
         .currentView()
         .ifPresent(
@@ -2258,18 +2270,15 @@ public class MainWindowController implements UiScreenController {
                           result.importResult().sourceKind(),
                           result.historyEntry()),
                       rawPresentationMode,
-                      currentBreadcrumbModel));
+                      currentBreadcrumbModel,
+                      currentOutlineModel));
             });
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     currentPresentationMode = rawPresentationMode;
     rawJsonButton.setText(
-        largePreviewActive
-            ? "Raw page"
-            : documentFormat.markdown()
-                ? "Markdown"
-                : "ASCII tree");
+        largePreviewActive ? "Raw page" : documentFormat.markdown() ? "Markdown" : "ASCII tree");
     structureButton.setText("Structure");
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
@@ -2352,7 +2361,8 @@ public class MainWindowController implements UiScreenController {
       case RAW_JSON, RAW_MARKDOWN ->
           workflowService.currentViewRawJson().ifPresent(this::renderRawJsonContent);
       case MARKDOWN_RENDERED ->
-          workflowService.currentViewRawJson()
+          workflowService
+              .currentViewRawJson()
               .ifPresent(markdownSource -> renderMarkdownContent(result, markdownSource));
       case STRUCTURE -> renderStructure(result);
       case ASCII_TREE -> renderAsciiTree(result);
@@ -2368,6 +2378,9 @@ public class MainWindowController implements UiScreenController {
     resetPresentationArtifactsForNonRawMode();
     applyLargePreviewDocumentScrollShell(result);
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "markdown-content");
+    currentPresentationMode = ViewerPresentationMode.MARKDOWN_RENDERED;
+    updateOutlineShell(result, result.asciiTreeDocument());
+    syncOutlinePanelVisibility(result);
     publishZoomSnapshot(
         zoomViewerSnapshotFactory.renderable(
             result,
@@ -2379,15 +2392,13 @@ public class MainWindowController implements UiScreenController {
                 result.importResult().sourceKind(),
                 result.historyEntry()),
             ViewerPresentationMode.MARKDOWN_RENDERED,
-            currentBreadcrumbModel));
+            currentBreadcrumbModel,
+            currentOutlineModel));
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     rawJsonButton.setText("Raw Markdown");
     structureButton.setText("Structure");
-    currentPresentationMode = ViewerPresentationMode.MARKDOWN_RENDERED;
-    updateOutlineShell(result, result.asciiTreeDocument());
-    syncOutlinePanelVisibility(result);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
@@ -2415,7 +2426,8 @@ public class MainWindowController implements UiScreenController {
                           result.importResult().sourceKind(),
                           result.historyEntry()),
                       ViewerPresentationMode.STRUCTURE,
-                      currentBreadcrumbModel));
+                      currentBreadcrumbModel,
+                      currentOutlineModel));
               richTextViewerSurface.scrollToTop();
               emptyStateLabel.setManaged(false);
               emptyStateLabel.setVisible(false);
@@ -2449,7 +2461,8 @@ public class MainWindowController implements UiScreenController {
     return viewerPresentationModeResolver.resolve(requestedMode, result);
   }
 
-  private java.util.Optional<AsciiTreeDocument> resolveStructureDocument(JsonViewerLoadResult result) {
+  private java.util.Optional<AsciiTreeDocument> resolveStructureDocument(
+      JsonViewerLoadResult result) {
     if (result == null || result.usesLargePreview() || !result.hasRenderableTree()) {
       resetStructureDocument();
       return java.util.Optional.empty();
@@ -2461,7 +2474,10 @@ public class MainWindowController implements UiScreenController {
     }
 
     currentStructureDocument =
-        workflowService.currentViewRawJson().map(structureDocumentService::buildFromRawJson).orElse(null);
+        workflowService
+            .currentViewRawJson()
+            .map(structureDocumentService::buildFromRawJson)
+            .orElse(null);
     currentStructureSourceIdentity = sourceIdentity;
     return java.util.Optional.ofNullable(currentStructureDocument);
   }

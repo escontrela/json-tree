@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
@@ -40,7 +41,8 @@ class ZoomViewerSnapshotFactoryTest {
                 "tree-content",
                 "1.0 KB • local import",
                 ViewerPresentationMode.ASCII_TREE,
-                JsonBreadcrumbModel.unavailable())
+                JsonBreadcrumbModel.unavailable(),
+                JsonOutlineModel.empty())
             .modeLabel());
     assertEquals(
         "Raw JSON",
@@ -52,7 +54,8 @@ class ZoomViewerSnapshotFactoryTest {
                 "raw-json-content",
                 "1.0 KB • local import",
                 ViewerPresentationMode.RAW_JSON,
-                JsonBreadcrumbModel.unavailable())
+                JsonBreadcrumbModel.unavailable(),
+                JsonOutlineModel.empty())
             .modeLabel());
   }
 
@@ -73,7 +76,8 @@ class ZoomViewerSnapshotFactoryTest {
             "raw-json-content",
             "12.3 MB • reopened from history • byte-paged large preview",
             ViewerPresentationMode.RAW_JSON,
-            JsonBreadcrumbModel.unavailable());
+            JsonBreadcrumbModel.unavailable(),
+            JsonOutlineModel.empty());
 
     assertEquals("Raw page", snapshot.modeLabel());
     assertTrue(snapshot.largePreview());
@@ -98,7 +102,8 @@ class ZoomViewerSnapshotFactoryTest {
             "tree-content",
             "1.0 KB • local import",
             ViewerPresentationMode.STRUCTURE,
-            JsonBreadcrumbModel.unavailable());
+            JsonBreadcrumbModel.unavailable(),
+            JsonOutlineModel.empty());
 
     assertEquals("Structure", snapshot.modeLabel());
     assertEquals("tree-content", snapshot.contentStyleClass());
@@ -123,7 +128,8 @@ class ZoomViewerSnapshotFactoryTest {
             "markdown-content",
             "2.0 KB • local import",
             ViewerPresentationMode.MARKDOWN_RENDERED,
-            JsonBreadcrumbModel.unavailable());
+            JsonBreadcrumbModel.unavailable(),
+            JsonOutlineModel.empty());
     var rawSnapshot =
         factory.renderable(
             result,
@@ -132,7 +138,8 @@ class ZoomViewerSnapshotFactoryTest {
             "markdown-content",
             "2.0 KB • local import",
             ViewerPresentationMode.RAW_MARKDOWN,
-            JsonBreadcrumbModel.unavailable());
+            JsonBreadcrumbModel.unavailable(),
+            JsonOutlineModel.empty());
 
     assertEquals("Markdown", renderedSnapshot.modeLabel());
     assertEquals(ViewerPresentationMode.MARKDOWN_RENDERED, renderedSnapshot.presentationMode());

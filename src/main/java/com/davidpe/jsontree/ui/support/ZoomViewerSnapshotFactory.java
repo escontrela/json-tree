@@ -1,14 +1,13 @@
 package com.davidpe.jsontree.ui.support;
 
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import org.springframework.stereotype.Component;
 
-/**
- * Builds presentation snapshots consumed by the secondary zoom window.
- */
+/** Builds presentation snapshots consumed by the secondary zoom window. */
 @Component
 public class ZoomViewerSnapshotFactory {
 
@@ -19,7 +18,8 @@ public class ZoomViewerSnapshotFactory {
       String contentStyleClass,
       String fileMeta,
       ViewerPresentationMode presentationMode,
-      JsonBreadcrumbModel breadcrumbModel) {
+      JsonBreadcrumbModel breadcrumbModel,
+      JsonOutlineModel outlineModel) {
     String windowTitle = "JSON -> TREE • Zoom • " + result.importResult().fileName();
     return ZoomViewerSnapshot.renderable(
         result.usesLargePreview(),
@@ -30,6 +30,7 @@ public class ZoomViewerSnapshotFactory {
         renderPlan,
         contentStyleClass,
         presentationMode,
-        breadcrumbModel);
+        breadcrumbModel,
+        outlineModel);
   }
 }

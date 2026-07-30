@@ -1,11 +1,10 @@
 package com.davidpe.jsontree.ui.model;
 
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 
-/**
- * Presentation snapshot consumed by the secondary zoom window.
- */
+/** Presentation snapshot consumed by the secondary zoom window. */
 public record ZoomViewerSnapshot(
     boolean renderable,
     boolean largePreview,
@@ -17,6 +16,7 @@ public record ZoomViewerSnapshot(
     String contentStyleClass,
     ViewerPresentationMode presentationMode,
     JsonBreadcrumbModel breadcrumbModel,
+    JsonOutlineModel outlineModel,
     String emptyStateMessage) {
 
   public static ZoomViewerSnapshot renderable(
@@ -28,7 +28,8 @@ public record ZoomViewerSnapshot(
       ViewerTextRenderPlan renderPlan,
       String contentStyleClass,
       ViewerPresentationMode presentationMode,
-      JsonBreadcrumbModel breadcrumbModel) {
+      JsonBreadcrumbModel breadcrumbModel,
+      JsonOutlineModel outlineModel) {
     return new ZoomViewerSnapshot(
         true,
         largePreview,
@@ -40,6 +41,7 @@ public record ZoomViewerSnapshot(
         contentStyleClass,
         presentationMode,
         breadcrumbModel == null ? JsonBreadcrumbModel.unavailable() : breadcrumbModel,
+        outlineModel == null ? JsonOutlineModel.empty() : outlineModel,
         "");
   }
 
@@ -56,6 +58,7 @@ public record ZoomViewerSnapshot(
         "",
         ViewerPresentationMode.ASCII_TREE,
         JsonBreadcrumbModel.unavailable(),
+        JsonOutlineModel.empty(),
         emptyStateMessage == null ? "" : emptyStateMessage);
   }
 }

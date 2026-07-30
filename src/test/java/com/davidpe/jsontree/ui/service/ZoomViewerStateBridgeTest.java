@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderFragment;
@@ -99,6 +100,7 @@ class ZoomViewerStateBridgeTest {
           case "Structure" -> ViewerPresentationMode.STRUCTURE;
           default -> ViewerPresentationMode.ASCII_TREE;
         },
-        JsonBreadcrumbModel.unavailable());
+        JsonBreadcrumbModel.unavailable(),
+        JsonOutlineModel.empty());
   }
 }

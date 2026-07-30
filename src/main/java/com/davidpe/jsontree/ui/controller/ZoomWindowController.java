@@ -1,5 +1,6 @@
 package com.davidpe.jsontree.ui.controller;
 
+import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
 import com.davidpe.jsontree.application.service.RegexTextSearchService;
@@ -8,6 +9,12 @@ import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.JsonBreadcrumbViewportResolver;
+import com.davidpe.jsontree.ui.support.OutlineMinimapLayout;
+import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
+import com.davidpe.jsontree.ui.support.OutlineMinimapRow;
+import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
+import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
+import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
@@ -17,11 +24,17 @@ import java.util.List;
 import java.util.Optional;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.springframework.stereotype.Component;
@@ -37,12 +50,19 @@ public class ZoomWindowController {
   private final RegexTextSearchService regexTextSearchService;
   private final ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay;
   private final JsonBreadcrumbViewportResolver breadcrumbViewportResolver;
+  private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
+  private final OutlineMinimapScrollMapper outlineScrollMapper;
+  private final OutlineViewportProjector outlineViewportProjector;
 
   private RichTextViewerSurface richTextViewerSurface;
   private Runnable zoomSubscriptionRelease;
   private ZoomViewerSnapshot currentSnapshot;
   private JsonSearchSession searchSession;
   private boolean breadcrumbRefreshPending;
+  private boolean outlineViewportRefreshPending;
+  private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
+  private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
+  private boolean zoomOutlineAutoClosedForPreview;
 
   @FXML private BorderPane rootPane;
 
@@ -68,17 +88,39 @@ public class ZoomWindowController {
 
   @FXML private Label zoomStateLabel;
 
+  @FXML private Button zoomOutlineToggleButton;
+
+  @FXML private VBox zoomOutlineVBox;
+
+  @FXML private Label zoomOutlineTitleLabel;
+
+  @FXML private StackPane zoomOutlinePreviewShell;
+
+  @FXML private Canvas zoomOutlineCanvas;
+
+  @FXML private Region zoomOutlineViewportMarker;
+
+  @FXML private Label zoomOutlineStateLabel;
+
+  @FXML private Label zoomOutlineMetaLabel;
+
   public ZoomWindowController(
       RichTextViewerFactory richTextViewerFactory,
       ZoomViewerStateBridge zoomViewerStateBridge,
       RegexTextSearchService regexTextSearchService,
       ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay,
-      JsonBreadcrumbViewportResolver breadcrumbViewportResolver) {
+      JsonBreadcrumbViewportResolver breadcrumbViewportResolver,
+      OutlineMinimapLayoutPlanner outlineLayoutPlanner,
+      OutlineMinimapScrollMapper outlineScrollMapper,
+      OutlineViewportProjector outlineViewportProjector) {
     this.richTextViewerFactory = richTextViewerFactory;
     this.zoomViewerStateBridge = zoomViewerStateBridge;
     this.regexTextSearchService = regexTextSearchService;
     this.renderPlanSearchOverlay = renderPlanSearchOverlay;
     this.breadcrumbViewportResolver = breadcrumbViewportResolver;
+    this.outlineLayoutPlanner = outlineLayoutPlanner;
+    this.outlineScrollMapper = outlineScrollMapper;
+    this.outlineViewportProjector = outlineViewportProjector;
   }
 
   @FXML
@@ -86,7 +128,14 @@ public class ZoomWindowController {
     rootPane.getProperties().put("controller", this);
     richTextViewerSurface = richTextViewerFactory.create();
     zoomViewerHost.getChildren().setAll(richTextViewerSurface.view());
-    richTextViewerSurface.addViewportChangeListener(this::scheduleBreadcrumbRefresh);
+    richTextViewerSurface.addViewportChangeListener(
+        () -> {
+          scheduleBreadcrumbRefresh();
+          scheduleOutlineViewportRefresh();
+        });
+    zoomOutlinePreviewShell.widthProperty().addListener((unused, oldValue, newValue) -> resizeOutlineCanvas());
+    zoomOutlinePreviewShell.heightProperty().addListener((unused, oldValue, newValue) -> resizeOutlineCanvas());
+    zoomOutlinePreviewShell.setOnMouseClicked(this::handleOutlineInteraction);
     syncSearchControls();
     showAwaitingDocument();
   }
@@ -129,6 +178,19 @@ public class ZoomWindowController {
   @FXML
   void showNextSearchResult() {
     moveSearchSelection(1);
+  }
+
+  @FXML
+  void toggleZoomOutline() {
+    if (zoomOutlineToggleButton.isDisable()) {
+      return;
+    }
+    boolean nextVisible = !zoomOutlineVBox.isVisible();
+    setZoomOutlineVisible(nextVisible);
+    if (nextVisible) {
+      resizeOutlineCanvas();
+      scheduleOutlineViewportRefresh();
+    }
   }
 
   public void showAwaitingDocument() {
@@ -178,10 +240,12 @@ public class ZoomWindowController {
     }
 
     currentSnapshot = snapshot;
+    currentOutlineModel = snapshot.outlineModel() == null ? JsonOutlineModel.empty() : snapshot.outlineModel();
     zoomModeLabel.setText(snapshot.modeLabel());
     zoomTitleLabel.setText(snapshot.documentTitle());
     applyMeta(snapshot.documentMeta());
     updateWindowTitle(snapshot.windowTitle());
+    syncOutlineState(snapshot);
 
     if (snapshot.renderable() && snapshot.renderPlan() != null) {
       zoomViewerHost.setManaged(true);
@@ -238,6 +302,7 @@ public class ZoomWindowController {
     richTextViewerSurface.showStyledText(
         currentSnapshot.renderPlan().fragments(), currentSnapshot.contentStyleClass());
     richTextViewerSurface.scrollToTop();
+    scheduleOutlineViewportRefresh();
   }
 
   private void renderSearchAwareSnapshot() {
@@ -260,6 +325,7 @@ public class ZoomWindowController {
       richTextViewerSurface.scrollToTop();
     }
     scheduleBreadcrumbRefresh();
+    scheduleOutlineViewportRefresh();
   }
 
   private String currentRenderedText() {
@@ -352,6 +418,18 @@ public class ZoomWindowController {
         });
   }
 
+  private void scheduleOutlineViewportRefresh() {
+    if (outlineViewportRefreshPending) {
+      return;
+    }
+    outlineViewportRefreshPending = true;
+    Platform.runLater(
+        () -> {
+          outlineViewportRefreshPending = false;
+          refreshOutlineViewportMarker();
+        });
+  }
+
   private void refreshBreadcrumb() {
     if (currentSnapshot == null
         || !currentSnapshot.renderable()
@@ -413,5 +491,238 @@ public class ZoomWindowController {
       return Optional.empty();
     }
     return Optional.ofNullable(rootPane.getScene().getWindow());
+  }
+
+  private void syncOutlineState(ZoomViewerSnapshot snapshot) {
+    if (snapshot == null || !snapshot.renderable()) {
+      zoomOutlineToggleButton.setDisable(true);
+      currentOutlineModel = JsonOutlineModel.empty();
+      setZoomOutlineVisible(true);
+      showOutlineShellState(
+          "Awaiting document",
+          "Open a JSON or Markdown file in the main workspace to populate the outline minimap shell.",
+          "The panel keeps a dedicated minimap shell ready for the active document.",
+          null);
+      return;
+    }
+
+    if (snapshot.largePreview()) {
+      zoomOutlineToggleButton.setDisable(true);
+      zoomOutlineAutoClosedForPreview = true;
+      setZoomOutlineVisible(false);
+      currentOutlineModel = JsonOutlineModel.empty();
+      showOutlineShellState(
+          "Outline unavailable",
+          "Large preview keeps the zoom reader focused on the active page chunk.",
+          "Outline navigation stays disabled for preview mode in the zoom window.",
+          "outline-state-loading");
+      return;
+    }
+
+    boolean outlineAvailable = currentOutlineModel != null && !currentOutlineModel.emptyModel();
+    zoomOutlineToggleButton.setDisable(!outlineAvailable);
+    if (outlineAvailable) {
+      if (zoomOutlineAutoClosedForPreview || !zoomOutlineVBox.isManaged()) {
+        setZoomOutlineVisible(true);
+      }
+      zoomOutlineAutoClosedForPreview = false;
+      showOutlineValidShell();
+      return;
+    }
+
+    if (zoomOutlineAutoClosedForPreview || !zoomOutlineVBox.isManaged()) {
+      setZoomOutlineVisible(true);
+    }
+    zoomOutlineAutoClosedForPreview = false;
+    showOutlineShellState(
+        "Outline unavailable",
+        "The current zoom presentation does not expose a reusable outline model.",
+        "Load a regular JSON or Markdown document in the main workspace to restore the minimap.",
+        "outline-state-invalid");
+  }
+
+  private void showOutlineValidShell() {
+    zoomOutlineTitleLabel.setText("Document outline");
+    zoomOutlineMetaLabel.setText(
+        currentOutlineModel.totalEntries()
+            + " outline nodes • depth "
+            + currentOutlineModel.maxDepth());
+    zoomOutlineCanvas.setManaged(true);
+    zoomOutlineCanvas.setVisible(true);
+    zoomOutlineStateLabel.setManaged(false);
+    zoomOutlineStateLabel.setVisible(false);
+    zoomOutlineViewportMarker.setManaged(false);
+    zoomOutlineViewportMarker.setVisible(false);
+    zoomOutlinePreviewShell
+        .getStyleClass()
+        .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
+    zoomOutlinePreviewShell.getStyleClass().add("outline-state-valid");
+    drawOutlineMinimap();
+    scheduleOutlineViewportRefresh();
+  }
+
+  private void showOutlineShellState(
+      String title, String stateMessage, String metaMessage, String previewStateClass) {
+    zoomOutlineTitleLabel.setText(title);
+    zoomOutlineMetaLabel.setText(metaMessage);
+    zoomOutlineCanvas.setManaged(true);
+    zoomOutlineCanvas.setVisible(true);
+    zoomOutlineStateLabel.setText(stateMessage);
+    zoomOutlineStateLabel.setManaged(true);
+    zoomOutlineStateLabel.setVisible(true);
+    zoomOutlineViewportMarker.setManaged(false);
+    zoomOutlineViewportMarker.setVisible(false);
+    zoomOutlinePreviewShell
+        .getStyleClass()
+        .removeAll("outline-state-loading", "outline-state-valid", "outline-state-invalid");
+    if (previewStateClass != null) {
+      zoomOutlinePreviewShell.getStyleClass().add(previewStateClass);
+    }
+    currentOutlineLayout = OutlineMinimapLayout.empty();
+    drawOutlineShellPlaceholder();
+  }
+
+  private void resizeOutlineCanvas() {
+    if (zoomOutlineCanvas == null || zoomOutlinePreviewShell == null) {
+      return;
+    }
+    double width = Math.max(0.0, zoomOutlinePreviewShell.getWidth() - 2.0);
+    double height = Math.max(0.0, zoomOutlinePreviewShell.getHeight() - 2.0);
+    zoomOutlineCanvas.setWidth(width);
+    zoomOutlineCanvas.setHeight(height);
+    refreshOutlineCanvas();
+  }
+
+  private void refreshOutlineCanvas() {
+    if (zoomOutlineStateLabel.isVisible()
+        || currentOutlineModel.emptyModel()
+        || !zoomOutlineCanvas.isVisible()) {
+      currentOutlineLayout = OutlineMinimapLayout.empty();
+      drawOutlineShellPlaceholder();
+      hideOutlineViewportMarker();
+      return;
+    }
+    drawOutlineMinimap();
+    scheduleOutlineViewportRefresh();
+  }
+
+  private void drawOutlineMinimap() {
+    currentOutlineLayout =
+        outlineLayoutPlanner.plan(
+            currentOutlineModel, zoomOutlineCanvas.getWidth(), zoomOutlineCanvas.getHeight());
+
+    GraphicsContext graphics = zoomOutlineCanvas.getGraphicsContext2D();
+    double width = zoomOutlineCanvas.getWidth();
+    double height = zoomOutlineCanvas.getHeight();
+    graphics.clearRect(0, 0, width, height);
+    if (currentOutlineLayout.emptyLayout()) {
+      return;
+    }
+
+    graphics.setFill(nightModeActive() ? Color.web("#18202a") : Color.web("#f6f8fb"));
+    graphics.fillRect(0, 0, width, height);
+
+    for (OutlineMinimapRow row : currentOutlineLayout.rows()) {
+      graphics.setFill(outlineRowColor(row));
+      graphics.fillRoundRect(row.x(), row.y(), row.width(), row.height(), 2.0, 2.0);
+    }
+  }
+
+  private void drawOutlineShellPlaceholder() {
+    GraphicsContext graphics = zoomOutlineCanvas.getGraphicsContext2D();
+    double width = zoomOutlineCanvas.getWidth();
+    double height = zoomOutlineCanvas.getHeight();
+    graphics.clearRect(0, 0, width, height);
+    if (width <= 0.0 || height <= 0.0) {
+      return;
+    }
+
+    graphics.setFill(nightModeActive() ? Color.web("#18202a") : Color.web("#eef1f4"));
+    graphics.fillRect(0, 0, width, height);
+
+    double rowCount = 8.0;
+    double rowHeight = Math.max(6.0, (height - 36.0) / rowCount);
+    for (int index = 0; index < rowCount; index++) {
+      double x = 14.0 + ((index % 3) * 10.0);
+      double y = 18.0 + (index * rowHeight);
+      double barWidth = Math.max(20.0, width - x - (18.0 + ((index % 4) * 6.0)));
+      graphics.setFill(
+          nightModeActive()
+              ? (index % 2 == 0 ? Color.web("#324253") : Color.web("#2b3948"))
+              : (index % 2 == 0 ? Color.web("#d5dbe3") : Color.web("#c8d1dc")));
+      graphics.fillRect(x, y, barWidth, 3.0);
+    }
+  }
+
+  private Color outlineRowColor(OutlineMinimapRow row) {
+    if (nightModeActive()) {
+      return switch (row.kind()) {
+        case OBJECT -> Color.web("#7fb7ff");
+        case ARRAY -> Color.web("#92a8c6");
+        case VALUE -> Color.web("#60748c");
+      };
+    }
+    return switch (row.kind()) {
+      case OBJECT -> Color.web("#3569a3");
+      case ARRAY -> Color.web("#6f8bad");
+      case VALUE -> Color.web("#b5c0cd");
+    };
+  }
+
+  private void handleOutlineInteraction(MouseEvent event) {
+    if (zoomOutlineToggleButton.isDisable() || currentOutlineLayout.emptyLayout()) {
+      return;
+    }
+    double scrollValue =
+        outlineScrollMapper.scrollValueForPointer(
+            event.getY(),
+            zoomOutlinePreviewShell.getHeight(),
+            richTextViewerSurface.viewportHeight(),
+            richTextViewerSurface.totalContentHeightEstimate());
+    richTextViewerSurface.scrollToVerticalValue(scrollValue);
+    scheduleBreadcrumbRefresh();
+    scheduleOutlineViewportRefresh();
+    event.consume();
+  }
+
+  private void refreshOutlineViewportMarker() {
+    if (currentOutlineLayout.emptyLayout() || !zoomOutlinePreviewShell.isVisible()) {
+      hideOutlineViewportMarker();
+      return;
+    }
+
+    OutlineViewportProjection projection =
+        outlineViewportProjector.project(
+            richTextViewerSurface.verticalScrollValue(),
+            zoomOutlineCanvas.getHeight(),
+            richTextViewerSurface.viewportHeight(),
+            richTextViewerSurface.totalContentHeightEstimate());
+    if (!projection.visible()) {
+      hideOutlineViewportMarker();
+      return;
+    }
+
+    double markerWidth = Math.max(24.0, zoomOutlineCanvas.getWidth() - 20.0);
+    zoomOutlineViewportMarker.resizeRelocate(
+        10.0, 1.0 + projection.y(), markerWidth, projection.height());
+    zoomOutlineViewportMarker.setManaged(false);
+    zoomOutlineViewportMarker.setVisible(true);
+  }
+
+  private void hideOutlineViewportMarker() {
+    zoomOutlineViewportMarker.setManaged(false);
+    zoomOutlineViewportMarker.setVisible(false);
+  }
+
+  private void setZoomOutlineVisible(boolean visible) {
+    zoomOutlineVBox.setManaged(visible);
+    zoomOutlineVBox.setVisible(visible);
+    if (!visible) {
+      hideOutlineViewportMarker();
+    }
+  }
+
+  private boolean nightModeActive() {
+    return rootPane.getStyleClass().contains("night-mode");
   }
 }
