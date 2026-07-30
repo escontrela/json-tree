@@ -29,9 +29,7 @@ import javax.net.ssl.X509TrustManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/**
- * Executes normalized curl requests with scoped insecure HTTPS handling for this workflow only.
- */
+/** Executes normalized curl requests with scoped insecure HTTPS handling for this workflow only. */
 @Component
 public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutorPort {
 
@@ -48,10 +46,7 @@ public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutor
   public HttpUrlConnectionCurlRequestExecutor(
       ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase) {
     this(
-        () ->
-            viewLargePreviewSettingsUseCase
-                .currentLargePreviewSettings()
-                .defaultCurlUserAgent());
+        () -> viewLargePreviewSettingsUseCase.currentLargePreviewSettings().defaultCurlUserAgent());
   }
 
   HttpUrlConnectionCurlRequestExecutor() {
@@ -76,34 +71,39 @@ public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutor
     String currentMethod = request.method();
     byte[] currentBody = request.body().getBytes(StandardCharsets.UTF_8);
 
-    for (int redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+    for (int redirectCount = 0; redirectCount < MAX_REDIRECTS; redirectCount++) {
       HttpURLConnection connection = openConnection(currentUri.toURL());
-      configureConnection(connection, request, currentMethod, currentBody);
+      try {
+        configureConnection(connection, request, currentMethod, currentBody);
 
-      int statusCode = connection.getResponseCode();
-      if (shouldFollowRedirect(request, statusCode)) {
-        String location = connection.getHeaderField("Location");
-        if (location == null || location.isBlank()) {
-          return CurlExecutionResult.failure("Redirect response did not include a Location header.");
+        int statusCode = connection.getResponseCode();
+        if (shouldFollowRedirect(request, statusCode)) {
+          String location = connection.getHeaderField("Location");
+          if (location == null || location.isBlank()) {
+            return CurlExecutionResult.failure(
+                "Redirect response did not include a Location header.");
+          }
+          currentUri = currentUri.resolve(location);
+          if (statusCode == HttpURLConnection.HTTP_SEE_OTHER) {
+            currentMethod = "GET";
+            currentBody = new byte[0];
+          }
+          continue;
         }
-        currentUri = currentUri.resolve(location);
-        if (statusCode == HttpURLConnection.HTTP_SEE_OTHER) {
-          currentMethod = "GET";
-          currentBody = new byte[0];
-        }
-        continue;
+
+        byte[] responseBytes = readResponseBytes(connection);
+        String contentType = contentTypeWithoutCharset(connection.getContentType());
+        String charset = resolveCharset(connection.getContentType());
+        return CurlExecutionResult.success(
+            statusCode,
+            currentUri,
+            sanitizeHeaders(connection.getHeaderFields()),
+            responseBytes,
+            contentType,
+            charset);
+      } finally {
+        connection.disconnect();
       }
-
-      byte[] responseBytes = readResponseBytes(connection);
-      String contentType = contentTypeWithoutCharset(connection.getContentType());
-      String charset = resolveCharset(connection.getContentType());
-      return CurlExecutionResult.success(
-          statusCode,
-          currentUri,
-          sanitizeHeaders(connection.getHeaderFields()),
-          responseBytes,
-          contentType,
-          charset);
     }
 
     return CurlExecutionResult.failure("Curl fetch exceeded the maximum number of redirects.");
@@ -122,13 +122,14 @@ public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutor
   }
 
   private void configureConnection(
-      HttpURLConnection connection,
-      CurlExecutionRequest request,
-      String method,
-      byte[] body) throws IOException {
+      HttpURLConnection connection, CurlExecutionRequest request, String method, byte[] body)
+      throws IOException {
     connection.setRequestMethod(method);
-    request.headers().forEach(header -> connection.setRequestProperty(header.name(), header.value()));
-    if (request.headers().stream().noneMatch(header -> USER_AGENT_HEADER.equalsIgnoreCase(header.name()))) {
+    request
+        .headers()
+        .forEach(header -> connection.setRequestProperty(header.name(), header.value()));
+    if (request.headers().stream()
+        .noneMatch(header -> USER_AGENT_HEADER.equalsIgnoreCase(header.name()))) {
       String defaultUserAgent = defaultUserAgentSupplier.get();
       if (defaultUserAgent != null && !defaultUserAgent.isBlank()) {
         connection.setRequestProperty(USER_AGENT_HEADER, defaultUserAgent.trim());
@@ -158,11 +159,14 @@ public class HttpUrlConnectionCurlRequestExecutor implements CurlRequestExecutor
 
   private byte[] readResponseBytes(HttpURLConnection connection) throws IOException {
     InputStream inputStream =
-        connection.getErrorStream() != null ? connection.getErrorStream() : connection.getInputStream();
+        connection.getErrorStream() != null
+            ? connection.getErrorStream()
+            : connection.getInputStream();
     if (inputStream == null) {
       return new byte[0];
     }
-    try (InputStream stream = inputStream; ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+    try (InputStream stream = inputStream;
+        ByteArrayOutputStream output = new ByteArrayOutputStream()) {
       stream.transferTo(output);
       return output.toByteArray();
     }

@@ -4,9 +4,7 @@ import com.davidpe.jsontree.application.model.LargePreviewSettingsSnapshot;
 import com.davidpe.jsontree.infrastructure.config.LargePreviewProperties;
 import org.springframework.stereotype.Component;
 
-/**
- * Resolves editable settings-form state from runtime snapshot values and current text input.
- */
+/** Resolves editable settings-form state from runtime snapshot values and current text input. */
 @Component
 public class SettingsFormStateResolver {
 

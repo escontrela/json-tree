@@ -17,122 +17,140 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class FileSystemJsonHistoryRepository implements JsonHistoryRepository {
 
-    private static final TypeReference<List<ImportedJsonFile>> HISTORY_LIST_TYPE = new TypeReference<>() {
-    };
+  private static final TypeReference<List<ImportedJsonFile>> HISTORY_LIST_TYPE =
+      new TypeReference<>() {};
 
-    private final AppDataProperties appDataProperties;
-    private final ObjectMapper objectMapper;
+  private final AppDataProperties appDataProperties;
+  private final ObjectMapper objectMapper;
 
-    public FileSystemJsonHistoryRepository(AppDataProperties appDataProperties, ObjectMapper objectMapper) {
-        this.appDataProperties = appDataProperties;
-        this.objectMapper = objectMapper;
+  public FileSystemJsonHistoryRepository(
+      AppDataProperties appDataProperties, ObjectMapper objectMapper) {
+    this.appDataProperties = appDataProperties;
+    this.objectMapper = objectMapper;
+  }
+
+  @Override
+  public List<ImportedJsonFile> findAll() {
+    if (!Files.exists(metadataPath())) {
+      return new ArrayList<>();
     }
-
-    @Override
-    public List<ImportedJsonFile> findAll() {
-        if (!Files.exists(metadataPath())) {
-            return new ArrayList<>();
-        }
-        try {
-            List<ImportedJsonFile> entries = objectMapper.readValue(metadataPath().toFile(), HISTORY_LIST_TYPE);
-            entries.sort(Comparator.comparing(ImportedJsonFile::importedAt));
-            return entries;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read JSON history metadata.", exception);
-        }
+    try {
+      List<ImportedJsonFile> entries =
+          objectMapper.readValue(metadataPath().toFile(), HISTORY_LIST_TYPE);
+      entries.sort(Comparator.comparing(ImportedJsonFile::importedAt));
+      return entries;
+    } catch (IOException exception) {
+      throw new IllegalStateException("Unable to read JSON history metadata.", exception);
     }
+  }
 
-    @Override
-    public Optional<ImportedJsonFile> findByStoredName(String storedName) {
-        return findAll().stream()
-                .filter(entry -> entry.storedName().equals(storedName))
-                .findFirst();
+  @Override
+  public Optional<ImportedJsonFile> findByStoredName(String storedName) {
+    return findAll().stream().filter(entry -> entry.storedName().equals(storedName)).findFirst();
+  }
+
+  @Override
+  public Optional<Path> resolveStoredJsonPath(String storedName) {
+    Path snapshotPath = resolveSafeStoredPath(storedName);
+    return Files.exists(snapshotPath) ? Optional.of(snapshotPath) : Optional.empty();
+  }
+
+  @Override
+  public Optional<String> readStoredJson(String storedName) {
+    Optional<Path> snapshotPath = resolveStoredJsonPath(storedName);
+    if (snapshotPath.isEmpty()) {
+      return Optional.empty();
     }
-
-    @Override
-    public Optional<Path> resolveStoredJsonPath(String storedName) {
-        Path snapshotPath = historyDirectory().resolve(storedName);
-        return Files.exists(snapshotPath) ? Optional.of(snapshotPath) : Optional.empty();
+    try {
+      return Optional.of(Files.readString(snapshotPath.get()));
+    } catch (IOException exception) {
+      throw new IllegalStateException(
+          "Unable to read stored JSON snapshot: " + storedName, exception);
     }
+  }
 
-    @Override
-    public Optional<String> readStoredJson(String storedName) {
-        Optional<Path> snapshotPath = resolveStoredJsonPath(storedName);
-        if (snapshotPath.isEmpty()) {
-            return Optional.empty();
-        }
-        try {
-            return Optional.of(Files.readString(snapshotPath.get()));
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read stored JSON snapshot: " + storedName, exception);
-        }
+  @Override
+  public void save(ImportedJsonFile importedJsonFile, String jsonContent) {
+    try {
+      ensureDirectories();
+      Files.writeString(resolveSafeStoredPath(importedJsonFile.storedName()), jsonContent);
+
+      List<ImportedJsonFile> entries =
+          findAll().stream()
+              .filter(existing -> !existing.storedName().equals(importedJsonFile.storedName()))
+              .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+      entries.add(importedJsonFile);
+      entries.sort(Comparator.comparing(ImportedJsonFile::importedAt));
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
+    } catch (IOException exception) {
+      throw new IllegalStateException("Unable to persist JSON history snapshot.", exception);
     }
+  }
 
-    @Override
-    public void save(ImportedJsonFile importedJsonFile, String jsonContent) {
-        try {
-            ensureDirectories();
-            Files.writeString(historyDirectory().resolve(importedJsonFile.storedName()), jsonContent);
-
-            List<ImportedJsonFile> entries = findAll().stream()
-                    .filter(existing -> !existing.storedName().equals(importedJsonFile.storedName()))
-                    .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-            entries.add(importedJsonFile);
-            entries.sort(Comparator.comparing(ImportedJsonFile::importedAt));
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to persist JSON history snapshot.", exception);
-        }
+  @Override
+  public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
+    try {
+      List<ImportedJsonFile> entries =
+          findAll().stream()
+              .map(
+                  entry ->
+                      entry.storedName().equals(storedName) ? entry.withFavorite(favorite) : entry)
+              .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
+      Optional<ImportedJsonFile> updated =
+          entries.stream().filter(entry -> entry.storedName().equals(storedName)).findFirst();
+      if (updated.isEmpty()) {
+        return Optional.empty();
+      }
+      ensureDirectories();
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
+      return updated;
+    } catch (IOException exception) {
+      throw new IllegalStateException(
+          "Unable to update JSON history favorite state: " + storedName, exception);
     }
+  }
 
-    @Override
-    public Optional<ImportedJsonFile> updateFavorite(String storedName, boolean favorite) {
-        try {
-            List<ImportedJsonFile> entries = findAll().stream()
-                    .map(entry -> entry.storedName().equals(storedName) ? entry.withFavorite(favorite) : entry)
-                    .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
-            Optional<ImportedJsonFile> updated = entries.stream()
-                    .filter(entry -> entry.storedName().equals(storedName))
-                    .findFirst();
-            if (updated.isEmpty()) {
-                return Optional.empty();
-            }
-            ensureDirectories();
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
-            return updated;
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to update JSON history favorite state: " + storedName, exception);
-        }
+  @Override
+  public void deleteByStoredName(String storedName) {
+    try {
+      Files.deleteIfExists(resolveSafeStoredPath(storedName));
+      List<ImportedJsonFile> entries =
+          findAll().stream().filter(existing -> !existing.storedName().equals(storedName)).toList();
+      ensureDirectories();
+      objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
+    } catch (IOException exception) {
+      throw new IllegalStateException(
+          "Unable to delete JSON history snapshot: " + storedName, exception);
     }
+  }
 
-    @Override
-    public void deleteByStoredName(String storedName) {
-        try {
-            Files.deleteIfExists(historyDirectory().resolve(storedName));
-            List<ImportedJsonFile> entries = findAll().stream()
-                    .filter(existing -> !existing.storedName().equals(storedName))
-                    .toList();
-            ensureDirectories();
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(metadataPath().toFile(), entries);
-        } catch (IOException exception) {
-            throw new IllegalStateException("Unable to delete JSON history snapshot: " + storedName, exception);
-        }
+  private Path resolveSafeStoredPath(String storedName) {
+    if (storedName == null || storedName.isBlank()) {
+      throw new IllegalArgumentException("storedName must not be blank.");
     }
+    Path historyDirectory = historyDirectory();
+    Path candidate = historyDirectory.resolve(storedName).normalize();
+    if (!candidate.startsWith(historyDirectory)) {
+      throw new IllegalArgumentException(
+          "storedName resolves outside the history directory: " + storedName);
+    }
+    return candidate;
+  }
 
-    private void ensureDirectories() throws IOException {
-        Files.createDirectories(historyDirectory());
-        Files.createDirectories(rootDirectory());
-    }
+  private void ensureDirectories() throws IOException {
+    Files.createDirectories(historyDirectory());
+    Files.createDirectories(rootDirectory());
+  }
 
-    private Path rootDirectory() {
-        return appDataProperties.getRootDirectory().toAbsolutePath().normalize();
-    }
+  private Path rootDirectory() {
+    return appDataProperties.getRootDirectory().toAbsolutePath().normalize();
+  }
 
-    private Path historyDirectory() {
-        return rootDirectory().resolve(appDataProperties.getHistoryDirectoryName());
-    }
+  private Path historyDirectory() {
+    return rootDirectory().resolve(appDataProperties.getHistoryDirectoryName());
+  }
 
-    private Path metadataPath() {
-        return rootDirectory().resolve(appDataProperties.getMetadataFileName());
-    }
+  private Path metadataPath() {
+    return rootDirectory().resolve(appDataProperties.getMetadataFileName());
+  }
 }
