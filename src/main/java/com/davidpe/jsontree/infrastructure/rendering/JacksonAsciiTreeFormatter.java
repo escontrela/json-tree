@@ -46,6 +46,15 @@ public class JacksonAsciiTreeFormatter implements AsciiTreeRendererPort {
     }
 
     @Override
+    public AsciiTreeDocument renderRawJson(String rawJson) {
+        try {
+            return format(objectMapper.readTree(rawJson));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to render ASCII tree from in-memory JSON.", exception);
+        }
+    }
+
+    @Override
     public AsciiTreeDocument renderLargePreview(Path jsonFilePath) {
         try (InputStream inputStream = Files.newInputStream(jsonFilePath);
              JsonParser parser = objectMapper.getFactory().createParser(inputStream)) {

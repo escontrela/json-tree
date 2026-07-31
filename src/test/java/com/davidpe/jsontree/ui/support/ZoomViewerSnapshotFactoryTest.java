@@ -37,6 +37,7 @@ class ZoomViewerSnapshotFactoryTest {
             .renderable(
                 result,
                 "ASCII tree",
+                "{\"id\":1}",
                 renderPlan,
                 "tree-content",
                 "1.0 KB • local import",
@@ -50,6 +51,7 @@ class ZoomViewerSnapshotFactoryTest {
             .renderable(
                 result,
                 "Raw JSON",
+                "{\"id\":1}",
                 renderPlan,
                 "raw-json-content",
                 "1.0 KB • local import",
@@ -72,6 +74,7 @@ class ZoomViewerSnapshotFactoryTest {
         factory.renderable(
             result,
             "Raw page",
+            "{\"chunk\":true}",
             renderPlan,
             "raw-json-content",
             "12.3 MB • reopened from history • byte-paged large preview",
@@ -98,6 +101,7 @@ class ZoomViewerSnapshotFactoryTest {
         factory.renderable(
             result,
             "Structure",
+            "{\"user\":{\"name\":\"David\"}}",
             renderPlan,
             "tree-content",
             "1.0 KB • local import",
@@ -124,6 +128,7 @@ class ZoomViewerSnapshotFactoryTest {
         factory.renderable(
             result,
             "Markdown",
+            "# Heading\n\nParagraph",
             renderPlan,
             "markdown-content",
             "2.0 KB • local import",
@@ -134,6 +139,7 @@ class ZoomViewerSnapshotFactoryTest {
         factory.renderable(
             result,
             "Raw Markdown",
+            "# Heading\n\nParagraph",
             renderPlan,
             "markdown-content",
             "2.0 KB • local import",

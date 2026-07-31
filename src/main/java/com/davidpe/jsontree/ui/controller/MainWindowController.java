@@ -2,6 +2,7 @@ package com.davidpe.jsontree.ui.controller;
 
 import com.davidpe.jsontree.application.model.ClipboardJsonImportResult;
 import com.davidpe.jsontree.application.model.DroppedFileImportResult;
+import com.davidpe.jsontree.application.model.JsonCropDocument;
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
@@ -15,6 +16,7 @@ import com.davidpe.jsontree.application.port.in.ImportDroppedFileUseCase;
 import com.davidpe.jsontree.application.port.in.ImportJsonUseCase;
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
 import com.davidpe.jsontree.application.service.JsonBreadcrumbModelService;
+import com.davidpe.jsontree.application.service.JsonCropViewService;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.JsonSearchWorkflowService;
 import com.davidpe.jsontree.application.service.JsonStructureDocumentService;
@@ -76,6 +78,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -131,6 +135,7 @@ public class MainWindowController implements UiScreenController {
   private final ImportJsonUseCase importJsonUseCase;
   private final JsonViewerWorkflowService workflowService;
   private final JsonBreadcrumbModelService breadcrumbModelService;
+  private final JsonCropViewService jsonCropViewService;
   private final JsonStructureDocumentService structureDocumentService;
   private final JsonOutlineModelService outlineModelService;
   private final MarkdownOutlineModelService markdownOutlineModelService;
@@ -168,6 +173,7 @@ public class MainWindowController implements UiScreenController {
       ImportJsonUseCase importJsonUseCase,
       JsonViewerWorkflowService workflowService,
       JsonBreadcrumbModelService breadcrumbModelService,
+      JsonCropViewService jsonCropViewService,
       JsonStructureDocumentService structureDocumentService,
       JsonOutlineModelService outlineModelService,
       MarkdownOutlineModelService markdownOutlineModelService,
@@ -199,6 +205,7 @@ public class MainWindowController implements UiScreenController {
     this.importJsonUseCase = importJsonUseCase;
     this.workflowService = workflowService;
     this.breadcrumbModelService = breadcrumbModelService;
+    this.jsonCropViewService = jsonCropViewService;
     this.structureDocumentService = structureDocumentService;
     this.outlineModelService = outlineModelService;
     this.markdownOutlineModelService = markdownOutlineModelService;
@@ -311,6 +318,8 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Button searchButton;
 
+  @FXML private Button cropButton;
+
   @FXML private Button copyTreeButton;
 
   @FXML private Button outlineToggleButton;
@@ -349,12 +358,16 @@ public class MainWindowController implements UiScreenController {
       new RawJsonPresentation("", new int[] {0});
   private JsonBreadcrumbModel currentBreadcrumbModel = JsonBreadcrumbModel.unavailable();
   private AsciiTreeDocument currentStructureDocument;
+  private JsonCropDocument currentCropDocument;
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
   private MarkdownOutlineModel currentMarkdownOutlineModel = MarkdownOutlineModel.empty();
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private String currentBreadcrumbSourceIdentity;
+  private String currentCropSourceIdentity;
+  private String currentCropQuery;
   private String currentStructureSourceIdentity;
   private String currentOutlineSourceIdentity;
+  private boolean cropActive;
   private boolean breadcrumbRefreshPending;
   private boolean outlineViewportRefreshPending;
   private boolean suppressLargePreviewScrollHandling;
@@ -841,6 +854,7 @@ public class MainWindowController implements UiScreenController {
         zoomViewerSnapshotFactory.renderable(
             result,
             "ASCII tree",
+            currentZoomSourceRawText(result),
             renderPlan,
             "tree-content",
             formatFileMeta(
@@ -1223,6 +1237,11 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void presentLoadResult(JsonViewerLoadResult result) {
+    if (cropActive
+        && currentCropSourceIdentity != null
+        && !currentCropSourceIdentity.equals(currentViewIdentity(result))) {
+      deactivateCropView();
+    }
     updateFileSummary(result);
     searchWorkflowService.clearIfSourceChanged(currentViewIdentity(result));
     if (!capabilityPresentationResolver
@@ -1561,6 +1580,7 @@ public class MainWindowController implements UiScreenController {
     if (structureButton.isDisable()) {
       return;
     }
+    deactivateCropView();
     switchPresentationMode(
         currentPresentationMode == ViewerPresentationMode.STRUCTURE
             ? ViewerPresentationMode.ASCII_TREE
@@ -1569,6 +1589,33 @@ public class MainWindowController implements UiScreenController {
     viewerScrollPane.setVvalue(0);
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
+  }
+
+  @FXML
+  void toggleCropView() {
+    if (cropButton.isDisable()) {
+      return;
+    }
+
+    if (cropActive) {
+      deactivateCropView();
+      refreshCurrentViewerContent();
+      return;
+    }
+
+    workflowService
+        .currentView()
+        .filter(this::supportsCropInCurrentContext)
+        .flatMap(this::resolveCropDocument)
+        .ifPresent(
+            cropDocument -> {
+              cropActive = true;
+              currentCropDocument = cropDocument;
+              currentCropSourceIdentity = currentViewIdentity;
+              currentCropQuery =
+                  searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(null);
+              refreshCurrentViewerContent();
+            });
   }
 
   private void setValidationBadge(String text, String styleClass) {
@@ -1625,6 +1672,8 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void acceptSearchModal() {
+    String previousQuery =
+        searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(null);
     JsonSearchExecutionResult result =
         searchWorkflowService.activateSearch(
             currentViewIdentity == null ? "current-view" : currentViewIdentity,
@@ -1636,6 +1685,9 @@ public class MainWindowController implements UiScreenController {
       return;
     }
 
+    if (!Objects.equals(previousQuery, result.session().query())) {
+      deactivateCropView();
+    }
     syncActiveSearchStrip();
     hideSearchModal();
     refreshCurrentViewerContent();
@@ -1644,6 +1696,7 @@ public class MainWindowController implements UiScreenController {
 
   @FXML
   void clearSearchSession() {
+    deactivateCropView();
     searchWorkflowService.clear();
     syncActiveSearchStrip();
     refreshCurrentViewerContent();
@@ -1709,6 +1762,11 @@ public class MainWindowController implements UiScreenController {
         .filter(zoomActionAvailabilityResolver::shouldEnable)
         .isEmpty()) {
       return;
+    }
+    boolean cropWasActive = cropActive;
+    deactivateCropView();
+    if (cropWasActive) {
+      refreshCurrentViewerContent();
     }
     zoomWindowCoordinator.openOrFocus();
   }
@@ -2125,6 +2183,7 @@ public class MainWindowController implements UiScreenController {
         presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
     updateFooterStatusLabel(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
+    syncCropButtonState(result);
   }
 
   private void syncOutlinePanelVisibility(JsonViewerLoadResult result) {
@@ -2169,6 +2228,8 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setDisable(true);
     structureButton.setDisable(true);
     searchButton.setDisable(true);
+    cropButton.setDisable(true);
+    cropButton.setText("Crop");
     zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
   }
@@ -2261,6 +2322,7 @@ public class MainWindowController implements UiScreenController {
                           : result.importResult().documentFormat().markdown()
                               ? "Markdown"
                               : "Raw JSON",
+                      currentZoomSourceRawText(result),
                       renderPlan,
                       result.importResult().documentFormat().markdown()
                           ? "markdown-content"
@@ -2309,6 +2371,9 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void scrollToActiveSearchHighlight() {
+    if (cropActive) {
+      return;
+    }
     searchWorkflowService
         .currentSession()
         .filter(JsonSearchSession::hasMatches)
@@ -2355,6 +2420,9 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void renderCurrentPresentation(JsonViewerLoadResult result) {
+    if (renderCropPresentationIfActive(result)) {
+      return;
+    }
     ViewerPresentationMode mode = effectivePresentationMode(result);
     currentPresentationMode = mode;
     switch (mode) {
@@ -2385,6 +2453,7 @@ public class MainWindowController implements UiScreenController {
         zoomViewerSnapshotFactory.renderable(
             result,
             "Markdown",
+            currentZoomSourceRawText(result),
             renderPlan,
             "markdown-content",
             formatFileMeta(
@@ -2419,6 +2488,7 @@ public class MainWindowController implements UiScreenController {
                   zoomViewerSnapshotFactory.renderable(
                       result,
                       "Structure",
+                      currentZoomSourceRawText(result),
                       renderPlan,
                       "tree-content",
                       formatFileMeta(
@@ -2461,6 +2531,190 @@ public class MainWindowController implements UiScreenController {
     return viewerPresentationModeResolver.resolve(requestedMode, result);
   }
 
+  private boolean renderCropPresentationIfActive(JsonViewerLoadResult result) {
+    if (!cropActive) {
+      return false;
+    }
+
+    ViewerPresentationMode mode = effectivePresentationMode(result);
+    if (!supportsCrop(result, mode)) {
+      deactivateCropView();
+      return false;
+    }
+
+    return resolveCropDocument(result)
+        .map(
+            cropDocument -> {
+              if (mode == ViewerPresentationMode.RAW_JSON) {
+                renderCroppedRawJsonContent(result, cropDocument);
+              } else {
+                renderCroppedAsciiTree(result, cropDocument);
+              }
+              return true;
+            })
+        .orElseGet(
+            () -> {
+              deactivateCropView();
+              return false;
+            });
+  }
+
+  private Optional<JsonCropDocument> resolveCropDocument(JsonViewerLoadResult result) {
+    JsonSearchSession session = searchWorkflowService.currentSession().orElse(null);
+    if (session == null || !session.hasMatches()) {
+      return Optional.empty();
+    }
+
+    String sourceIdentity = currentViewIdentity(result);
+    if (currentCropDocument != null
+        && Objects.equals(currentCropSourceIdentity, sourceIdentity)
+        && Objects.equals(currentCropQuery, session.query())) {
+      return Optional.of(currentCropDocument);
+    }
+
+    Optional<JsonCropDocument> cropDocument =
+        workflowService.currentViewRawJson().flatMap(rawJson -> jsonCropViewService.buildFromQuery(rawJson, session.query()));
+    currentCropDocument = cropDocument.orElse(null);
+    currentCropSourceIdentity = cropDocument.isPresent() ? sourceIdentity : null;
+    currentCropQuery = cropDocument.isPresent() ? session.query() : null;
+    return cropDocument;
+  }
+
+  private void renderCroppedAsciiTree(JsonViewerLoadResult result, JsonCropDocument cropDocument) {
+    currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
+    JsonBreadcrumbModel breadcrumbModel =
+        breadcrumbModelService.buildFromRawJson(cropDocument.rawJson());
+    JsonOutlineModel outlineModel = outlineModelService.buildFromRawJson(cropDocument.rawJson());
+    ViewerTextRenderPlan renderPlan =
+        viewerTextRenderPlanFactory.buildAsciiPlan(cropDocument.asciiTreeDocument(), List.of());
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
+    currentBreadcrumbModel = breadcrumbModel;
+    currentBreadcrumbSourceIdentity = currentViewIdentity(result) + "::crop";
+    currentOutlineModel = outlineModel;
+    currentOutlineSourceIdentity = currentViewIdentity(result) + "::crop";
+    currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
+    applyCapabilityPresentation(result);
+    syncLargePreviewPageControls(result);
+    applyLargePreviewDocumentScrollShell(result);
+    showOutlineValidShell(result, cropDocument.asciiTreeDocument());
+    syncOutlinePanelVisibility(result);
+    publishZoomSnapshot(
+        zoomViewerSnapshotFactory.renderable(
+            result,
+            "Crop",
+            cropDocument.rawJson(),
+            renderPlan,
+            "tree-content",
+            formatFileMeta(
+                result.importResult().sizeBytes(),
+                result.importResult().sourceKind(),
+                result.historyEntry()),
+            ViewerPresentationMode.ASCII_TREE,
+            currentBreadcrumbModel,
+            currentOutlineModel));
+    richTextViewerSurface.scrollToTop();
+    emptyStateLabel.setManaged(false);
+    emptyStateLabel.setVisible(false);
+    rawJsonButton.setText("Raw JSON");
+    structureButton.setText("Structure");
+    updateFooterStatusLabel("Showing a cropped JSON view derived from the active regex query");
+    setStatusRailValues(
+        "CROPPED",
+        ByteSizeFormatter.format(result.importResult().sizeBytes()),
+        Integer.toString(cropDocument.asciiTreeDocument().lineCount()),
+        sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
+    applyState(ViewerVisualState.VALID);
+    scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
+  }
+
+  private void renderCroppedRawJsonContent(JsonViewerLoadResult result, JsonCropDocument cropDocument) {
+    currentRawJsonPresentation = rawJsonPresentationService.present(cropDocument.rawJson());
+    JsonBreadcrumbModel breadcrumbModel =
+        breadcrumbModelService.buildFromRawJson(cropDocument.rawJson());
+    JsonOutlineModel outlineModel = outlineModelService.buildFromRawJson(cropDocument.rawJson());
+    ViewerTextRenderPlan renderPlan =
+        viewerTextRenderPlanFactory.buildRawPlan(currentRawJsonPresentation.content(), List.of());
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), "raw-json-content");
+    currentBreadcrumbModel = breadcrumbModel;
+    currentBreadcrumbSourceIdentity = currentViewIdentity(result) + "::crop";
+    currentOutlineModel = outlineModel;
+    currentOutlineSourceIdentity = currentViewIdentity(result) + "::crop";
+    currentPresentationMode = ViewerPresentationMode.RAW_JSON;
+    applyCapabilityPresentation(result);
+    syncLargePreviewPageControls(result);
+    applyLargePreviewDocumentScrollShell(result);
+    showOutlineValidShell(result, cropDocument.asciiTreeDocument());
+    syncOutlinePanelVisibility(result);
+    publishZoomSnapshot(
+        zoomViewerSnapshotFactory.renderable(
+            result,
+            "Crop",
+            cropDocument.rawJson(),
+            renderPlan,
+            "raw-json-content",
+            formatFileMeta(
+                result.importResult().sizeBytes(),
+                result.importResult().sourceKind(),
+                result.historyEntry()),
+            ViewerPresentationMode.RAW_JSON,
+            currentBreadcrumbModel,
+            currentOutlineModel));
+    richTextViewerSurface.scrollToTop();
+    emptyStateLabel.setManaged(false);
+    emptyStateLabel.setVisible(false);
+    rawJsonButton.setText("ASCII tree");
+    structureButton.setText("Structure");
+    updateFooterStatusLabel("Showing a cropped JSON view derived from the active regex query");
+    setStatusRailValues(
+        "CROPPED",
+        ByteSizeFormatter.format(result.importResult().sizeBytes()),
+        Integer.toString(cropDocument.asciiTreeDocument().lineCount()),
+        sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
+    applyState(ViewerVisualState.VALID);
+    scheduleOutlineViewportRefresh();
+    scheduleBreadcrumbRefresh();
+  }
+
+  private boolean supportsCropInCurrentContext(JsonViewerLoadResult result) {
+    return supportsCrop(result, effectivePresentationMode(result))
+        && searchWorkflowService.currentSession().filter(JsonSearchSession::hasMatches).isPresent();
+  }
+
+  private boolean supportsCrop(JsonViewerLoadResult result, ViewerPresentationMode mode) {
+    return result != null
+        && result.validationResult().status() == JsonValidationStatus.VALID
+        && result.hasRenderableTree()
+        && !result.usesLargePreview()
+        && !result.markdownDocument()
+        && mode != ViewerPresentationMode.STRUCTURE;
+  }
+
+  private void syncCropButtonState(JsonViewerLoadResult result) {
+    ViewerPresentationMode mode = effectivePresentationMode(result);
+    boolean available = supportsCropInCurrentContext(result);
+    cropButton.setDisable(!(available || cropActive));
+    cropButton.setText(cropActive ? "Full view" : "Crop");
+  }
+
+  private void deactivateCropView() {
+    cropActive = false;
+    resetCropDocument();
+  }
+
+  private void resetCropDocument() {
+    currentCropDocument = null;
+    currentCropSourceIdentity = null;
+    currentCropQuery = null;
+  }
+
+  private String currentZoomSourceRawText(JsonViewerLoadResult result) {
+    if (cropActive && currentCropDocument != null && supportsCrop(result, effectivePresentationMode(result))) {
+      return currentCropDocument.rawJson();
+    }
+    return workflowService.currentViewRawJson().orElse("");
+  }
+
   private java.util.Optional<AsciiTreeDocument> resolveStructureDocument(
       JsonViewerLoadResult result) {
     if (result == null || result.usesLargePreview() || !result.hasRenderableTree()) {
@@ -2492,6 +2746,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void resetPresentationState() {
+    deactivateCropView();
     currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
     rawJsonButton.setText("Raw JSON");
     structureButton.setText("Structure");
@@ -2500,6 +2755,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void preparePresentationStateForIncomingDocument() {
+    deactivateCropView();
     if (currentPresentationMode != ViewerPresentationMode.STRUCTURE) {
       currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
     }

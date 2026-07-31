@@ -29,6 +29,7 @@
             </HBox>
             <HBox alignment="CENTER_LEFT" spacing="8.0" styleClass="zoom-search-strip">
                 <TextField fx:id="zoomSearchField" onAction="#executeSearch" promptText="Regex search" HBox.hgrow="ALWAYS" />
+                <Button fx:id="zoomCropButton" disable="true" mnemonicParsing="false" onAction="#toggleCropView" styleClass="ghost-button search-strip-button" text="Crop" />
                 <Button fx:id="zoomSearchPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousSearchResult" styleClass="ghost-button search-strip-button" text="Previous" />
                 <Button fx:id="zoomSearchNextButton" disable="true" mnemonicParsing="false" onAction="#showNextSearchResult" styleClass="ghost-button search-strip-button" text="Next" />
                 <Label fx:id="zoomSearchOccurrenceLabel" styleClass="zoom-search-count" text="Ready" />

@@ -6,7 +6,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
+import com.davidpe.jsontree.application.service.BestEffortJsonPrettyPrinter;
+import com.davidpe.jsontree.application.service.JsonBreadcrumbModelService;
+import com.davidpe.jsontree.application.service.JsonCropViewService;
+import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.RegexTextSearchService;
+import com.davidpe.jsontree.application.service.RawJsonPresentationService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
@@ -15,11 +21,16 @@ import com.davidpe.jsontree.ui.support.JsonBreadcrumbViewportResolver;
 import com.davidpe.jsontree.ui.support.OutlineMinimapLayoutPlanner;
 import com.davidpe.jsontree.ui.support.OutlineMinimapScrollMapper;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
+import com.davidpe.jsontree.ui.support.AsciiTreeSyntaxHighlighter;
+import com.davidpe.jsontree.ui.support.MarkdownTextSyntaxHighlighter;
+import com.davidpe.jsontree.ui.support.RenderedMarkdownTextRenderer;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
+import com.davidpe.jsontree.ui.support.SearchTextSpanHighlighter;
 import com.davidpe.jsontree.ui.support.SearchHighlightRangeNormalizer;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderFragment;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanSearchOverlay;
 import java.lang.reflect.Field;
 import java.util.List;
@@ -93,11 +104,27 @@ class ZoomWindowControllerSearchTest {
   }
 
   private ZoomWindowController controller(ZoomViewerStateBridge bridge) {
+    ObjectMapper objectMapper = new ObjectMapper();
+    RawJsonPresentationService rawJsonPresentationService =
+        new RawJsonPresentationService(objectMapper, new BestEffortJsonPrettyPrinter());
     ZoomWindowController controller =
         new ZoomWindowController(
             new RichTextViewerFactory(),
             bridge,
             new RegexTextSearchService(),
+            new JsonCropViewService(
+                objectMapper,
+                new com.davidpe.jsontree.application.service.JsonSemanticSearchPathResolverService(objectMapper),
+                new com.davidpe.jsontree.infrastructure.rendering.JacksonAsciiTreeFormatter(objectMapper)),
+            rawJsonPresentationService,
+            new JsonBreadcrumbModelService(objectMapper, rawJsonPresentationService),
+            new JsonOutlineModelService(objectMapper),
+            new ViewerTextRenderPlanFactory(
+                new AsciiTreeSyntaxHighlighter(),
+                new SearchTextSpanHighlighter(),
+                new MarkdownTextSyntaxHighlighter(),
+                new RenderedMarkdownTextRenderer(),
+                new ViewerTextRenderPlanSearchOverlay(new SearchHighlightRangeNormalizer())),
             new ViewerTextRenderPlanSearchOverlay(new SearchHighlightRangeNormalizer()),
             new JsonBreadcrumbViewportResolver(),
             new OutlineMinimapLayoutPlanner(),
@@ -108,6 +135,7 @@ class ZoomWindowControllerSearchTest {
     setField(controller, "zoomTitleLabel", new Label());
     setField(controller, "zoomMetaLabel", new Label());
     setField(controller, "zoomSearchField", new TextField());
+    setField(controller, "zoomCropButton", new Button("Crop"));
     setField(controller, "zoomSearchPreviousButton", new Button("Previous"));
     setField(controller, "zoomSearchNextButton", new Button("Next"));
     setField(controller, "zoomSearchOccurrenceLabel", new Label());
@@ -133,6 +161,7 @@ class ZoomWindowControllerSearchTest {
         "ASCII tree",
         "sample.json",
         "1.0 KB • local import",
+        "{\"value\":\"alpha beta alpha\"}",
         ViewerTextRenderPlan.normal(
             List.of(new ViewerTextRenderFragment(text, "tree-default", "#2d333a", false, false))),
         "tree-content",

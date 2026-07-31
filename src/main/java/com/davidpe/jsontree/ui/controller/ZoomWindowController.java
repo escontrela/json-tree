@@ -1,9 +1,16 @@
 package com.davidpe.jsontree.ui.controller;
 
+import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
+import com.davidpe.jsontree.application.model.JsonCropDocument;
 import com.davidpe.jsontree.application.model.JsonOutlineModel;
 import com.davidpe.jsontree.application.model.JsonSearchExecutionResult;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
+import com.davidpe.jsontree.application.model.RawJsonPresentation;
+import com.davidpe.jsontree.application.service.JsonBreadcrumbModelService;
+import com.davidpe.jsontree.application.service.JsonCropViewService;
+import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.RegexTextSearchService;
+import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.davidpe.jsontree.ui.model.BreadcrumbViewerMode;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
@@ -19,8 +26,10 @@ import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanSearchOverlay;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -48,6 +57,11 @@ public class ZoomWindowController {
   private final RichTextViewerFactory richTextViewerFactory;
   private final ZoomViewerStateBridge zoomViewerStateBridge;
   private final RegexTextSearchService regexTextSearchService;
+  private final JsonCropViewService jsonCropViewService;
+  private final RawJsonPresentationService rawJsonPresentationService;
+  private final JsonBreadcrumbModelService breadcrumbModelService;
+  private final JsonOutlineModelService outlineModelService;
+  private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay;
   private final JsonBreadcrumbViewportResolver breadcrumbViewportResolver;
   private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
@@ -58,6 +72,12 @@ public class ZoomWindowController {
   private Runnable zoomSubscriptionRelease;
   private ZoomViewerSnapshot currentSnapshot;
   private JsonSearchSession searchSession;
+  private JsonCropDocument currentCropDocument;
+  private JsonBreadcrumbModel currentCropBreadcrumbModel = JsonBreadcrumbModel.unavailable();
+  private RawJsonPresentation currentRawPresentation = new RawJsonPresentation("", new int[] {0});
+  private boolean cropActive;
+  private String currentCropSourceIdentity;
+  private String currentCropQuery;
   private boolean breadcrumbRefreshPending;
   private boolean outlineViewportRefreshPending;
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
@@ -73,6 +93,8 @@ public class ZoomWindowController {
   @FXML private Label zoomMetaLabel;
 
   @FXML private TextField zoomSearchField;
+
+  @FXML private Button zoomCropButton;
 
   @FXML private Button zoomSearchPreviousButton;
 
@@ -108,6 +130,11 @@ public class ZoomWindowController {
       RichTextViewerFactory richTextViewerFactory,
       ZoomViewerStateBridge zoomViewerStateBridge,
       RegexTextSearchService regexTextSearchService,
+      JsonCropViewService jsonCropViewService,
+      RawJsonPresentationService rawJsonPresentationService,
+      JsonBreadcrumbModelService breadcrumbModelService,
+      JsonOutlineModelService outlineModelService,
+      ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
       ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay,
       JsonBreadcrumbViewportResolver breadcrumbViewportResolver,
       OutlineMinimapLayoutPlanner outlineLayoutPlanner,
@@ -116,6 +143,11 @@ public class ZoomWindowController {
     this.richTextViewerFactory = richTextViewerFactory;
     this.zoomViewerStateBridge = zoomViewerStateBridge;
     this.regexTextSearchService = regexTextSearchService;
+    this.jsonCropViewService = jsonCropViewService;
+    this.rawJsonPresentationService = rawJsonPresentationService;
+    this.breadcrumbModelService = breadcrumbModelService;
+    this.outlineModelService = outlineModelService;
+    this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
     this.renderPlanSearchOverlay = renderPlanSearchOverlay;
     this.breadcrumbViewportResolver = breadcrumbViewportResolver;
     this.outlineLayoutPlanner = outlineLayoutPlanner;
@@ -137,6 +169,7 @@ public class ZoomWindowController {
     zoomOutlinePreviewShell.heightProperty().addListener((unused, oldValue, newValue) -> resizeOutlineCanvas());
     zoomOutlinePreviewShell.setOnMouseClicked(this::handleOutlineInteraction);
     syncSearchControls();
+    syncCropButtonState();
     showAwaitingDocument();
   }
 
@@ -147,8 +180,10 @@ public class ZoomWindowController {
 
   @FXML
   void executeSearch() {
+    String previousQuery = searchSession == null ? null : searchSession.query();
     String query = zoomSearchField.getText();
     if (query == null || query.trim().isEmpty()) {
+      deactivateCropView();
       clearSearchState();
       return;
     }
@@ -166,8 +201,32 @@ public class ZoomWindowController {
 
     hideSearchError();
     searchSession = result.session();
+    if (!Objects.equals(previousQuery, searchSession.query())) {
+      deactivateCropView();
+    }
     syncSearchControls();
     renderSearchAwareSnapshot();
+  }
+
+  @FXML
+  void toggleCropView() {
+    if (zoomCropButton.isDisable()) {
+      return;
+    }
+    if (cropActive) {
+      deactivateCropView();
+      renderBaseSnapshot();
+      return;
+    }
+    resolveCropDocument()
+        .ifPresent(
+            cropDocument -> {
+              cropActive = true;
+              currentCropDocument = cropDocument;
+              currentCropSourceIdentity = snapshotSourceIdentity();
+              currentCropQuery = searchSession == null ? null : searchSession.query();
+              renderBaseSnapshot();
+            });
   }
 
   @FXML
@@ -194,6 +253,7 @@ public class ZoomWindowController {
   }
 
   public void showAwaitingDocument() {
+    deactivateCropView();
     presentSnapshot(
         ZoomViewerSnapshot.empty(
             "JSON -> TREE • Zoom",
@@ -239,6 +299,7 @@ public class ZoomWindowController {
       return;
     }
 
+    deactivateCropView();
     currentSnapshot = snapshot;
     currentOutlineModel = snapshot.outlineModel() == null ? JsonOutlineModel.empty() : snapshot.outlineModel();
     zoomModeLabel.setText(snapshot.modeLabel());
@@ -299,6 +360,12 @@ public class ZoomWindowController {
     if (currentSnapshot == null || currentSnapshot.renderPlan() == null) {
       return;
     }
+    if (renderCropSnapshot()) {
+      return;
+    }
+    currentOutlineModel =
+        currentSnapshot.outlineModel() == null ? JsonOutlineModel.empty() : currentSnapshot.outlineModel();
+    restoreBaseModeLabel();
     richTextViewerSurface.showStyledText(
         currentSnapshot.renderPlan().fragments(), currentSnapshot.contentStyleClass());
     richTextViewerSurface.scrollToTop();
@@ -309,6 +376,12 @@ public class ZoomWindowController {
     if (currentSnapshot == null || currentSnapshot.renderPlan() == null) {
       return;
     }
+    if (renderCropSnapshot()) {
+      return;
+    }
+    currentOutlineModel =
+        currentSnapshot.outlineModel() == null ? JsonOutlineModel.empty() : currentSnapshot.outlineModel();
+    restoreBaseModeLabel();
 
     ViewerTextRenderPlan renderPlan =
         searchSession == null || !searchSession.hasMatches()
@@ -365,10 +438,121 @@ public class ZoomWindowController {
   }
 
   private void clearSearchState() {
+    deactivateCropView();
     searchSession = null;
     hideSearchError();
     syncSearchControls();
     renderBaseSnapshot();
+  }
+
+  private boolean renderCropSnapshot() {
+    if (!cropActive) {
+      return false;
+    }
+    if (!supportsCrop()) {
+      deactivateCropView();
+      return false;
+    }
+
+    return resolveCropDocument()
+        .map(
+            cropDocument -> {
+              showCropSnapshot(cropDocument);
+              return true;
+            })
+        .orElseGet(
+            () -> {
+              deactivateCropView();
+              return false;
+            });
+  }
+
+  private Optional<JsonCropDocument> resolveCropDocument() {
+    if (!supportsCrop() || searchSession == null) {
+      return Optional.empty();
+    }
+
+    String sourceIdentity = snapshotSourceIdentity();
+    if (currentCropDocument != null
+        && Objects.equals(currentCropSourceIdentity, sourceIdentity)
+        && Objects.equals(currentCropQuery, searchSession.query())) {
+      return Optional.of(currentCropDocument);
+    }
+
+    Optional<JsonCropDocument> cropDocument =
+        jsonCropViewService.buildFromQuery(currentSnapshot.sourceRawText(), searchSession.query());
+    currentCropDocument = cropDocument.orElse(null);
+    currentCropSourceIdentity = cropDocument.isPresent() ? sourceIdentity : null;
+    currentCropQuery = cropDocument.isPresent() ? searchSession.query() : null;
+    return cropDocument;
+  }
+
+  private void showCropSnapshot(JsonCropDocument cropDocument) {
+    currentCropBreadcrumbModel = breadcrumbModelService.buildFromRawJson(cropDocument.rawJson());
+    currentOutlineModel = outlineModelService.buildFromRawJson(cropDocument.rawJson());
+    zoomModeLabel.setText("Crop");
+    if (currentSnapshot.presentationMode() == ViewerPresentationMode.RAW_JSON) {
+      currentRawPresentation = rawJsonPresentationService.present(cropDocument.rawJson());
+      ViewerTextRenderPlan renderPlan =
+          viewerTextRenderPlanFactory.buildRawPlan(currentRawPresentation.content(), List.of());
+      richTextViewerSurface.showStyledText(renderPlan.fragments(), "raw-json-content");
+    } else {
+      currentRawPresentation = new RawJsonPresentation("", new int[] {0});
+      ViewerTextRenderPlan renderPlan =
+          viewerTextRenderPlanFactory.buildAsciiPlan(cropDocument.asciiTreeDocument(), List.of());
+      richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
+    }
+    showOutlineValidShell();
+    richTextViewerSurface.scrollToTop();
+    scheduleBreadcrumbRefresh();
+    scheduleOutlineViewportRefresh();
+  }
+
+  private boolean supportsCrop() {
+    return currentSnapshot != null
+        && currentSnapshot.renderable()
+        && !currentSnapshot.largePreview()
+        && !currentSnapshot.presentationMode().markdownMode()
+        && currentSnapshot.presentationMode() != ViewerPresentationMode.STRUCTURE
+        && !currentSnapshot.sourceRawText().isBlank()
+        && searchSession != null
+        && searchSession.hasMatches();
+  }
+
+  private void syncCropButtonState() {
+    boolean available = supportsCrop();
+    zoomCropButton.setDisable(!(available || cropActive));
+    zoomCropButton.setText(cropActive ? "Full view" : "Crop");
+  }
+
+  private void deactivateCropView() {
+    cropActive = false;
+    currentCropDocument = null;
+    currentCropBreadcrumbModel = JsonBreadcrumbModel.unavailable();
+    currentCropSourceIdentity = null;
+    currentCropQuery = null;
+    currentRawPresentation = new RawJsonPresentation("", new int[] {0});
+    syncCropButtonState();
+  }
+
+  private String snapshotSourceIdentity() {
+    if (currentSnapshot == null) {
+      return "zoom";
+    }
+    return currentSnapshot.windowTitle() + "::" + currentSnapshot.modeLabel();
+  }
+
+  private void restoreBaseModeLabel() {
+    if (currentSnapshot != null) {
+      zoomModeLabel.setText(currentSnapshot.modeLabel());
+    }
+  }
+
+  private JsonBreadcrumbModel activeBreadcrumbModel() {
+    if (cropActive) {
+      return currentCropBreadcrumbModel;
+    }
+    return currentSnapshot == null ? JsonBreadcrumbModel.unavailable() : currentSnapshot.breadcrumbModel();
   }
 
   private void syncSearchControls() {
@@ -376,6 +560,7 @@ public class ZoomWindowController {
       zoomSearchOccurrenceLabel.setText("Ready");
       zoomSearchPreviousButton.setDisable(true);
       zoomSearchNextButton.setDisable(true);
+      syncCropButtonState();
       return;
     }
     zoomSearchOccurrenceLabel.setText(
@@ -385,6 +570,7 @@ public class ZoomWindowController {
     boolean navigationEnabled = searchSession.totalMatches() > 1;
     zoomSearchPreviousButton.setDisable(!navigationEnabled);
     zoomSearchNextButton.setDisable(!navigationEnabled);
+    syncCropButtonState();
   }
 
   private void showSearchError(String errorMessage) {
@@ -431,18 +617,19 @@ public class ZoomWindowController {
   }
 
   private void refreshBreadcrumb() {
+    JsonBreadcrumbModel breadcrumbModel = activeBreadcrumbModel();
     if (currentSnapshot == null
         || !currentSnapshot.renderable()
         || currentSnapshot.largePreview()
-        || currentSnapshot.breadcrumbModel() == null
-        || !currentSnapshot.breadcrumbModel().available()) {
+        || breadcrumbModel == null
+        || !breadcrumbModel.available()) {
       hideZoomBreadcrumb();
       return;
     }
 
     breadcrumbViewportResolver
         .resolve(
-            currentSnapshot.breadcrumbModel(),
+            breadcrumbModel,
             breadcrumbViewerMode(currentSnapshot.presentationMode()),
             richTextViewerSurface.firstVisibleParagraphIndex())
         .map(com.davidpe.jsontree.application.model.JsonBreadcrumbPath::displayLabel)

@@ -14,6 +14,7 @@ public class ZoomViewerSnapshotFactory {
   public ZoomViewerSnapshot renderable(
       JsonViewerLoadResult result,
       String modeLabel,
+      String sourceRawText,
       ViewerTextRenderPlan renderPlan,
       String contentStyleClass,
       String fileMeta,
@@ -27,6 +28,7 @@ public class ZoomViewerSnapshotFactory {
         modeLabel,
         result.importResult().fileName(),
         fileMeta,
+        sourceRawText,
         renderPlan,
         contentStyleClass,
         presentationMode,

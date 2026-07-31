@@ -175,6 +175,15 @@
 - The active-search strip shows `current / total` when matches exist and disables navigation controls coherently for zero or one occurrence.
 - Moving between matches rerenders the current viewer and scrolls the active highlighted fragment into view; clearing the session hides the strip and restores the viewer to its unhighlighted state.
 
+## Search-Driven Crop View
+
+- Full JSON documents now expose a `Crop` toggle in both the main viewer and the zoom window whenever there is an active regex search with matches.
+- Crop never slices rendered text. Instead, it resolves the active regex query against semantic JSON paths, builds an ephemeral reduced JSON snapshot in memory, and rerenders that derived document through the shared raw and ASCII viewer pipeline.
+- Matching a property name keeps that whole property branch downward, while matching a scalar value keeps the minimal branch needed to reach that value. Shared ancestors are merged without duplicate branches.
+- Array crops preserve only the matched elements in source order and compact them into a valid JSON array for the derived view.
+- Crop is intentionally unavailable for Markdown, `LARGE_PREVIEW`, and `Structure`, and it never modifies or persists the underlying source or history snapshot.
+- Clearing search, changing the active regex query, loading another document, or moving from the main viewer into zoom resets crop automatically so stale derived views cannot leak across contexts.
+
 ## RichTextFX Viewer Runtime
 
 - The main viewer now uses one shared read-only `RichTextFX` surface for ASCII tree, raw JSON, and large-preview chunk rendering instead of maintaining parallel `TextFlow` scene graphs.

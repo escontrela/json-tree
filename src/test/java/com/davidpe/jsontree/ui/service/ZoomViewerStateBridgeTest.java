@@ -88,6 +88,7 @@ class ZoomViewerStateBridgeTest {
         modeLabel,
         fileName,
         "1.0 KB • local import",
+        "{\"id\":1}",
         ViewerTextRenderPlan.normal(
             List.of(
                 new ViewerTextRenderFragment(
