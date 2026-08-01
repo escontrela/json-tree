@@ -62,12 +62,13 @@ import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
-import com.davidpe.jsontree.ui.support.SearchPanelDragSupport;
+import com.davidpe.jsontree.ui.controls.search.controller.SearchPanelController;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelDragSupport;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
-import com.davidpe.jsontree.ui.support.SearchPanelPositioner;
-import com.davidpe.jsontree.ui.support.SearchPanelViewFactory;
-import com.davidpe.jsontree.ui.support.SearchPanelViewStateResolver;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelPositioner;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewFactory;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewStateResolver;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import com.davidpe.jsontree.ui.support.ViewerPresentationModeResolver;
@@ -114,6 +115,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Window;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -245,6 +247,7 @@ public class MainWindowController implements UiScreenController {
         uiFlowManager);
   }
 
+  @Autowired
   public MainWindowController(
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
       ImportDroppedFileUseCase importDroppedFileUseCase,

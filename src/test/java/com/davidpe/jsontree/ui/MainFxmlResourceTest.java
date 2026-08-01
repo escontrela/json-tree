@@ -46,7 +46,7 @@ class MainFxmlResourceTest {
     @DisplayName("search panel FXML resource is present on the classpath")
     void searchPanelFxmlResourceIsPresentOnTheClasspath() {
         assertNotNull(
-                MainFxmlResourceTest.class.getResource("/com/davidpe/jsontree/ui/search-panel.fxml")
+                MainFxmlResourceTest.class.getResource("/com/davidpe/jsontree/ui/controls/search/search-panel.fxml")
         );
     }
 
@@ -71,7 +71,7 @@ class MainFxmlResourceTest {
     @Test
     @DisplayName("search panel FXML imports every referenced JavaFX type")
     void searchPanelFxmlImportsEveryReferencedJavaFxType() throws IOException {
-        assertReferencedTypesAreImported("/com/davidpe/jsontree/ui/search-panel.fxml");
+        assertReferencedTypesAreImported("/com/davidpe/jsontree/ui/controls/search/search-panel.fxml");
     }
 
     @Test

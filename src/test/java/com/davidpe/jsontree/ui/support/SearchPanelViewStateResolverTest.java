@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonSearchMatch;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelMessageTone;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelViewState;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewStateResolver;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 

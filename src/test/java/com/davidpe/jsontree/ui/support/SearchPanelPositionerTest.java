@@ -3,6 +3,8 @@ package com.davidpe.jsontree.ui.support;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelPosition;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelPositioner;
 import org.junit.jupiter.api.Test;
 
 class SearchPanelPositionerTest {

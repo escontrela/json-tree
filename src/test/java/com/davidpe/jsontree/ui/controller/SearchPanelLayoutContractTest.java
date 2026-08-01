@@ -13,7 +13,7 @@ class SearchPanelLayoutContractTest {
     String fxml =
         new String(
             SearchPanelLayoutContractTest.class
-                .getResourceAsStream("/com/davidpe/jsontree/ui/search-panel.fxml")
+                .getResourceAsStream("/com/davidpe/jsontree/ui/controls/search/search-panel.fxml")
                 .readAllBytes(),
             StandardCharsets.UTF_8);
 
