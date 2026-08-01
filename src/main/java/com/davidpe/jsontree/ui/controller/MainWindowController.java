@@ -412,7 +412,7 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Button copyTreeButton;
 
-  @FXML private Button outlineToggleButton;
+  @FXML private ToolbarIconButton outlineToggleButton;
 
   @FXML private ToolbarIconButton zoomButton;
 
@@ -2337,6 +2337,9 @@ public class MainWindowController implements UiScreenController {
   private void setOutlinePanelVisible(boolean visible) {
     outlineVBox.setVisible(visible);
     outlineVBox.setManaged(visible);
+    if (outlineToggleButton != null) {
+      outlineToggleButton.setSelected(visible);
+    }
     if (!visible) {
       hideOutlineViewportMarker();
     }

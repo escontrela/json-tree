@@ -22,5 +22,10 @@ class MainWindowToolbarCleanupTest {
     assertFalse(fxml.contains("text=\"Density\""));
     assertTrue(fxml.contains("fx:id=\"zoomButton\""));
     assertTrue(fxml.contains("fx:id=\"outlineToggleButton\""));
+    assertTrue(fxml.contains("<ToolbarIconButton fx:id=\"outlineToggleButton\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/outline_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png\""));
+    assertTrue(fxml.contains("toggleMode=\"true\""));
+    assertTrue(fxml.contains("tooltipText=\"Toggle outline panel\""));
   }
 }

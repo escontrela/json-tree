@@ -119,7 +119,14 @@
                                                lightIconResource="/com/davidpe/jsontree/images/zoom_35dp_000000.png"
                                                onAction="#openZoomViewer"
                                                tooltipText="Open zoom viewer" />
-                            <Button fx:id="outlineToggleButton" mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
+                            <ToolbarIconButton fx:id="outlineToggleButton"
+                                               accessibleText="Toggle outline panel"
+                                               darkIconResource="/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png"
+                                               lightIconResource="/com/davidpe/jsontree/images/outline_35dp_000000.png"
+                                               onAction="#toggleOutline"
+                                               selected="true"
+                                               toggleMode="true"
+                                               tooltipText="Toggle outline panel" />
                         </HBox>
                         <Label fx:id="breadcrumbLabel" managed="false" styleClass="viewer-toolbar-breadcrumb" visible="false" wrapText="true" />
                     </VBox>
