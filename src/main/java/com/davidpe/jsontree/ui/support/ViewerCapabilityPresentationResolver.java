@@ -40,7 +40,7 @@ public class ViewerCapabilityPresentationResolver {
       return new ViewerCapabilityPresentation(
           true,
           false,
-          rawMarkdownMode && result.capabilities().searchAvailable(),
+          result.capabilities().searchAvailable(),
           result.capabilities().outlineAvailable(),
           rawMarkdownMode ? "Copy raw" : "Copy markdown",
           "Markdown",
@@ -56,7 +56,7 @@ public class ViewerCapabilityPresentationResolver {
           "The Markdown outline follows heading anchors when available and falls back to source segments otherwise.",
           rawMarkdownMode
               ? "Markdown raw mode keeps regex search aligned with the exact source while Structure stays unavailable."
-              : "Rendered Markdown keeps Structure unavailable and disables regex search so highlights do not drift away from the interpreted reading view.");
+              : "Rendered Markdown keeps Structure unavailable. Regex search remains available, but opening it switches the viewer to raw Markdown so highlights stay source-aligned.");
     }
 
     int renderedLines = result.hasRenderableTree() ? result.asciiTreeDocument().lineCount() : 0;

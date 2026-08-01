@@ -102,12 +102,13 @@ class ViewerCapabilityPresentationResolverTest {
 
     assertTrue(presentation.rawJsonEnabled());
     assertFalse(presentation.structureEnabled());
-    assertFalse(presentation.searchEnabled());
+    assertTrue(presentation.searchEnabled());
     assertTrue(presentation.outlineEnabled());
     assertEquals("Copy markdown", presentation.copyButtonText());
     assertEquals("Markdown", presentation.validationBadgeText());
     assertEquals("MARKDOWN", presentation.statusState());
     assertTrue(presentation.footerStatus().contains("reading view"));
+    assertTrue(presentation.outlineMetaMessage().contains("switches the viewer to raw Markdown"));
   }
 
   @Test

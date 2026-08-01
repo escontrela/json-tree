@@ -1763,6 +1763,7 @@ public class MainWindowController implements UiScreenController {
     if (searchButton.isDisable() || searchPanelController == null) {
       return;
     }
+    normalizeSearchPresentationIfNeeded();
     pendingSearchPanelErrorText = null;
     pendingSearchPanelQuery =
         searchWorkflowService.currentSession().map(JsonSearchSession::query).orElseGet(this::searchPanelQueryText);
@@ -1856,6 +1857,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void acceptSearchQuery(String queryText) {
+    normalizeSearchPresentationIfNeeded();
     String previousQuery =
         searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(null);
     pendingSearchPanelQuery = queryText == null ? "" : queryText;
@@ -2370,7 +2372,10 @@ public class MainWindowController implements UiScreenController {
         .currentSession()
         .ifPresentOrElse(
             session -> searchPanelController.applyState(searchPanelViewStateResolver.active(true, session)),
-            () -> searchPanelController.applyState(searchPanelViewStateResolver.idle(true, searchPanelQueryText())));
+            () ->
+                searchPanelController.applyState(
+                    searchPanelViewStateResolver.idle(
+                        true, searchPanelQueryText(), currentSearchIdleMessage())));
   }
 
   private String searchPanelQueryText() {
@@ -2378,6 +2383,48 @@ public class MainWindowController implements UiScreenController {
       return searchPanelController.queryText();
     }
     return pendingSearchPanelQuery == null ? "" : pendingSearchPanelQuery;
+  }
+
+  private void normalizeSearchPresentationIfNeeded() {
+    workflowService
+        .currentView()
+        .filter(result -> result.validationResult().status() == JsonValidationStatus.VALID)
+        .filter(this::shouldNormalizeSearchToRawMarkdown)
+        .ifPresent(unused -> switchPresentationMode(ViewerPresentationMode.RAW_MARKDOWN));
+  }
+
+  private boolean shouldNormalizeSearchToRawMarkdown(JsonViewerLoadResult result) {
+    return result.markdownDocument()
+        && !result.usesLargePreview()
+        && effectivePresentationMode(result) == ViewerPresentationMode.MARKDOWN_RENDERED;
+  }
+
+  private boolean shouldClearSearchForRenderedMarkdown(
+      JsonViewerLoadResult result, ViewerPresentationMode targetMode) {
+    return result.markdownDocument() && targetMode == ViewerPresentationMode.MARKDOWN_RENDERED;
+  }
+
+  private String currentSearchIdleMessage() {
+    return workflowService
+        .currentView()
+        .map(
+            result -> {
+              if (result.markdownDocument()) {
+                return effectivePresentationMode(result) == ViewerPresentationMode.MARKDOWN_RENDERED
+                    ? "Regex search switches rendered Markdown into raw source mode so highlights stay source-aligned."
+                    : "Regex search runs against the exact Markdown source. Literal fallback is disabled.";
+              }
+              return "Java regular expression search. Literal fallback is disabled.";
+            })
+        .orElse("Java regular expression search. Literal fallback is disabled.");
+  }
+
+  private void clearSearchPanelState(boolean visible) {
+    searchWorkflowService.clear();
+    hideSearchPanel();
+    pendingSearchPanelQuery = "";
+    pendingSearchPanelErrorText = null;
+    refreshSearchPanelState(visible);
   }
 
   private void renderRawJsonContent(String rawJson) {
@@ -2519,14 +2566,13 @@ public class MainWindowController implements UiScreenController {
         .ifPresent(
             result -> {
               currentPresentationMode = normalizePresentationMode(targetMode, result);
+              if (shouldClearSearchForRenderedMarkdown(result, currentPresentationMode)) {
+                clearSearchPanelState(false);
+              }
               if (!capabilityPresentationResolver
                   .resolve(result, currentPresentationMode)
                   .searchEnabled()) {
-                searchWorkflowService.clear();
-                hideSearchPanel();
-                pendingSearchPanelQuery = "";
-                pendingSearchPanelErrorText = null;
-                refreshSearchPanelState(false);
+                clearSearchPanelState(false);
               }
               renderCurrentPresentation(result);
             });
