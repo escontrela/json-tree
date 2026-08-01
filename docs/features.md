@@ -62,6 +62,12 @@
 - The effect is centralized in a reusable UI presentation service so rapid state changes can cancel stale animations cleanly without leaving partial text behind.
 - The service is intentionally scoped to lightweight labels only and does not animate the ASCII viewer or raw JSON body.
 
+## Viewer Header And Text Scale
+
+- The main viewer toolbar now includes a dedicated font-size icon action that cycles the shared RichTextFX surface through default, `2x`, and `3x` text scale without introducing a second renderer or changing persistence rules.
+- The current text-scale step stays session-local and is exposed through the icon tooltip and accessibility text so the user can understand the active size before the next cycle.
+- The main viewer header no longer keeps a stale `Structured developer output` title. It now resolves the active presentation copy for ASCII tree, Structure, rendered Markdown, raw JSON or Markdown, crop-derived views, and non-renderable states.
+
 ## Zoom Viewer Window
 
 - The main workspace now exposes a dedicated `Zoom` action in the viewer toolbar, enabled only when a renderable JSON presentation is on screen.
