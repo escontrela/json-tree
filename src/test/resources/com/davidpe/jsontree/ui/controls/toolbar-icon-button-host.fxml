@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton?>
+<?import javafx.scene.layout.HBox?>
+
+<HBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" spacing="8.0">
+    <children>
+        <ToolbarIconButton fx:id="toolbarIconButton"
+                           accessibleText="Zoom viewer"
+                           darkIconResource="/com/davidpe/jsontree/images/zoom_35dp_FFFFFF.png"
+                           disable="true"
+                           lightIconResource="/com/davidpe/jsontree/images/zoom_35dp_000000.png"
+                           tooltipText="Zoom viewer" />
+    </children>
+</HBox>
