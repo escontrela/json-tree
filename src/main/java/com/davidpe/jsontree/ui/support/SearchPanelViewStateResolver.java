@@ -48,8 +48,8 @@ public class SearchPanelViewStateResolver {
         formatOccurrence(session),
         hasMatches
             ? "Search session active in the current viewer."
-            : "No matches found in the current viewer.",
-        hasMatches ? SearchPanelMessageTone.ACCENT : SearchPanelMessageTone.MUTED,
+            : "Valid regex, but no matches were found in the current viewer.",
+        SearchPanelMessageTone.ACCENT,
         true,
         hasMultipleMatches,
         hasMultipleMatches,
