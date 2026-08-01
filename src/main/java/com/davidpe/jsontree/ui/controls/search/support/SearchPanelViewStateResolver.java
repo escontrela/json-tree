@@ -16,11 +16,18 @@ public class SearchPanelViewStateResolver {
   }
 
   public SearchPanelViewState idle(boolean visible, String queryText) {
+    return idle(
+        visible,
+        queryText,
+        "Java regular expression search. Literal fallback is disabled.");
+  }
+
+  public SearchPanelViewState idle(boolean visible, String queryText, String helperText) {
     return new SearchPanelViewState(
         visible,
         safeQuery(queryText),
         "Ready",
-        "Use a Java regular expression to search the current viewer.",
+        safeHelper(helperText),
         SearchPanelMessageTone.MUTED,
         true,
         false,
@@ -65,7 +72,7 @@ public class SearchPanelViewStateResolver {
     if (!session.hasMatches()) {
       return "0 matches";
     }
-    return (session.activeMatchIndex() + 1) + " / " + session.totalMatches();
+    return (session.activeMatchIndex() + 1) + " of " + session.totalMatches();
   }
 
   private String safeQuery(String queryText) {
@@ -76,5 +83,11 @@ public class SearchPanelViewStateResolver {
     return (errorText == null || errorText.isBlank())
         ? "The current regular expression is not valid."
         : errorText;
+  }
+
+  private String safeHelper(String helperText) {
+    return (helperText == null || helperText.isBlank())
+        ? "Java regular expression search. Literal fallback is disabled."
+        : helperText;
   }
 }

@@ -19,6 +19,7 @@ class SearchPanelLayoutContractTest {
 
     assertTrue(fxml.contains("fx:id=\"searchPanelDragHandle\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelQueryField\""));
+    assertTrue(fxml.contains("promptText=\"Regex search (Java Pattern)\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelPreviousButton\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelNextButton\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelClearButton\""));

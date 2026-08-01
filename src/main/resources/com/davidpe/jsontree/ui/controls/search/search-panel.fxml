@@ -20,8 +20,8 @@
         </HBox>
         <Button mnemonicParsing="false" onAction="#closePanel" styleClass="ghost-button search-panel-close-button" text="Close" />
     </HBox>
-    <TextField fx:id="searchPanelQueryField" onAction="#submitSearch" promptText="Example: David|admin" />
-    <Label fx:id="searchPanelHelperLabel" styleClass="search-panel-helper search-panel-helper-muted" text="Use a Java regular expression to search the current viewer." wrapText="true" />
+    <TextField fx:id="searchPanelQueryField" onAction="#submitSearch" promptText="Regex search (Java Pattern)" />
+    <Label fx:id="searchPanelHelperLabel" styleClass="search-panel-helper search-panel-helper-muted" text="Java regular expression search. Literal fallback is disabled." wrapText="true" />
     <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="search-panel-actions">
         <Button fx:id="searchPanelPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousResult" styleClass="ghost-button search-panel-action-button" text="Prev" />
         <Button fx:id="searchPanelNextButton" disable="true" mnemonicParsing="false" onAction="#showNextResult" styleClass="ghost-button search-panel-action-button" text="Next" />

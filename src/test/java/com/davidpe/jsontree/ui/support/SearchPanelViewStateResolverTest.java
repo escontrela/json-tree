@@ -25,6 +25,14 @@ class SearchPanelViewStateResolverTest {
   }
 
   @Test
+  void keepsTheRegexOnlyIdleContractVisible() {
+    SearchPanelViewState state = resolver.idle(true, "user.*", "Java regular expression search. Literal fallback is disabled.");
+
+    assertEquals("Java regular expression search. Literal fallback is disabled.", state.helperText());
+    assertEquals(SearchPanelMessageTone.MUTED, state.helperTone());
+  }
+
+  @Test
   void returnsErrorStateForInvalidRegexFeedback() {
     SearchPanelViewState state = resolver.invalid(true, "foo(", "Dangling group");
 
@@ -48,7 +56,7 @@ class SearchPanelViewStateResolverTest {
     SearchPanelViewState state = resolver.active(true, session);
 
     assertEquals("admin", state.queryText());
-    assertEquals("2 / 2", state.occurrenceText());
+    assertEquals("2 of 2", state.occurrenceText());
     assertTrue(state.previousEnabled());
     assertTrue(state.nextEnabled());
     assertEquals(SearchPanelMessageTone.ACCENT, state.helperTone());
