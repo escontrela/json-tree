@@ -3,6 +3,7 @@ package com.davidpe.jsontree.ui.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.davidpe.jsontree.application.model.JsonInspectionMode;
+import com.davidpe.jsontree.application.model.JsonBreadcrumbModel;
 import com.davidpe.jsontree.application.model.JsonViewerCapabilities;
 import com.davidpe.jsontree.application.model.JsonViewerLoadResult;
 import com.davidpe.jsontree.application.service.JsonViewerWorkflowService;
@@ -16,6 +17,10 @@ import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
 import com.davidpe.jsontree.ui.support.ZoomViewerSnapshotFactory;
+import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
+import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
+import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
+import java.util.List;
 import java.nio.file.Path;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -63,6 +68,7 @@ class MainWindowZoomActionTest {
     controller.openZoomViewer();
 
     assertEquals(0, coordinator.openCount());
+    assertEquals(null, coordinator.lastSnapshot());
   }
 
   @Test
@@ -108,6 +114,67 @@ class MainWindowZoomActionTest {
     assertEquals(1, coordinator.openCount());
   }
 
+  @Test
+  void republishesTheLatestRenderableZoomSnapshotBeforeOpeningZoom() {
+    RecordingZoomWindowCoordinator coordinator = new RecordingZoomWindowCoordinator();
+    ZoomViewerStateBridge bridge = new ZoomViewerStateBridge();
+    MainWindowController controller =
+        new MainWindowController(
+            null,
+            null,
+            null,
+            new StaticWorkflowService(Optional.of(renderableResult())),
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new TypewriterLabelRevealService(),
+            null,
+            new ZoomActionAvailabilityResolver(),
+            coordinator,
+            bridge,
+            new ZoomViewerSnapshotFactory(),
+            null);
+
+    ZoomViewerSnapshot snapshot =
+        ZoomViewerSnapshot.renderable(
+            false,
+            "JSON -> TREE • Zoom • sample.json",
+            "ASCII tree",
+            "sample.json",
+            "1.0 KB • local import",
+            "root",
+            ViewerTextRenderPlan.normal(List.of()),
+            "tree-content",
+            ViewerPresentationMode.ASCII_TREE,
+            JsonBreadcrumbModel.unavailable(),
+            com.davidpe.jsontree.application.model.JsonOutlineModel.empty());
+    setField(controller, "currentZoomSnapshot", snapshot);
+
+    controller.openZoomViewer();
+
+    assertEquals(snapshot, bridge.currentSnapshot());
+    assertEquals(1, coordinator.openCount());
+    assertEquals(snapshot, coordinator.lastSnapshot());
+  }
+
   private JsonViewerLoadResult renderableResult() {
     return new JsonViewerLoadResult(
         new JsonImportResult(
@@ -144,14 +211,30 @@ class MainWindowZoomActionTest {
   private static final class RecordingZoomWindowCoordinator implements ZoomWindowCoordinator {
 
     private int openCount;
+    private ZoomViewerSnapshot lastSnapshot;
 
     @Override
-    public void openOrFocus() {
+    public void openOrFocus(ZoomViewerSnapshot initialSnapshot) {
       openCount++;
+      lastSnapshot = initialSnapshot;
     }
 
     private int openCount() {
       return openCount;
+    }
+
+    private ZoomViewerSnapshot lastSnapshot() {
+      return lastSnapshot;
+    }
+  }
+
+  private static void setField(Object target, String fieldName, Object value) {
+    try {
+      java.lang.reflect.Field field = target.getClass().getDeclaredField(fieldName);
+      field.setAccessible(true);
+      field.set(target, value);
+    } catch (ReflectiveOperationException exception) {
+      throw new AssertionError(exception);
     }
   }
 }

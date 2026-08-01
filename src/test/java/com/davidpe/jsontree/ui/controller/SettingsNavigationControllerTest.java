@@ -10,6 +10,7 @@ import com.davidpe.jsontree.application.service.ProcessMemoryReferenceService;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenFactory;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
+import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.service.ApplicationThemeService;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
@@ -172,6 +173,6 @@ class SettingsNavigationControllerTest {
   private static final class NoOpZoomWindowCoordinator implements ZoomWindowCoordinator {
 
     @Override
-    public void openOrFocus() {}
+    public void openOrFocus(ZoomViewerSnapshot initialSnapshot) {}
   }
 }

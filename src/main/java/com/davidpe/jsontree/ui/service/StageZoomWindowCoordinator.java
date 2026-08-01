@@ -1,5 +1,6 @@
 package com.davidpe.jsontree.ui.service;
 
+import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.window.ZoomWindowView;
 import com.davidpe.jsontree.ui.window.ZoomWindowViewFactory;
 import com.davidpe.jsontree.ui.support.ZoomWindowPlacementResolver;
@@ -24,6 +25,7 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
   private final String applicationTitle;
 
   private Stage zoomStage;
+  private ZoomWindowView zoomWindowView;
 
   public StageZoomWindowCoordinator(
       ObjectProvider<Stage> primaryStageProvider,
@@ -37,8 +39,9 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
   }
 
   @Override
-  public void openOrFocus() {
+  public void openOrFocus(ZoomViewerSnapshot initialSnapshot) {
     Stage stage = prepareStage();
+    applyInitialSnapshot(initialSnapshot);
     if (stage.isShowing()) {
       stage.toFront();
       stage.requestFocus();
@@ -58,7 +61,7 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
       return zoomStage;
     }
 
-    ZoomWindowView view = zoomWindowViewFactory.create();
+    zoomWindowView = zoomWindowViewFactory.create();
     Stage stage = new Stage();
     Stage primaryStage = primaryStageProvider.getIfAvailable();
     if (primaryStage != null) {
@@ -71,15 +74,22 @@ public class StageZoomWindowCoordinator implements ZoomWindowCoordinator {
     stage.setHeight(INITIAL_HEIGHT);
     stage.setMinWidth(860.0);
     stage.setMinHeight(560.0);
-    stage.setScene(new Scene(view.root(), INITIAL_WIDTH, INITIAL_HEIGHT));
+    stage.setScene(new Scene(zoomWindowView.root(), INITIAL_WIDTH, INITIAL_HEIGHT));
     stage.setOnShown(
         unused -> {
           centerRelativeToOwner(stage);
-          view.controller().activate();
+          zoomWindowView.controller().activate();
         });
-    stage.setOnHidden(unused -> view.controller().deactivate());
+    stage.setOnHidden(unused -> zoomWindowView.controller().deactivate());
     zoomStage = stage;
     return zoomStage;
+  }
+
+  private void applyInitialSnapshot(ZoomViewerSnapshot initialSnapshot) {
+    if (zoomWindowView == null) {
+      return;
+    }
+    zoomWindowView.controller().loadSnapshot(initialSnapshot);
   }
 
   private void centerRelativeToOwner(Stage stage) {

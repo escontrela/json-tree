@@ -66,7 +66,7 @@ class MainWindowCopyViewerContentTest {
         new TypewriterLabelRevealService(),
         null,
         new ZoomActionAvailabilityResolver(),
-        () -> {},
+        snapshot -> {},
         new ZoomViewerStateBridge(),
         new ZoomViewerSnapshotFactory(),
         null);

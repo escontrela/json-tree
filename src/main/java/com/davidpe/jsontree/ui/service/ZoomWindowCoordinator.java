@@ -1,5 +1,7 @@
 package com.davidpe.jsontree.ui.service;
 
+import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
+
 /**
  * Presentation-side coordination contract for the secondary zoom viewer window.
  *
@@ -8,5 +10,5 @@ package com.davidpe.jsontree.ui.service;
  */
 public interface ZoomWindowCoordinator {
 
-  void openOrFocus();
+  void openOrFocus(ZoomViewerSnapshot initialSnapshot);
 }

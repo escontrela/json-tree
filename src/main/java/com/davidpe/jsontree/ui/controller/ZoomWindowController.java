@@ -102,6 +102,8 @@ public class ZoomWindowController {
   private String pendingSearchPanelErrorText;
   private boolean searchNormalizedToRawMarkdown;
 
+  @FXML private StackPane zoomRoot;
+
   @FXML private BorderPane rootPane;
 
   @FXML private Label zoomModeLabel;
@@ -173,6 +175,7 @@ public class ZoomWindowController {
 
   @FXML
   public void initialize() {
+    zoomRoot.getProperties().put("controller", this);
     rootPane.getProperties().put("controller", this);
     richTextViewerSurface = richTextViewerFactory.create();
     zoomViewerHost.getChildren().setAll(richTextViewerSurface.view());
@@ -187,6 +190,14 @@ public class ZoomWindowController {
     zoomOutlinePreviewShell.setOnMouseClicked(this::handleOutlineInteraction);
     refreshSearchPanelState(false);
     showAwaitingDocument();
+  }
+
+  public void loadSnapshot(ZoomViewerSnapshot snapshot) {
+    if (snapshot == null) {
+      showAwaitingDocument();
+      return;
+    }
+    presentSnapshot(snapshot);
   }
 
   private void configureSearchPanel() {
@@ -658,6 +669,8 @@ public class ZoomWindowController {
     if (searchPanelController == null) {
       return;
     }
+    zoomOverlayPane.setManaged(visible);
+    zoomOverlayPane.setVisible(visible);
     if (!visible) {
       searchPanelController.applyState(searchPanelViewStateResolver.hidden());
       return;

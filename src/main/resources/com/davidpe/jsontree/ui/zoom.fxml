@@ -12,8 +12,8 @@
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.ZoomWindowController">
-    <BorderPane fx:id="rootPane" styleClass="app-shell zoom-window-shell" stylesheets="@styles.css">
+<StackPane fx:id="zoomRoot" styleClass="app-shell" stylesheets="@styles.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.davidpe.jsontree.ui.controller.ZoomWindowController">
+    <BorderPane fx:id="rootPane" styleClass="app-shell zoom-window-shell">
         <top>
             <VBox spacing="12.0" styleClass="workspace-header zoom-window-header">
                 <padding>

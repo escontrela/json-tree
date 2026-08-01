@@ -190,6 +190,7 @@ public class MainWindowController implements UiScreenController {
   private final ApplicationShortcutCatalog applicationShortcutCatalog =
       new ApplicationShortcutCatalog();
   private ViewerTextScaleStep viewerTextScaleStep = ViewerTextScaleStep.BASE;
+  private ZoomViewerSnapshot currentZoomSnapshot;
 
   public MainWindowController(
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
@@ -1896,7 +1897,12 @@ public class MainWindowController implements UiScreenController {
     if (cropWasActive) {
       refreshCurrentViewerContent();
     }
-    zoomWindowCoordinator.openOrFocus();
+    ZoomViewerSnapshot snapshot =
+        currentZoomSnapshot != null ? currentZoomSnapshot : zoomViewerStateBridge.currentSnapshot();
+    if (snapshot != null && snapshot.renderable()) {
+      zoomViewerStateBridge.publish(snapshot);
+    }
+    zoomWindowCoordinator.openOrFocus(snapshot);
   }
 
   private void acceptSearchQuery(String queryText) {
@@ -2403,6 +2409,8 @@ public class MainWindowController implements UiScreenController {
     if (searchPanelController == null) {
       return;
     }
+    workspaceOverlayPane.setManaged(visible);
+    workspaceOverlayPane.setVisible(visible);
     if (!visible) {
       searchPanelController.applyState(searchPanelViewStateResolver.hidden());
       return;
@@ -2562,6 +2570,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void publishZoomSnapshot(ZoomViewerSnapshot snapshot) {
+    currentZoomSnapshot = snapshot;
     zoomViewerStateBridge.publish(snapshot);
   }
 
