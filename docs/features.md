@@ -165,6 +165,7 @@
 - The entry panel lives inside the current JavaFX shell and includes a RegExp input plus accept and cancel actions.
 - The header layout now reserves a hidden compact strip area to the left of `Copy tree` so accepted searches can later promote into persistent controls without redistributing the top bar again.
 - The floating search panel now reuses the same theme-aware icon-control language as the main viewer toolbar for previous, next, clear, close, and apply actions, using normalized short asset names instead of the verbose Material-export filenames.
+- The same reusable floating search panel now also hosts the `Crop` or `Full view` affordance when the current document supports search-derived crop, so crop no longer appears as a standalone viewer-toolbar action.
 
 ## Active Search Strip
 
@@ -192,12 +193,18 @@
 
 ## Search-Driven Crop View
 
-- Full JSON documents now expose a `Crop` toggle in both the main viewer and the zoom window whenever there is an active regex search with matches.
+- Full JSON documents now expose `Crop` through the reusable search panel in both the main viewer and the zoom window whenever there is an active regex search with matches.
 - Crop never slices rendered text. Instead, it resolves the active regex query against semantic JSON paths, builds an ephemeral reduced JSON snapshot in memory, and rerenders that derived document through the shared raw and ASCII viewer pipeline.
 - Matching a property name keeps that whole property branch downward, while matching a scalar value keeps the minimal branch needed to reach that value. Shared ancestors are merged without duplicate branches.
 - Array crops preserve only the matched elements in source order and compact them into a valid JSON array for the derived view.
 - Crop is intentionally unavailable for Markdown, `LARGE_PREVIEW`, and `Structure`, and it never modifies or persists the underlying source or history snapshot.
 - Clearing search, changing the active regex query, loading another document, or moving from the main viewer into zoom resets crop automatically so stale derived views cannot leak across contexts.
+
+## Search Parity Between Main And Zoom
+
+- The main floating search panel and the zoom search workflow now evaluate regex queries against the same source-aligned text contract instead of letting zoom search over already-rendered fragments.
+- Zoom no longer keeps its own bespoke search strip. It now opens the same reusable floating search panel family, with equivalent submit, previous, next, clear, close, helper messaging, and crop affordances when the host document supports them.
+- Rendered Markdown search stays explicit in both places: opening search normalizes the zoom or main viewer into raw-source search semantics so highlights and match counts stay truthful instead of depending on rendered copy.
 
 ## RichTextFX Viewer Runtime
 
