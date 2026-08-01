@@ -11,5 +11,12 @@
                            disable="true"
                            lightIconResource="/com/davidpe/jsontree/images/zoom_35dp_000000.png"
                            tooltipText="Zoom viewer" />
+        <ToolbarIconButton fx:id="toolbarToggleIconButton"
+                           accessibleText="Outline panel"
+                           darkIconResource="/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png"
+                           lightIconResource="/com/davidpe/jsontree/images/outline_35dp_000000.png"
+                           selected="true"
+                           toggleMode="true"
+                           tooltipText="Toggle outline panel" />
     </children>
 </HBox>

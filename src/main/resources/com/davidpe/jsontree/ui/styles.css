@@ -746,6 +746,35 @@
     -fx-border-color: #1c69d4;
 }
 
+.toolbar-icon-button {
+    -fx-alignment: center;
+    -fx-padding: 0;
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d8dde3;
+    -fx-border-width: 1;
+    -fx-border-radius: 14;
+    -fx-background-radius: 14;
+}
+
+.toolbar-icon-button:hover {
+    -fx-background-color: #f4f7fb;
+    -fx-border-color: #c3d3e8;
+}
+
+.toolbar-icon-button:pressed {
+    -fx-background-color: #eaf1fa;
+    -fx-border-color: #8eb5e8;
+}
+
+.toolbar-icon-button:disabled {
+    -fx-opacity: 0.46;
+}
+
+.toolbar-icon-button:toolbar-selected {
+    -fx-background-color: rgba(28, 105, 212, 0.10);
+    -fx-border-color: #1c69d4;
+}
+
 .text-field {
     -fx-background-color: #ffffff;
     -fx-border-color: #c7ced7;
@@ -1068,6 +1097,26 @@
 .night-mode .scroll-pane:focused,
 .night-mode .text-field:focused,
 .night-mode .outline-viewport-marker {
+    -fx-border-color: #6ba5f0;
+}
+
+.night-mode .toolbar-icon-button {
+    -fx-background-color: #1c2430;
+    -fx-border-color: #334151;
+}
+
+.night-mode .toolbar-icon-button:hover {
+    -fx-background-color: #243243;
+    -fx-border-color: #5d8fd0;
+}
+
+.night-mode .toolbar-icon-button:pressed {
+    -fx-background-color: #2b3b4d;
+    -fx-border-color: #6ba5f0;
+}
+
+.night-mode .toolbar-icon-button:toolbar-selected {
+    -fx-background-color: rgba(107, 165, 240, 0.14);
     -fx-border-color: #6ba5f0;
 }
 

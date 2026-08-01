@@ -20,6 +20,10 @@ class ToolbarIconButtonContractTest {
     assertTrue(fxml.contains("tooltipText=\"Zoom viewer\""));
     assertTrue(fxml.contains("accessibleText=\"Zoom viewer\""));
     assertTrue(fxml.contains("disable=\"true\""));
+    assertTrue(fxml.contains("toggleMode=\"true\""));
+    assertTrue(fxml.contains("selected=\"true\""));
+    assertTrue(
+        fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png\""));
   }
 
   @Test
@@ -30,6 +34,12 @@ class ToolbarIconButtonContractTest {
     assertNotNull(
         ToolbarIconButtonContractTest.class.getResource(
             "/com/davidpe/jsontree/images/zoom_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/outline_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png"));
   }
 
   private static String readResource(String resourcePath) throws IOException {

@@ -3,6 +3,8 @@ import java.net.URL;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Parent;
@@ -12,6 +14,7 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.css.PseudoClass;
 
 /**
  * Reusable icon-only toolbar button with theme-aware PNG switching.
@@ -24,13 +27,18 @@ public class ToolbarIconButton extends Button {
   private static final String NIGHT_MODE_STYLE_CLASS = "night-mode";
   private static final double ICON_SIZE = 18.0;
   private static final Map<String, Image> IMAGE_CACHE = new ConcurrentHashMap<>();
+  private static final PseudoClass SELECTED_PSEUDO_CLASS =
+      PseudoClass.getPseudoClass("toolbar-selected");
 
   private final ImageView iconView = new ImageView();
+  private final ToolbarIconAssetResolver assetResolver = new ToolbarIconAssetResolver();
   private final StringProperty lightIconResource =
       new SimpleStringProperty(this, "lightIconResource", "");
   private final StringProperty darkIconResource =
       new SimpleStringProperty(this, "darkIconResource", "");
   private final StringProperty tooltipText = new SimpleStringProperty(this, "tooltipText", "");
+  private final BooleanProperty toggleMode = new SimpleBooleanProperty(this, "toggleMode", false);
+  private final BooleanProperty selected = new SimpleBooleanProperty(this, "selected", false);
   private final ListChangeListener<String> themeStyleClassListener = change -> refreshIcon();
 
   private Parent observedThemeRoot;
@@ -55,6 +63,9 @@ public class ToolbarIconButton extends Button {
     lightIconResource.addListener((unused, oldValue, newValue) -> refreshIcon());
     darkIconResource.addListener((unused, oldValue, newValue) -> refreshIcon());
     tooltipText.addListener((unused, oldValue, newValue) -> refreshTooltip(newValue));
+    selected.addListener(
+        (unused, oldValue, newValue) ->
+            pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, Boolean.TRUE.equals(newValue)));
     sceneProperty().addListener((unused, previousScene, nextScene) -> handleSceneChange(previousScene, nextScene));
   }
 
@@ -92,6 +103,41 @@ public class ToolbarIconButton extends Button {
 
   public final StringProperty tooltipTextProperty() {
     return tooltipText;
+  }
+
+  public final boolean isToggleMode() {
+    return toggleMode.get();
+  }
+
+  public final void setToggleMode(boolean toggleMode) {
+    this.toggleMode.set(toggleMode);
+  }
+
+  public final BooleanProperty toggleModeProperty() {
+    return toggleMode;
+  }
+
+  public final boolean isSelected() {
+    return selected.get();
+  }
+
+  public final void setSelected(boolean selected) {
+    this.selected.set(selected);
+  }
+
+  public final BooleanProperty selectedProperty() {
+    return selected;
+  }
+
+  @Override
+  public void fire() {
+    if (isDisabled()) {
+      return;
+    }
+    if (isToggleMode()) {
+      setSelected(!isSelected());
+    }
+    super.fire();
   }
 
   private void handleSceneChange(Scene previousScene, Scene nextScene) {
@@ -152,10 +198,10 @@ public class ToolbarIconButton extends Button {
   }
 
   private String resolveThemeResourcePath() {
-    if (isNightModeActive() && darkIconResource.get() != null && !darkIconResource.get().isBlank()) {
-      return darkIconResource.get();
-    }
-    return lightIconResource.get();
+    return assetResolver.resolve(
+        lightIconResource.get(),
+        darkIconResource.get(),
+        isNightModeActive());
   }
 
   private boolean isNightModeActive() {
