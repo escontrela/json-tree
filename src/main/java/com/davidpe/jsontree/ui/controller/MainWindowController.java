@@ -62,8 +62,12 @@ import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
+import com.davidpe.jsontree.ui.support.SearchPanelDragSupport;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
+import com.davidpe.jsontree.ui.support.SearchPanelPositioner;
+import com.davidpe.jsontree.ui.support.SearchPanelViewFactory;
+import com.davidpe.jsontree.ui.support.SearchPanelViewStateResolver;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
 import com.davidpe.jsontree.ui.support.ViewerPresentationModeResolver;
@@ -95,7 +99,6 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.input.DragEvent;
 import javafx.scene.input.Dragboard;
@@ -105,6 +108,7 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.input.TransferMode;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -154,6 +158,8 @@ public class MainWindowController implements UiScreenController {
   private final LargePreviewIndicatorResolver largePreviewIndicatorResolver;
   private final LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver;
   private final LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver;
+  private final SearchPanelViewFactory searchPanelViewFactory;
+  private final SearchPanelViewStateResolver searchPanelViewStateResolver;
   private final ViewerCapabilityPresentationResolver capabilityPresentationResolver;
   private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final RichTextViewerFactory richTextViewerFactory;
@@ -166,6 +172,8 @@ public class MainWindowController implements UiScreenController {
       new ViewerPresentationModeResolver();
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
+  private final SearchPanelDragSupport searchPanelDragSupport =
+      new SearchPanelDragSupport(new SearchPanelPositioner());
 
   public MainWindowController(
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
@@ -200,6 +208,78 @@ public class MainWindowController implements UiScreenController {
       ZoomViewerStateBridge zoomViewerStateBridge,
       ZoomViewerSnapshotFactory zoomViewerSnapshotFactory,
       @Lazy UiFlowManager uiFlowManager) {
+    this(
+        importClipboardJsonUseCase,
+        importDroppedFileUseCase,
+        importJsonUseCase,
+        workflowService,
+        breadcrumbModelService,
+        jsonCropViewService,
+        structureDocumentService,
+        outlineModelService,
+        markdownOutlineModelService,
+        breadcrumbViewportResolver,
+        outlineLayoutPlanner,
+        outlineScrollMapper,
+        outlineViewportProjector,
+        searchWorkflowService,
+        rawJsonPresentationService,
+        clipboardPort,
+        droppedJsonPathResolver,
+        searchMatchProjector,
+        clipboardImportShortcutSupport,
+        inlineHistoryPreviewStateResolver,
+        largePreviewIndicatorResolver,
+        largePreviewPageNavigationStateResolver,
+        largePreviewViewportNavigationResolver,
+        null,
+        null,
+        capabilityPresentationResolver,
+        viewerTextRenderPlanFactory,
+        typewriterLabelRevealService,
+        richTextViewerFactory,
+        zoomActionAvailabilityResolver,
+        zoomWindowCoordinator,
+        zoomViewerStateBridge,
+        zoomViewerSnapshotFactory,
+        uiFlowManager);
+  }
+
+  public MainWindowController(
+      ImportClipboardJsonUseCase importClipboardJsonUseCase,
+      ImportDroppedFileUseCase importDroppedFileUseCase,
+      ImportJsonUseCase importJsonUseCase,
+      JsonViewerWorkflowService workflowService,
+      JsonBreadcrumbModelService breadcrumbModelService,
+      JsonCropViewService jsonCropViewService,
+      JsonStructureDocumentService structureDocumentService,
+      JsonOutlineModelService outlineModelService,
+      MarkdownOutlineModelService markdownOutlineModelService,
+      JsonBreadcrumbViewportResolver breadcrumbViewportResolver,
+      OutlineMinimapLayoutPlanner outlineLayoutPlanner,
+      OutlineMinimapScrollMapper outlineScrollMapper,
+      OutlineViewportProjector outlineViewportProjector,
+      JsonSearchWorkflowService searchWorkflowService,
+      RawJsonPresentationService rawJsonPresentationService,
+      ClipboardPort clipboardPort,
+      DroppedJsonPathResolver droppedJsonPathResolver,
+      SearchMatchProjector searchMatchProjector,
+      ClipboardImportShortcutSupport clipboardImportShortcutSupport,
+      InlineHistoryPreviewStateResolver inlineHistoryPreviewStateResolver,
+      LargePreviewIndicatorResolver largePreviewIndicatorResolver,
+      LargePreviewPageNavigationStateResolver largePreviewPageNavigationStateResolver,
+      LargePreviewViewportNavigationResolver largePreviewViewportNavigationResolver,
+      SearchPanelViewFactory searchPanelViewFactory,
+      SearchPanelViewStateResolver searchPanelViewStateResolver,
+      ViewerCapabilityPresentationResolver capabilityPresentationResolver,
+      ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
+      TypewriterLabelRevealService typewriterLabelRevealService,
+      RichTextViewerFactory richTextViewerFactory,
+      ZoomActionAvailabilityResolver zoomActionAvailabilityResolver,
+      ZoomWindowCoordinator zoomWindowCoordinator,
+      ZoomViewerStateBridge zoomViewerStateBridge,
+      ZoomViewerSnapshotFactory zoomViewerSnapshotFactory,
+      @Lazy UiFlowManager uiFlowManager) {
     this.importClipboardJsonUseCase = importClipboardJsonUseCase;
     this.importDroppedFileUseCase = importDroppedFileUseCase;
     this.importJsonUseCase = importJsonUseCase;
@@ -223,6 +303,8 @@ public class MainWindowController implements UiScreenController {
     this.largePreviewIndicatorResolver = largePreviewIndicatorResolver;
     this.largePreviewPageNavigationStateResolver = largePreviewPageNavigationStateResolver;
     this.largePreviewViewportNavigationResolver = largePreviewViewportNavigationResolver;
+    this.searchPanelViewFactory = searchPanelViewFactory;
+    this.searchPanelViewStateResolver = searchPanelViewStateResolver;
     this.capabilityPresentationResolver = capabilityPresentationResolver;
     this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
     this.typewriterLabelRevealService = typewriterLabelRevealService;
@@ -252,11 +334,9 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Label emptyHistoryInlineLabel;
 
-  @FXML private HBox activeSearchStrip;
+  @FXML private StackPane workspaceOverlayShell;
 
-  @FXML private Label activeSearchQueryLabel;
-
-  @FXML private Label activeSearchOccurrenceLabel;
+  @FXML private Pane workspaceOverlayPane;
 
   @FXML private Label emptyStateLabel;
 
@@ -326,16 +406,6 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Button zoomButton;
 
-  @FXML private Button previousSearchButton;
-
-  @FXML private Button nextSearchButton;
-
-  @FXML private VBox searchModalCard;
-
-  @FXML private TextField searchQueryField;
-
-  @FXML private Label searchModalErrorLabel;
-
   @FXML private ListView<ImportedJsonFile> historyListView;
 
   @FXML private VBox outlineVBox;
@@ -381,6 +451,9 @@ public class MainWindowController implements UiScreenController {
   private PauseTransition largePreviewLoaderRevealTransition;
   private Timeline largePreviewLoaderAnimationTimeline;
   private long currentLargePreviewLoaderRequestSequence;
+  private SearchPanelController searchPanelController;
+  private String pendingSearchPanelQuery = "";
+  private String pendingSearchPanelErrorText;
 
   @FXML
   public void initialize() {
@@ -389,6 +462,7 @@ public class MainWindowController implements UiScreenController {
     viewerDocumentHost.setManaged(true);
     viewerDocumentHost.setVisible(true);
     viewerDocumentHost.getChildren().setAll(richTextViewerSurface.view());
+    configureSearchPanel();
     fileWarningIconLabel.setGraphic(LargePreviewWarningIconFactory.create(16.0));
     configureWindowMetricsLogging();
     rootPane.addEventFilter(KeyEvent.KEY_PRESSED, this::handleGlobalKeyPressed);
@@ -426,6 +500,26 @@ public class MainWindowController implements UiScreenController {
     configureOutlineShell();
     showEmptyViewer();
     refreshInlineHistory();
+  }
+
+  private void configureSearchPanel() {
+    if (searchPanelViewFactory == null) {
+      return;
+    }
+    var searchPanelView = searchPanelViewFactory.create();
+    searchPanelController = searchPanelView.controller();
+    searchPanelController.bindHandlers(
+        this::acceptSearchQuery,
+        this::showPreviousSearchResult,
+        this::showNextSearchResult,
+        this::clearSearchSession,
+        this::hideSearchPanel);
+    workspaceOverlayPane.getChildren().setAll(searchPanelView.root());
+    workspaceOverlayPane.setManaged(false);
+    workspaceOverlayPane.setVisible(false);
+    searchPanelDragSupport.attach(
+        workspaceOverlayPane, searchPanelController.root(), searchPanelController.dragHandle());
+    searchPanelController.applyState(searchPanelViewStateResolver.hidden());
   }
 
   private void configureLargePreviewLoadingAffordance() {
@@ -828,7 +922,7 @@ public class MainWindowController implements UiScreenController {
   @Override
   public void onShow() {
     refreshInlineHistory();
-    syncActiveSearchStrip();
+    refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
     restoreViewFromWorkflow();
   }
 
@@ -908,8 +1002,10 @@ public class MainWindowController implements UiScreenController {
                 + " surface."));
     viewerContentBox.autosize();
     searchWorkflowService.clear();
-    syncActiveSearchStrip();
-    hideSearchModal();
+    hideSearchPanel();
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery = "";
+    refreshSearchPanelState(false);
     resetPresentationState();
     applyState(ViewerVisualState.EMPTY);
     hideBreadcrumbLabel();
@@ -974,8 +1070,10 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     searchWorkflowService.clear();
-    syncActiveSearchStrip();
-    hideSearchModal();
+    hideSearchPanel();
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery = "";
+    refreshSearchPanelState(false);
     applyState(ViewerVisualState.LOADING);
     hideBreadcrumbLabel();
   }
@@ -1010,8 +1108,10 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(true);
     emptyStateLabel.setVisible(true);
     searchWorkflowService.clear();
-    syncActiveSearchStrip();
-    hideSearchModal();
+    hideSearchPanel();
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery = "";
+    refreshSearchPanelState(false);
     resetPresentationState();
     applyState(ViewerVisualState.INVALID);
     hideBreadcrumbLabel();
@@ -1114,7 +1214,7 @@ public class MainWindowController implements UiScreenController {
         event.isAltDown(),
         event.isShiftDown(),
         event.getTarget() instanceof TextInputControl,
-        searchModalCard.isVisible())) {
+        searchPanelController != null && searchPanelController.isEditingQuery())) {
       return;
     }
 
@@ -1237,20 +1337,29 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void presentLoadResult(JsonViewerLoadResult result) {
+    String incomingViewIdentity = currentViewIdentity(result);
+    boolean sourceChanged = !Objects.equals(currentViewIdentity, incomingViewIdentity);
     if (cropActive
         && currentCropSourceIdentity != null
-        && !currentCropSourceIdentity.equals(currentViewIdentity(result))) {
+        && !currentCropSourceIdentity.equals(incomingViewIdentity)) {
       deactivateCropView();
     }
     updateFileSummary(result);
-    searchWorkflowService.clearIfSourceChanged(currentViewIdentity(result));
+    searchWorkflowService.clearIfSourceChanged(incomingViewIdentity);
+    if (sourceChanged) {
+      hideSearchPanel();
+      pendingSearchPanelQuery = "";
+      pendingSearchPanelErrorText = null;
+    }
     if (!capabilityPresentationResolver
         .resolve(result, effectivePresentationMode(result))
         .searchEnabled()) {
       searchWorkflowService.clear();
-      hideSearchModal();
+      hideSearchPanel();
+      pendingSearchPanelQuery = "";
+      pendingSearchPanelErrorText = null;
     }
-    syncActiveSearchStrip();
+    refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
     syncStatusRail(result);
     refreshInlineHistory();
 
@@ -1647,80 +1756,52 @@ public class MainWindowController implements UiScreenController {
   }
 
   @FXML
-  void openSearchModal() {
-    if (searchButton.isDisable()) {
+  void openSearchPanel() {
+    if (searchButton.isDisable() || searchPanelController == null) {
       return;
     }
-    searchQueryField.setText(
-        searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(""));
-    searchModalErrorLabel.setManaged(false);
-    searchModalErrorLabel.setVisible(false);
-    searchModalErrorLabel.setText("");
-    searchModalCard.setManaged(true);
-    searchModalCard.setVisible(true);
-    Platform.runLater(
-        () -> {
-          searchQueryField.requestFocus();
-          searchQueryField.selectAll();
-        });
-  }
-
-  @FXML
-  void cancelSearchModal() {
-    hideSearchModal();
-  }
-
-  @FXML
-  void acceptSearchModal() {
-    String previousQuery =
-        searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(null);
-    JsonSearchExecutionResult result =
-        searchWorkflowService.activateSearch(
-            currentViewIdentity == null ? "current-view" : currentViewIdentity,
-            searchQueryField.getText());
-    if (!result.successful()) {
-      searchModalErrorLabel.setText(result.errorMessage());
-      searchModalErrorLabel.setManaged(true);
-      searchModalErrorLabel.setVisible(true);
-      return;
-    }
-
-    if (!Objects.equals(previousQuery, result.session().query())) {
-      deactivateCropView();
-    }
-    syncActiveSearchStrip();
-    hideSearchModal();
-    refreshCurrentViewerContent();
-    scrollToActiveSearchHighlight();
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery =
+        searchWorkflowService.currentSession().map(JsonSearchSession::query).orElseGet(this::searchPanelQueryText);
+    refreshSearchPanelState(true);
+    searchPanelController.revealAndFocus();
+    workspaceOverlayPane.setManaged(true);
+    workspaceOverlayPane.setVisible(true);
+    searchPanelDragSupport.ensureInitialPosition();
   }
 
   @FXML
   void clearSearchSession() {
     deactivateCropView();
     searchWorkflowService.clear();
-    syncActiveSearchStrip();
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery = "";
+    refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
     refreshCurrentViewerContent();
+    if (searchPanelController != null && searchPanelController.isShowing()) {
+      searchPanelController.revealAndFocus();
+    }
   }
 
-  @FXML
   void showPreviousSearchResult() {
     searchWorkflowService
         .moveToPreviousMatch()
         .ifPresent(
             unused -> {
-              syncActiveSearchStrip();
+              pendingSearchPanelErrorText = null;
+              refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
               refreshCurrentViewerContent();
               scrollToActiveSearchHighlight();
             });
   }
 
-  @FXML
   void showNextSearchResult() {
     searchWorkflowService
         .moveToNextMatch()
         .ifPresent(
             unused -> {
-              syncActiveSearchStrip();
+              pendingSearchPanelErrorText = null;
+              refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
               refreshCurrentViewerContent();
               scrollToActiveSearchHighlight();
             });
@@ -1771,9 +1852,38 @@ public class MainWindowController implements UiScreenController {
     zoomWindowCoordinator.openOrFocus();
   }
 
-  private void hideSearchModal() {
-    searchModalCard.setManaged(false);
-    searchModalCard.setVisible(false);
+  private void acceptSearchQuery(String queryText) {
+    String previousQuery =
+        searchWorkflowService.currentSession().map(JsonSearchSession::query).orElse(null);
+    pendingSearchPanelQuery = queryText == null ? "" : queryText;
+    JsonSearchExecutionResult result =
+        searchWorkflowService.activateSearch(
+            currentViewIdentity == null ? "current-view" : currentViewIdentity,
+            pendingSearchPanelQuery);
+    if (!result.successful()) {
+      pendingSearchPanelErrorText = result.errorMessage();
+      refreshSearchPanelState(true);
+      return;
+    }
+
+    pendingSearchPanelErrorText = null;
+    if (!Objects.equals(previousQuery, result.session().query())) {
+      deactivateCropView();
+    }
+    pendingSearchPanelQuery = result.session().query();
+    refreshSearchPanelState(true);
+    refreshCurrentViewerContent();
+    scrollToActiveSearchHighlight();
+  }
+
+  private void hideSearchPanel() {
+    if (searchPanelController == null) {
+      return;
+    }
+    pendingSearchPanelQuery = searchPanelQueryText();
+    searchPanelController.hidePanel();
+    workspaceOverlayPane.setManaged(false);
+    workspaceOverlayPane.setVisible(false);
   }
 
   private void syncOutlineModelWithCurrentView() {
@@ -2239,34 +2349,32 @@ public class MainWindowController implements UiScreenController {
     fileWarningIconLabel.setVisible(visible);
   }
 
-  private void syncActiveSearchStrip() {
+  private void refreshSearchPanelState(boolean visible) {
+    if (searchPanelController == null) {
+      return;
+    }
+    if (!visible) {
+      searchPanelController.applyState(searchPanelViewStateResolver.hidden());
+      return;
+    }
+    if (pendingSearchPanelErrorText != null) {
+      searchPanelController.applyState(
+          searchPanelViewStateResolver.invalid(
+              true, searchPanelQueryText(), pendingSearchPanelErrorText));
+      return;
+    }
     searchWorkflowService
         .currentSession()
         .ifPresentOrElse(
-            session -> {
-              activeSearchQueryLabel.setText(session.query());
-              activeSearchOccurrenceLabel.setText(formatOccurrenceLabel(session));
-              activeSearchStrip.setManaged(true);
-              activeSearchStrip.setVisible(true);
-              boolean disableNavigation = session.totalMatches() <= 1;
-              previousSearchButton.setDisable(disableNavigation);
-              nextSearchButton.setDisable(disableNavigation);
-            },
-            () -> {
-              activeSearchStrip.setManaged(false);
-              activeSearchStrip.setVisible(false);
-              activeSearchQueryLabel.setText("Search ready");
-              activeSearchOccurrenceLabel.setText("Ready");
-              previousSearchButton.setDisable(true);
-              nextSearchButton.setDisable(true);
-            });
+            session -> searchPanelController.applyState(searchPanelViewStateResolver.active(true, session)),
+            () -> searchPanelController.applyState(searchPanelViewStateResolver.idle(true, searchPanelQueryText())));
   }
 
-  private String formatOccurrenceLabel(JsonSearchSession session) {
-    if (!session.hasMatches()) {
-      return "0 matches";
+  private String searchPanelQueryText() {
+    if (searchPanelController != null && searchPanelController.isShowing()) {
+      return searchPanelController.queryText();
     }
-    return (session.activeMatchIndex() + 1) + " / " + session.totalMatches();
+    return pendingSearchPanelQuery == null ? "" : pendingSearchPanelQuery;
   }
 
   private void renderRawJsonContent(String rawJson) {
@@ -2412,8 +2520,10 @@ public class MainWindowController implements UiScreenController {
                   .resolve(result, currentPresentationMode)
                   .searchEnabled()) {
                 searchWorkflowService.clear();
-                hideSearchModal();
-                syncActiveSearchStrip();
+                hideSearchPanel();
+                pendingSearchPanelQuery = "";
+                pendingSearchPanelErrorText = null;
+                refreshSearchPanelState(false);
               }
               renderCurrentPresentation(result);
             });
