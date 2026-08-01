@@ -66,6 +66,7 @@ import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchPanelShortcutSupport;
 import com.davidpe.jsontree.ui.controls.search.controller.SearchPanelController;
 import com.davidpe.jsontree.ui.controls.search.support.SearchPanelDragSupport;
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
 import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.controls.search.support.SearchPanelPositioner;
@@ -413,7 +414,7 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Button outlineToggleButton;
 
-  @FXML private Button zoomButton;
+  @FXML private ToolbarIconButton zoomButton;
 
   @FXML private ListView<ImportedJsonFile> historyListView;
 

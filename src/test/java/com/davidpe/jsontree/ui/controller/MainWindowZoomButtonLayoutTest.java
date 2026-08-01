@@ -22,5 +22,10 @@ class MainWindowZoomButtonLayoutTest {
 
     assertTrue(zoomIndex >= 0);
     assertTrue(outlineIndex > zoomIndex);
+    assertTrue(fxml.contains("<ToolbarIconButton fx:id=\"zoomButton\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/zoom_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/zoom_35dp_FFFFFF.png\""));
+    assertTrue(fxml.contains("tooltipText=\"Open zoom viewer\""));
+    assertTrue(fxml.contains("accessibleText=\"Open zoom viewer\""));
   }
 }

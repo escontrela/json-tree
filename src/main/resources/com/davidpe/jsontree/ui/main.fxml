@@ -6,6 +6,7 @@
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
+<?import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton?>
 <?import javafx.scene.canvas.Canvas?>
 <?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
@@ -111,7 +112,13 @@
                                 <Label fx:id="largePreviewTotalPagesLabel" styleClass="large-preview-page-meta" text="of 1" />
                                 <Button fx:id="largePreviewNextButton" disable="true" mnemonicParsing="false" onAction="#showNextLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Next" />
                             </HBox>
-                            <Button fx:id="zoomButton" disable="true" mnemonicParsing="false" onAction="#openZoomViewer" styleClass="ghost-button" text="Zoom" />
+                            <ToolbarIconButton fx:id="zoomButton"
+                                               accessibleText="Open zoom viewer"
+                                               darkIconResource="/com/davidpe/jsontree/images/zoom_35dp_FFFFFF.png"
+                                               disable="true"
+                                               lightIconResource="/com/davidpe/jsontree/images/zoom_35dp_000000.png"
+                                               onAction="#openZoomViewer"
+                                               tooltipText="Open zoom viewer" />
                             <Button fx:id="outlineToggleButton" mnemonicParsing="false" onAction="#toggleOutline" styleClass="ghost-button" text="Outline" />
                         </HBox>
                         <Label fx:id="breadcrumbLabel" managed="false" styleClass="viewer-toolbar-breadcrumb" visible="false" wrapText="true" />
