@@ -275,6 +275,16 @@
 
 .viewer-toolbar-button-row {
     -fx-alignment: center-right;
+    -fx-spacing: 10px;
+}
+
+.viewer-toolbar-button-row .toolbar-icon-button {
+    -fx-min-width: 40;
+    -fx-pref-width: 40;
+    -fx-max-width: 40;
+    -fx-min-height: 40;
+    -fx-pref-height: 40;
+    -fx-max-height: 40;
 }
 
 .viewer-toolbar-breadcrumb {

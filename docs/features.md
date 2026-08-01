@@ -65,6 +65,7 @@
 ## Zoom Viewer Window
 
 - The main workspace now exposes a dedicated `Zoom` action in the viewer toolbar, enabled only when a renderable JSON presentation is on screen.
+- The main structure-view toolbar now renders `Zoom` and `Outline` through one shared icon-control family that swaps black/white PNG assets with the active light/night theme while preserving tooltip and accessibility affordances.
 - Zoom opens a single owned secondary reader window that reuses the RichTextFX viewer path for the exact active presentation: `ASCII tree`, `Raw JSON`, or the current `LARGE_PREVIEW` page or chunk.
 - The zoom window consumes presentation snapshots from a shared UI bridge, so mode changes, history reopen flows, and non-renderable resets stay coherent without reparsing JSON inside the zoom controller.
 
