@@ -27,10 +27,7 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
-                <Button fx:id="copyTreeButton" mnemonicParsing="false" onAction="#copyTree" styleClass="ghost-button" text="Copy tree" />
-                <Button fx:id="rawJsonButton" disable="true" mnemonicParsing="false" onAction="#toggleRawJson" styleClass="ghost-button" text="Raw JSON" />
                 <Button fx:id="structureButton" disable="true" mnemonicParsing="false" onAction="#toggleStructureMode" styleClass="ghost-button" text="Structure" />
-                <Button fx:id="searchButton" disable="true" mnemonicParsing="false" onAction="#openSearchPanel" styleClass="ghost-button" text="Search" />
                 <Button fx:id="cropButton" disable="true" mnemonicParsing="false" onAction="#toggleCropView" styleClass="ghost-button" text="Crop" />
                 <Button mnemonicParsing="false" onAction="#openSettings" styleClass="ghost-button" text="Settings" />
             </HBox>
@@ -112,6 +109,27 @@
                                 <Label fx:id="largePreviewTotalPagesLabel" styleClass="large-preview-page-meta" text="of 1" />
                                 <Button fx:id="largePreviewNextButton" disable="true" mnemonicParsing="false" onAction="#showNextLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Next" />
                             </HBox>
+                            <ToolbarIconButton fx:id="copyTreeButton"
+                                               accessibleText="Copy tree"
+                                               darkIconResource="/com/davidpe/jsontree/images/copy_35dp_FFFFFF.png"
+                                               lightIconResource="/com/davidpe/jsontree/images/copy_35dp_000000.png"
+                                               onAction="#copyTree"
+                                               tooltipText="Copy tree" />
+                            <ToolbarIconButton fx:id="rawJsonButton"
+                                               accessibleText="Show raw view"
+                                               darkIconResource="/com/davidpe/jsontree/images/raw_on_35dp_FFFFFF.png"
+                                               disable="true"
+                                               lightIconResource="/com/davidpe/jsontree/images/raw_on_35dp_000000.png"
+                                               onAction="#toggleRawJson"
+                                               toggleMode="true"
+                                               tooltipText="Show raw view" />
+                            <ToolbarIconButton fx:id="searchButton"
+                                               accessibleText="Open search panel"
+                                               darkIconResource="/com/davidpe/jsontree/images/search_35dp_FFFFFF.png"
+                                               disable="true"
+                                               lightIconResource="/com/davidpe/jsontree/images/search_35dp_000000.png"
+                                               onAction="#openSearchPanel"
+                                               tooltipText="Open search panel" />
                             <ToolbarIconButton fx:id="zoomButton"
                                                accessibleText="Open zoom viewer"
                                                darkIconResource="/com/davidpe/jsontree/images/zoom_35dp_FFFFFF.png"

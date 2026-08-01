@@ -3,6 +3,7 @@ package com.davidpe.jsontree.ui.controller;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.davidpe.jsontree.application.port.out.ClipboardPort;
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.support.JavaFxThreadTestSupport;
@@ -11,7 +12,6 @@ import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
 import com.davidpe.jsontree.ui.support.ZoomViewerSnapshotFactory;
 import java.lang.reflect.Field;
-import javafx.scene.control.Button;
 import org.junit.jupiter.api.Test;
 
 class MainWindowCopyViewerContentTest {
@@ -25,8 +25,9 @@ class MainWindowCopyViewerContentTest {
           RichTextViewerSurface surface = new RichTextViewerFactory().create();
           surface.showText("{\"active\":true}", "raw-json-content");
 
-          setField(controller, "copyTreeButton", new Button("Copy tree"));
-          ((Button) getField(controller, "copyTreeButton")).setDisable(false);
+          ToolbarIconButton copyButton = new ToolbarIconButton();
+          copyButton.setDisable(false);
+          setField(controller, "copyTreeButton", copyButton);
           setField(controller, "richTextViewerSurface", surface);
 
           controller.copyTree();

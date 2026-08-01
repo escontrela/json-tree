@@ -66,6 +66,8 @@
 
 - The main workspace now exposes a dedicated `Zoom` action in the viewer toolbar, enabled only when a renderable JSON presentation is on screen.
 - The main structure-view toolbar now renders `Zoom` and `Outline` through one shared icon-control family that swaps black/white PNG assets with the active light/night theme while preserving tooltip and accessibility affordances.
+- The same shared icon-control family now also hosts `Copy`, `Raw`, and `Search`, so all viewer-scoped actions live together inside `viewer-toolbar-button-row` instead of being split between the workspace header and the structure toolbar.
+- `Raw` is now represented as a selected-capable icon toggle whose tooltip and accessible text follow the active presentation affordance (`Raw JSON`, `Raw Markdown`, `ASCII tree`, or `Raw page`) without changing the underlying workflow semantics.
 - Zoom opens a single owned secondary reader window that reuses the RichTextFX viewer path for the exact active presentation: `ASCII tree`, `Raw JSON`, or the current `LARGE_PREVIEW` page or chunk.
 - The zoom window consumes presentation snapshots from a shared UI bridge, so mode changes, history reopen flows, and non-renderable resets stay coherent without reparsing JSON inside the zoom controller.
 
@@ -146,6 +148,7 @@
 - The primary viewer workspace now has a dedicated header with action slots for copy, raw JSON, and search, even when those actions are still placeholder-disabled.
 - A secondary viewer toolbar keeps room for display-mode utilities without pushing those stubs into the business workflow.
 - The right side also exposes a compact auxiliary viewer aid panel so the screenshot-inspired distribution can exist without copying its dark aesthetic.
+- The top workspace header is now reserved for document-mode actions such as `Structure`, `Crop`, and `Settings`, while the viewer-specific actions `Copy`, `Raw`, `Search`, `Zoom`, and `Outline` are grouped as icon-only controls inside the structure-view toolbar.
 
 ## Search Entry Shell
 

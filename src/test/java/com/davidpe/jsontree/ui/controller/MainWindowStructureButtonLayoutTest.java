@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class MainWindowStructureButtonLayoutTest {
 
   @Test
-  void placesStructureButtonImmediatelyAfterRawJsonAndBeforeSearch() throws IOException {
+  void keepsStructureInTheHeaderAfterRemovingCopyRawAndSearchTextButtons() throws IOException {
     String fxml =
         new String(
             MainWindowStructureButtonLayoutTest.class
@@ -17,12 +17,14 @@ class MainWindowStructureButtonLayoutTest {
                 .readAllBytes(),
             StandardCharsets.UTF_8);
 
-    int rawIndex = fxml.indexOf("fx:id=\"rawJsonButton\"");
+    int headerIndex = fxml.indexOf("styleClass=\"header-action-bar\"");
     int structureIndex = fxml.indexOf("fx:id=\"structureButton\"");
-    int searchIndex = fxml.indexOf("fx:id=\"searchButton\"");
+    int cropIndex = fxml.indexOf("fx:id=\"cropButton\"");
+    int settingsIndex = fxml.indexOf("text=\"Settings\"");
 
-    assertTrue(rawIndex >= 0);
-    assertTrue(structureIndex > rawIndex);
-    assertTrue(searchIndex > structureIndex);
+    assertTrue(headerIndex >= 0);
+    assertTrue(structureIndex > headerIndex);
+    assertTrue(cropIndex > structureIndex);
+    assertTrue(settingsIndex > cropIndex);
   }
 }

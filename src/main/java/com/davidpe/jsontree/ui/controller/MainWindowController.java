@@ -402,15 +402,15 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Label largePreviewTotalPagesLabel;
 
-  @FXML private Button rawJsonButton;
+  @FXML private ToolbarIconButton rawJsonButton;
 
   @FXML private Button structureButton;
 
-  @FXML private Button searchButton;
+  @FXML private ToolbarIconButton searchButton;
 
   @FXML private Button cropButton;
 
-  @FXML private Button copyTreeButton;
+  @FXML private ToolbarIconButton copyTreeButton;
 
   @FXML private ToolbarIconButton outlineToggleButton;
 
@@ -971,7 +971,7 @@ public class MainWindowController implements UiScreenController {
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    rawJsonButton.setText("Raw JSON");
+    setRawButtonLabel("Raw JSON");
     structureButton.setText("Structure");
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
@@ -2263,7 +2263,7 @@ public class MainWindowController implements UiScreenController {
     syncOutlinePanelVisibility(result);
     renderRawJsonContent(
         workflowService.currentViewRawJson().orElse(result.asciiTreeDocument().content()));
-    rawJsonButton.setText("Raw page");
+    setRawButtonLabel("Raw page");
     structureButton.setText("Structure");
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
@@ -2308,7 +2308,7 @@ public class MainWindowController implements UiScreenController {
   private void applyCapabilityPresentation(JsonViewerLoadResult result) {
     ViewerCapabilityPresentation presentation =
         capabilityPresentationResolver.resolve(result, effectivePresentationMode(result));
-    copyTreeButton.setText(presentation.copyButtonText());
+    setCopyButtonLabel(presentation.copyButtonText());
     copyTreeButton.setDisable(false);
     rawJsonButton.setDisable(!presentation.rawJsonEnabled());
     structureButton.setDisable(!presentation.structureEnabled());
@@ -2321,6 +2321,7 @@ public class MainWindowController implements UiScreenController {
     updateFooterStatusLabel(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
     syncCropButtonState(result);
+    syncToolbarToggleStates();
   }
 
   private void syncOutlinePanelVisibility(JsonViewerLoadResult result) {
@@ -2363,7 +2364,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void resetToolbarForNonRenderableState() {
-    copyTreeButton.setText("Copy tree");
+    setCopyButtonLabel("Copy tree");
     copyTreeButton.setDisable(true);
     rawJsonButton.setDisable(true);
     structureButton.setDisable(true);
@@ -2372,6 +2373,7 @@ public class MainWindowController implements UiScreenController {
     cropButton.setText("Crop");
     zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
+    syncToolbarToggleStates();
   }
 
   private void showFileWarningIcon(boolean visible) {
@@ -2522,10 +2524,11 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     currentPresentationMode = rawPresentationMode;
-    rawJsonButton.setText(
+    setRawButtonLabel(
         largePreviewActive ? "Raw page" : documentFormat.markdown() ? "Markdown" : "ASCII tree");
     structureButton.setText("Structure");
     applyState(ViewerVisualState.VALID);
+    syncToolbarToggleStates();
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
   }
@@ -2650,9 +2653,10 @@ public class MainWindowController implements UiScreenController {
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    rawJsonButton.setText("Raw Markdown");
+    setRawButtonLabel("Raw Markdown");
     structureButton.setText("Structure");
     applyState(ViewerVisualState.VALID);
+    syncToolbarToggleStates();
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
   }
@@ -2685,7 +2689,7 @@ public class MainWindowController implements UiScreenController {
               richTextViewerSurface.scrollToTop();
               emptyStateLabel.setManaged(false);
               emptyStateLabel.setVisible(false);
-              rawJsonButton.setText("Raw JSON");
+              setRawButtonLabel("Raw JSON");
               structureButton.setText("ASCII tree");
               currentPresentationMode = ViewerPresentationMode.STRUCTURE;
               updateFooterStatusLabel("Rendered " + document.lineCount() + " structure lines");
@@ -2701,6 +2705,7 @@ public class MainWindowController implements UiScreenController {
                   "Return to ASCII tree or Raw JSON to restore outline interactions.",
                   null);
               applyState(ViewerVisualState.VALID);
+              syncToolbarToggleStates();
               hideBreadcrumbLabel();
             },
             () -> renderAsciiTree(result));
@@ -2799,7 +2804,7 @@ public class MainWindowController implements UiScreenController {
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    rawJsonButton.setText("Raw JSON");
+    setRawButtonLabel("Raw JSON");
     structureButton.setText("Structure");
     updateFooterStatusLabel("Showing a cropped JSON view derived from the active regex query");
     setStatusRailValues(
@@ -2808,6 +2813,7 @@ public class MainWindowController implements UiScreenController {
         Integer.toString(cropDocument.asciiTreeDocument().lineCount()),
         sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
     applyState(ViewerVisualState.VALID);
+    syncToolbarToggleStates();
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
   }
@@ -2847,7 +2853,7 @@ public class MainWindowController implements UiScreenController {
     richTextViewerSurface.scrollToTop();
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
-    rawJsonButton.setText("ASCII tree");
+    setRawButtonLabel("ASCII tree");
     structureButton.setText("Structure");
     updateFooterStatusLabel("Showing a cropped JSON view derived from the active regex query");
     setStatusRailValues(
@@ -2856,6 +2862,7 @@ public class MainWindowController implements UiScreenController {
         Integer.toString(cropDocument.asciiTreeDocument().lineCount()),
         sourceLabel(result.importResult().sourceKind(), result.historyEntry()));
     applyState(ViewerVisualState.VALID);
+    syncToolbarToggleStates();
     scheduleOutlineViewportRefresh();
     scheduleBreadcrumbRefresh();
   }
@@ -2932,10 +2939,11 @@ public class MainWindowController implements UiScreenController {
   private void resetPresentationState() {
     deactivateCropView();
     currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
-    rawJsonButton.setText("Raw JSON");
+    setRawButtonLabel("Raw JSON");
     structureButton.setText("Structure");
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
     resetStructureDocument();
+    syncToolbarToggleStates();
   }
 
   private void preparePresentationStateForIncomingDocument() {
@@ -2943,10 +2951,46 @@ public class MainWindowController implements UiScreenController {
     if (currentPresentationMode != ViewerPresentationMode.STRUCTURE) {
       currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
     }
-    rawJsonButton.setText("Raw JSON");
+    setRawButtonLabel("Raw JSON");
     structureButton.setText("Structure");
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
     resetStructureDocument();
+    syncToolbarToggleStates();
+  }
+
+  private void setCopyButtonLabel(String label) {
+    if (copyTreeButton == null) {
+      return;
+    }
+    copyTreeButton.setText(label);
+    copyTreeButton.setTooltipText(label);
+    copyTreeButton.setAccessibleText(label);
+  }
+
+  private void setRawButtonLabel(String label) {
+    if (rawJsonButton == null) {
+      return;
+    }
+    rawJsonButton.setText(label);
+    String affordanceText = switch (label) {
+      case "ASCII tree" -> "Show ASCII tree";
+      case "Raw JSON" -> "Show raw JSON";
+      case "Raw Markdown" -> "Show raw Markdown";
+      case "Markdown" -> "Show Markdown";
+      case "Raw page" -> "Show current raw page";
+      default -> label;
+    };
+    rawJsonButton.setTooltipText(affordanceText);
+    rawJsonButton.setAccessibleText(affordanceText);
+  }
+
+  private void syncToolbarToggleStates() {
+    if (rawJsonButton != null) {
+      rawJsonButton.setSelected(currentPresentationMode.rawTextMode());
+    }
+    if (outlineToggleButton != null && outlineVBox != null) {
+      outlineToggleButton.setSelected(outlineVBox.isVisible());
+    }
   }
 
   private double clamp(double value) {

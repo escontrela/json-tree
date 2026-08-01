@@ -1,20 +1,21 @@
 package com.davidpe.jsontree.ui.controls.toolbar;
+
 import java.net.URL;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Map;
+import javafx.css.PseudoClass;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.ListChangeListener;
-import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Tooltip;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.css.PseudoClass;
 
 /**
  * Reusable icon-only toolbar button with theme-aware PNG switching.
@@ -63,10 +64,15 @@ public class ToolbarIconButton extends Button {
     lightIconResource.addListener((unused, oldValue, newValue) -> refreshIcon());
     darkIconResource.addListener((unused, oldValue, newValue) -> refreshIcon());
     tooltipText.addListener((unused, oldValue, newValue) -> refreshTooltip(newValue));
+    textProperty()
+        .addListener((unused, oldValue, newValue) -> syncTextDrivenAffordances(newValue));
     selected.addListener(
         (unused, oldValue, newValue) ->
             pseudoClassStateChanged(SELECTED_PSEUDO_CLASS, Boolean.TRUE.equals(newValue)));
-    sceneProperty().addListener((unused, previousScene, nextScene) -> handleSceneChange(previousScene, nextScene));
+    sceneProperty()
+        .addListener(
+            (unused, previousScene, nextScene) ->
+                handleSceneChange(previousScene, nextScene));
   }
 
   public final String getLightIconResource() {
@@ -195,6 +201,16 @@ public class ToolbarIconButton extends Button {
       return;
     }
     iconView.setImage(resolveImage(resourcePath));
+  }
+
+  private void syncTextDrivenAffordances(String text) {
+    if (text == null || text.isBlank()) {
+      return;
+    }
+    setAccessibleText(text);
+    if (tooltipText.get() == null || tooltipText.get().isBlank()) {
+      refreshTooltip(text);
+    }
   }
 
   private String resolveThemeResourcePath() {
