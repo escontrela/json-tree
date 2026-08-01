@@ -157,6 +157,7 @@
 - The main workspace now includes a compact search modal overlay that opens from the existing `Search` action instead of routing to a separate screen.
 - The entry panel lives inside the current JavaFX shell and includes a RegExp input plus accept and cancel actions.
 - The header layout now reserves a hidden compact strip area to the left of `Copy tree` so accepted searches can later promote into persistent controls without redistributing the top bar again.
+- The floating search panel now reuses the same theme-aware icon-control language as the main viewer toolbar for previous, next, clear, close, and apply actions, using normalized short asset names instead of the verbose Material-export filenames.
 
 ## Active Search Strip
 

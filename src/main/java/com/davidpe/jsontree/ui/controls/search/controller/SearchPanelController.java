@@ -1,16 +1,16 @@
 package com.davidpe.jsontree.ui.controls.search.controller;
 
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelMessageTone;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelViewState;
 import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import org.springframework.stereotype.Component;
@@ -26,10 +26,10 @@ public class SearchPanelController {
   @FXML private Label searchPanelOccurrenceLabel;
   @FXML private TextField searchPanelQueryField;
   @FXML private Label searchPanelHelperLabel;
-  @FXML private Button searchPanelSubmitButton;
-  @FXML private Button searchPanelPreviousButton;
-  @FXML private Button searchPanelNextButton;
-  @FXML private Button searchPanelClearButton;
+  @FXML private ToolbarIconButton searchPanelSubmitButton;
+  @FXML private ToolbarIconButton searchPanelPreviousButton;
+  @FXML private ToolbarIconButton searchPanelNextButton;
+  @FXML private ToolbarIconButton searchPanelClearButton;
 
   private Consumer<String> submitHandler = unused -> {};
   private Runnable previousHandler = () -> {};

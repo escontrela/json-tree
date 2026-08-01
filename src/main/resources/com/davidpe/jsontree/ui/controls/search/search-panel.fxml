@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
@@ -18,14 +18,46 @@
             <Label fx:id="searchPanelOccurrenceLabel" styleClass="search-panel-occurrence" text="Ready" />
             <Region HBox.hgrow="ALWAYS" />
         </HBox>
-        <Button mnemonicParsing="false" onAction="#closePanel" styleClass="ghost-button search-panel-close-button" text="Close" />
+        <ToolbarIconButton accessibleText="Close search panel"
+                           darkIconResource="/com/davidpe/jsontree/images/close_35dp_FFFFFF.png"
+                           lightIconResource="/com/davidpe/jsontree/images/close_35dp_000000.png"
+                           onAction="#closePanel"
+                           styleClass="toolbar-icon-button search-panel-close-button"
+                           tooltipText="Close search panel" />
     </HBox>
     <TextField fx:id="searchPanelQueryField" onAction="#submitSearch" promptText="Regex search (Java Pattern)" />
     <Label fx:id="searchPanelHelperLabel" styleClass="search-panel-helper search-panel-helper-muted" text="Java regular expression search. Literal fallback is disabled." wrapText="true" />
     <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="search-panel-actions">
-        <Button fx:id="searchPanelPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousResult" styleClass="ghost-button search-panel-action-button" text="Prev" />
-        <Button fx:id="searchPanelNextButton" disable="true" mnemonicParsing="false" onAction="#showNextResult" styleClass="ghost-button search-panel-action-button" text="Next" />
-        <Button fx:id="searchPanelClearButton" disable="true" mnemonicParsing="false" onAction="#clearSearch" styleClass="ghost-button search-panel-action-button" text="Clear" />
-        <Button fx:id="searchPanelSubmitButton" mnemonicParsing="false" onAction="#submitSearch" styleClass="primary-button" text="Apply" />
+        <ToolbarIconButton fx:id="searchPanelPreviousButton"
+                           accessibleText="Show previous result"
+                           darkIconResource="/com/davidpe/jsontree/images/previous_35dp_FFFFFF.png"
+                           disable="true"
+                           lightIconResource="/com/davidpe/jsontree/images/previous_35dp_000000.png"
+                           onAction="#showPreviousResult"
+                           styleClass="toolbar-icon-button search-panel-icon-button"
+                           tooltipText="Show previous result" />
+        <ToolbarIconButton fx:id="searchPanelNextButton"
+                           accessibleText="Show next result"
+                           darkIconResource="/com/davidpe/jsontree/images/next_35dp_FFFFFF.png"
+                           disable="true"
+                           lightIconResource="/com/davidpe/jsontree/images/next_35dp_000000.png"
+                           onAction="#showNextResult"
+                           styleClass="toolbar-icon-button search-panel-icon-button"
+                           tooltipText="Show next result" />
+        <ToolbarIconButton fx:id="searchPanelClearButton"
+                           accessibleText="Clear search"
+                           darkIconResource="/com/davidpe/jsontree/images/clear_35dp_FFFFFF.png"
+                           disable="true"
+                           lightIconResource="/com/davidpe/jsontree/images/clear_35dp_000000.png"
+                           onAction="#clearSearch"
+                           styleClass="toolbar-icon-button search-panel-icon-button"
+                           tooltipText="Clear search" />
+        <ToolbarIconButton fx:id="searchPanelSubmitButton"
+                           accessibleText="Apply regex search"
+                           darkIconResource="/com/davidpe/jsontree/images/filter_35dp_FFFFFF.png"
+                           lightIconResource="/com/davidpe/jsontree/images/filter_35dp_000000.png"
+                           onAction="#submitSearch"
+                           styleClass="toolbar-icon-button search-panel-submit-button"
+                           tooltipText="Apply regex search" />
     </HBox>
 </VBox>

@@ -58,6 +58,36 @@ class ToolbarIconButtonContractTest {
     assertNotNull(
         ToolbarIconButtonContractTest.class.getResource(
             "/com/davidpe/jsontree/images/settings_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/previous_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/previous_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/next_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/next_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/clear_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/clear_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/close_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/close_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/filter_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/filter_35dp_FFFFFF.png"));
   }
 
   private static String readResource(String resourcePath) throws IOException {

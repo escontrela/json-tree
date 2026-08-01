@@ -16,6 +16,8 @@ class SearchPanelStylesheetContractTest {
 
     assertTrue(css.contains(".search-panel-card"));
     assertTrue(css.contains(".search-panel-helper-error"));
+    assertTrue(css.contains(".search-panel-actions .toolbar-icon-button"));
+    assertTrue(css.contains(".search-panel-submit-button"));
     assertTrue(css.contains(".night-mode .search-panel-card"));
     assertFalse(css.contains(".search-modal-card"));
     assertFalse(css.contains(".active-search-strip"));

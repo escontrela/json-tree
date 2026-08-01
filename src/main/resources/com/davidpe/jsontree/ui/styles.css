@@ -454,11 +454,25 @@
 
 .search-panel-actions {
     -fx-alignment: center-right;
+    -fx-spacing: 8;
 }
 
-.search-panel-action-button,
+.search-panel-actions .toolbar-icon-button,
 .search-panel-close-button {
-    -fx-padding: 8 12 8 12;
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+}
+
+.search-panel-submit-button {
+    -fx-border-color: #9ebbe3;
+}
+
+.search-panel-submit-button:hover {
+    -fx-border-color: #1c69d4;
 }
 
 .viewer-card-header {
