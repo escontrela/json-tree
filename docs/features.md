@@ -17,7 +17,7 @@
 - Markdown now has two first-class viewer modes: a rendered reading mode and a `Raw Markdown` source mode. The toolbar toggle swaps between them without inventing a Markdown-only side channel outside the shared presentation model.
 - Markdown raw rendering keeps the original source text byte-for-byte while applying lightweight source-centric styling for headings, list markers, block quotes, and fenced-code delimiters.
 - Markdown rendered mode stays intentionally lightweight and deterministic on RichTextFX. It improves readability for headings, ordered and unordered lists, block quotes, fenced code blocks, and ordinary paragraphs without introducing `WebView` or HTML preview.
-- Regex search stays aligned with raw-source semantics: it is available in `Raw Markdown`, disabled in rendered Markdown, and the current mode is mirrored coherently into zoom snapshots.
+- Regex search stays aligned with raw-source semantics: it runs against canonical `Raw Markdown`, and opening search from rendered Markdown normalizes that document back into raw mode before highlights are applied so the offsets stay truthful.
 - For non-large Markdown files, the outline rail stays active through a dedicated heading-based outline model. ATX headings become anchors with preserved depth and source-line positions, and heading-less documents fall back to compact source-line anchors so the minimap remains usable.
 - Clicking the Markdown minimap moves the active Markdown viewer to the corresponding heading or fallback anchor, while ordinary viewer scrolling continues to update the minimap viewport marker through the shared outline shell.
 - Large Markdown files reuse the existing byte-paged `LARGE_PREVIEW` raw workflow instead of trying to fully materialize an unsupported tree. In that mode, Markdown follows the same current product rule as other large previews: raw page available, search and outline disabled.
@@ -30,6 +30,7 @@
 - `Night Mode` is staged like the other settings: toggling it in the form does nothing until `Apply`, while `Back` discards the pending visual change.
 - After `Apply`, the current main screen, history screen, settings screen, and zoom window all switch coherently to a BMW-aligned night variant through one shared theme service and CSS class instead of ad hoc per-controller styling.
 - Persisted settings restore on the next application launch, so the chosen night variant becomes the visual baseline only when the user explicitly enabled it previously.
+- Settings now include a dedicated `Shortcuts` section that lists the runtime-supported global chords with platform-aware labels, including `Command+F` or `Ctrl+F` for the floating search panel and the existing clipboard import chords.
 
 ## Validation States
 

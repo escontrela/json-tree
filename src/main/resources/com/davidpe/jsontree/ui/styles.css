@@ -500,6 +500,47 @@
     -fx-fill-width: true;
 }
 
+.settings-shortcut-list {
+    -fx-spacing: 10;
+}
+
+.settings-shortcut-row {
+    -fx-alignment: center-left;
+    -fx-spacing: 16;
+    -fx-padding: 12 14 12 14;
+    -fx-background-color: rgba(246, 248, 250, 0.92);
+    -fx-border-color: #d7dee7;
+    -fx-border-radius: 16;
+    -fx-background-radius: 16;
+}
+
+.settings-shortcut-copy {
+    -fx-spacing: 4;
+}
+
+.settings-shortcut-title {
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 13px;
+    -fx-font-weight: 700;
+}
+
+.settings-shortcut-description {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.settings-shortcut-chord {
+    -fx-text-fill: #1f242a;
+    -fx-font-size: 12px;
+    -fx-font-weight: 700;
+    -fx-padding: 8 12 8 12;
+    -fx-background-color: #f0f4f8;
+    -fx-border-color: #ccd7e2;
+    -fx-border-radius: 999;
+    -fx-background-radius: 999;
+}
+
 .history-import-feedback {
     -fx-padding: 0 0 4 0;
 }
@@ -975,8 +1016,15 @@
     -fx-text-fill: #a8b4c1;
 }
 
+.night-mode .settings-shortcut-row {
+    -fx-background-color: rgba(17, 24, 34, 0.92);
+    -fx-border-color: #2f3a47;
+}
+
 .night-mode .settings-field-label,
 .night-mode .settings-check-box,
+.night-mode .settings-shortcut-title,
+.night-mode .settings-shortcut-chord,
 .night-mode .button,
 .night-mode .ghost-button,
 .night-mode .text-field,
@@ -1005,6 +1053,15 @@
 
 .night-mode .text-field {
     -fx-prompt-text-fill: #7e8b98;
+}
+
+.night-mode .settings-shortcut-description {
+    -fx-text-fill: #98a8b7;
+}
+
+.night-mode .settings-shortcut-chord {
+    -fx-background-color: #162030;
+    -fx-border-color: #334154;
 }
 
 .night-mode .button:focused,

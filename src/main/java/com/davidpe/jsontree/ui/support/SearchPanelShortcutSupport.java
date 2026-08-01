@@ -1,10 +1,12 @@
 package com.davidpe.jsontree.ui.support;
 
 import javafx.scene.input.KeyCode;
-import org.springframework.stereotype.Component;
 
-@Component
-public class ClipboardImportShortcutSupport {
+/**
+ * Guards the standard search shortcut so it only fires in the main viewer when the current
+ * document can actually open the floating search panel.
+ */
+public class SearchPanelShortcutSupport {
 
   private final ApplicationShortcutCatalog shortcutCatalog = new ApplicationShortcutCatalog();
 
@@ -14,12 +16,12 @@ public class ClipboardImportShortcutSupport {
       boolean altDown,
       boolean shiftDown,
       boolean textInputTarget,
-      boolean modalVisible
-  ) {
-    if (modalVisible || textInputTarget) {
+      boolean searchQueryEditing,
+      boolean searchAvailable) {
+    if (!searchAvailable || textInputTarget || searchQueryEditing) {
       return false;
     }
-    return shortcutCatalog.matchesClipboardImportShortcut(
+    return shortcutCatalog.matchesSearchPanelShortcut(
         keyCode, shortcutDown, altDown, shiftDown);
   }
 }

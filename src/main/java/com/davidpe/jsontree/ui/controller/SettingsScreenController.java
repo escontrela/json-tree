@@ -8,8 +8,11 @@ import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
 import com.davidpe.jsontree.ui.screen.UiScreenId;
 import com.davidpe.jsontree.ui.service.ApplicationThemeService;
+import com.davidpe.jsontree.ui.support.ApplicationShortcutCatalog;
 import com.davidpe.jsontree.ui.support.SettingsFormState;
 import com.davidpe.jsontree.ui.support.SettingsFormStateResolver;
+import com.davidpe.jsontree.ui.support.SupportedShortcut;
+import java.util.List;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -17,6 +20,10 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +42,8 @@ public class SettingsScreenController implements UiScreenController {
   private final ProcessMemoryReferenceService processMemoryReferenceService;
   private final SettingsFormStateResolver settingsFormStateResolver;
   private final ApplicationThemeService applicationThemeService;
+  private final ApplicationShortcutCatalog applicationShortcutCatalog =
+      new ApplicationShortcutCatalog();
 
   private boolean applyingSnapshot;
 
@@ -50,6 +59,7 @@ public class SettingsScreenController implements UiScreenController {
   @FXML private Label chunkErrorLabel;
   @FXML private Label defaultCurlUserAgentErrorLabel;
   @FXML private Button applyButton;
+  @FXML private VBox shortcutsListBox;
 
   public SettingsScreenController(
       ViewLargePreviewSettingsUseCase viewLargePreviewSettingsUseCase,
@@ -69,6 +79,7 @@ public class SettingsScreenController implements UiScreenController {
   @FXML
   public void initialize() {
     rootPane.getProperties().put("controller", this);
+    renderShortcutRows(applicationShortcutCatalog.supportedShortcuts());
     largePreviewThresholdField
         .textProperty()
         .addListener((unused, oldValue, newValue) -> refreshFormState());
@@ -165,5 +176,34 @@ public class SettingsScreenController implements UiScreenController {
     if (warningActive) {
       styles.add("settings-warning-label-active");
     }
+  }
+
+  private void renderShortcutRows(List<SupportedShortcut> shortcuts) {
+    shortcutsListBox.getChildren().clear();
+    for (SupportedShortcut shortcut : shortcuts) {
+      shortcutsListBox.getChildren().add(createShortcutRow(shortcut));
+    }
+  }
+
+  private HBox createShortcutRow(SupportedShortcut shortcut) {
+    Label titleLabel = new Label(shortcut.title());
+    titleLabel.getStyleClass().add("settings-shortcut-title");
+
+    Label descriptionLabel = new Label(shortcut.description());
+    descriptionLabel.getStyleClass().add("settings-shortcut-description");
+    descriptionLabel.setWrapText(true);
+
+    VBox copyBox = new VBox(4.0, titleLabel, descriptionLabel);
+    copyBox.getStyleClass().add("settings-shortcut-copy");
+
+    Label chordLabel = new Label(shortcut.chordLabel());
+    chordLabel.getStyleClass().add("settings-shortcut-chord");
+
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+
+    HBox row = new HBox(16.0, copyBox, spacer, chordLabel);
+    row.getStyleClass().add("settings-shortcut-row");
+    return row;
   }
 }

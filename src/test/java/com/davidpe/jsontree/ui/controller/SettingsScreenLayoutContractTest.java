@@ -26,5 +26,7 @@ class SettingsScreenLayoutContractTest {
     assertTrue(fxml.contains("hbarPolicy=\"NEVER\""));
     assertTrue(fxml.contains("vbarPolicy=\"AS_NEEDED\""));
     assertTrue(fxml.contains("fx:id=\"nightModeCheckBox\""));
+    assertTrue(fxml.contains("fx:id=\"shortcutsListBox\""));
+    assertTrue(fxml.contains("Supported keyboard shortcuts"));
   }
 }

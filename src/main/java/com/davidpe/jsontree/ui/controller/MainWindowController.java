@@ -40,6 +40,7 @@ import com.davidpe.jsontree.ui.service.TypewriterLabelRevealService;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
 import com.davidpe.jsontree.ui.service.ZoomWindowCoordinator;
 import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
+import com.davidpe.jsontree.ui.support.ApplicationShortcutCatalog;
 import com.davidpe.jsontree.ui.support.ClipboardImportShortcutSupport;
 import com.davidpe.jsontree.ui.support.DroppedJsonPathResolver;
 import com.davidpe.jsontree.ui.support.InlineHistoryPreviewState;
@@ -62,6 +63,7 @@ import com.davidpe.jsontree.ui.support.OutlineViewportProjection;
 import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
+import com.davidpe.jsontree.ui.support.SearchPanelShortcutSupport;
 import com.davidpe.jsontree.ui.controls.search.controller.SearchPanelController;
 import com.davidpe.jsontree.ui.controls.search.support.SearchPanelDragSupport;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
@@ -176,6 +178,10 @@ public class MainWindowController implements UiScreenController {
       new OutlinePanelVisibilityResolver();
   private final SearchPanelDragSupport searchPanelDragSupport =
       new SearchPanelDragSupport(new SearchPanelPositioner());
+  private final SearchPanelShortcutSupport searchPanelShortcutSupport =
+      new SearchPanelShortcutSupport();
+  private final ApplicationShortcutCatalog applicationShortcutCatalog =
+      new ApplicationShortcutCatalog();
 
   public MainWindowController(
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
@@ -1211,6 +1217,19 @@ public class MainWindowController implements UiScreenController {
   }
 
   private void handleGlobalKeyPressed(KeyEvent event) {
+    if (searchPanelShortcutSupport.shouldTrigger(
+        event.getCode(),
+        event.isShortcutDown(),
+        event.isAltDown(),
+        event.isShiftDown(),
+        event.getTarget() instanceof TextInputControl,
+        searchPanelController != null && searchPanelController.isEditingQuery(),
+        searchButton != null && !searchButton.isDisable())) {
+      openSearchPanel();
+      event.consume();
+      return;
+    }
+
     if (!clipboardImportShortcutSupport.shouldTrigger(
         event.getCode(),
         event.isShortcutDown(),
@@ -1434,6 +1453,7 @@ public class MainWindowController implements UiScreenController {
   }
 
   private String clipboardImportGuidance(ClipboardJsonImportResult result) {
+    String clipboardChordLabel = applicationShortcutCatalog.clipboardImportChordLabel();
     if (result.status()
             == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus.INVALID_CURL
         || result.status()
@@ -1442,10 +1462,11 @@ public class MainWindowController implements UiScreenController {
         || result.status()
             == com.davidpe.jsontree.application.model.ClipboardJsonImportStatus
                 .UNSUPPORTED_RESPONSE) {
-      return "Paste valid JSON or one supported curl command using Command+P / Command+V on macOS,"
-          + " Ctrl+P / Ctrl+V elsewhere.";
+      return "Paste valid JSON or one supported curl command using "
+          + clipboardChordLabel
+          + ".";
     }
-    return "Paste valid JSON using Command+P or Command+V on macOS, Ctrl+P or Ctrl+V elsewhere.";
+    return "Paste valid JSON using " + clipboardChordLabel + ".";
   }
 
   private String formatFileMeta(
