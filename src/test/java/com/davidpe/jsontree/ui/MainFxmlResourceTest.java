@@ -95,6 +95,20 @@ class MainFxmlResourceTest {
         assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/settings_35dp_FFFFFF.png\""));
     }
 
+    @Test
+    @DisplayName("history and settings FXML use the normalized back icon resources")
+    void historyAndSettingsFxmlUseNormalizedBackIconResources() throws IOException {
+        String historyFxml = readResource("/com/davidpe/jsontree/ui/history.fxml");
+        String settingsFxml = readResource("/com/davidpe/jsontree/ui/settings.fxml");
+
+        assertTrue(historyFxml.contains("/com/davidpe/jsontree/images/back_35dp_000000.png"));
+        assertTrue(historyFxml.contains("/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"));
+        assertTrue(settingsFxml.contains("/com/davidpe/jsontree/images/back_35dp_000000.png"));
+        assertTrue(settingsFxml.contains("/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"));
+        assertTrue(!historyFxml.contains("arrow_back_35dp_000000_FILL0_wght400_GRAD0_opsz40.png"));
+        assertTrue(!settingsFxml.contains("arrow_back_35dp_FFFFFF_FILL0_wght400_GRAD0_opsz40.png"));
+    }
+
     private static void assertReferencedTypesAreImported(String resourcePath) throws IOException {
         String fxml = readResource(resourcePath);
         Set<String> importedTypes = extractImportedTypes(fxml);

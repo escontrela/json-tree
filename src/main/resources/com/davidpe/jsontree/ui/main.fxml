@@ -83,7 +83,13 @@
                         <Label fx:id="historyInlineMetaLabel" styleClass="rail-placeholder-meta" />
                     </VBox>
                     <Region HBox.hgrow="ALWAYS" />
-                    <Button mnemonicParsing="false" onAction="#openHistory" styleClass="ghost-button" text="View all" />
+                    <ToolbarIconButton fx:id="inlineHistoryOpenButton"
+                                       accessibleText="Open full inspection history"
+                                       darkIconResource="/com/davidpe/jsontree/images/history_35dp_FFFFFF.png"
+                                       lightIconResource="/com/davidpe/jsontree/images/history_35dp_000000.png"
+                                       onAction="#openHistory"
+                                       styleClass="toolbar-icon-button inline-history-open-button"
+                                       tooltipText="Open full inspection history" />
                 </HBox>
                 <ListView fx:id="historyListView" prefHeight="264.0" VBox.vgrow="ALWAYS" />
                 <Label fx:id="emptyHistoryInlineLabel" managed="false" styleClass="rail-placeholder-body" text="No snapshots yet. Valid imports will appear here for quick reopen." visible="false" wrapText="true" />

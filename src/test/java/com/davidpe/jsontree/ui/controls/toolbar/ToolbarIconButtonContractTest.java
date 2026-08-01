@@ -60,6 +60,18 @@ class ToolbarIconButtonContractTest {
             "/com/davidpe/jsontree/images/settings_35dp_FFFFFF.png"));
     assertNotNull(
         ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/history_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/history_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/back_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
             "/com/davidpe/jsontree/images/previous_35dp_000000.png"));
     assertNotNull(
         ToolbarIconButtonContractTest.class.getResource(

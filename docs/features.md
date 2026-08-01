@@ -84,6 +84,7 @@
 - Dropping a valid `.json` file loads, validates, renders, and stores it as a local snapshot under the configured app-data history directory.
 - Snapshot filenames start with a deterministic timestamp and preserve a sanitized version of the original filename.
 - History metadata is persisted in a filesystem JSON index so entries can be listed chronologically and reopened later without any database dependency.
+- The main inline history entry point, the history-screen search action, and the history/settings back affordances now reuse the same theme-aware icon-control family as the main viewer toolbar, including the normalized short `back_35dp_*` assets for navigation.
 
 ## OS Drag And Drop Handoff
 

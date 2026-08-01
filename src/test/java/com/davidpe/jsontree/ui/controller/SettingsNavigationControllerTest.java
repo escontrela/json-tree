@@ -65,6 +65,49 @@ class SettingsNavigationControllerTest {
   }
 
   @Test
+  void mainWindowHistoryActionNavigatesToHistoryScreen() {
+    RecordingUiFlowManager uiFlowManager = new RecordingUiFlowManager();
+    MainWindowController controller =
+        new MainWindowController(
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            new TypewriterLabelRevealService(),
+            null,
+            new ZoomActionAvailabilityResolver(),
+            new NoOpZoomWindowCoordinator(),
+            new ZoomViewerStateBridge(),
+            new ZoomViewerSnapshotFactory(),
+            uiFlowManager);
+
+    controller.openHistory();
+
+    assertEquals(UiScreenId.HISTORY, uiFlowManager.lastShown());
+  }
+
+  @Test
   void settingsBackActionNavigatesToMainScreen() {
     RecordingUiFlowManager uiFlowManager = new RecordingUiFlowManager();
     RecordingSaveUseCase saveUseCase = new RecordingSaveUseCase();

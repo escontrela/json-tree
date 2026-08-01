@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
@@ -22,7 +23,13 @@
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
                 <VBox alignment="CENTER_RIGHT" spacing="12.0">
-                    <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="&lt;&lt; Back" />
+                    <ToolbarIconButton fx:id="historyBackButton"
+                                       accessibleText="Back to main workspace"
+                                       darkIconResource="/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"
+                                       lightIconResource="/com/davidpe/jsontree/images/back_35dp_000000.png"
+                                       onAction="#backToMain"
+                                       styleClass="toolbar-icon-button history-back-button"
+                                       tooltipText="Back to main workspace" />
                     <Label styleClass="hero-meta" text="Filesystem-backed timeline" />
                 </VBox>
             </HBox>
@@ -57,7 +64,13 @@
                         <HBox fx:id="storedInspectionsRegion" alignment="CENTER_RIGHT" spacing="8.0" HBox.hgrow="ALWAYS">
                             <HBox fx:id="historySearchControlsBox" alignment="CENTER_RIGHT" spacing="8.0">
                                 <TextField fx:id="historySearchField" onAction="#executeHistorySearch" prefWidth="220.0" promptText="Search stored documents" styleClass="history-search-field" />
-                                <Button fx:id="historySearchButton" mnemonicParsing="false" onAction="#executeHistorySearch" styleClass="ghost-button history-search-button" text="Search" />
+                                <ToolbarIconButton fx:id="historySearchButton"
+                                                   accessibleText="Search stored documents"
+                                                   darkIconResource="/com/davidpe/jsontree/images/search_35dp_FFFFFF.png"
+                                                   lightIconResource="/com/davidpe/jsontree/images/search_35dp_000000.png"
+                                                   onAction="#executeHistorySearch"
+                                                   styleClass="toolbar-icon-button history-search-button"
+                                                   tooltipText="Search stored documents" />
                             </HBox>
                             <Button fx:id="importJsonButton" mnemonicParsing="false" onAction="#importJson" styleClass="history-import-button" text="Import file" />
                             <Button fx:id="newCurlButton" mnemonicParsing="false" onAction="#openNewCurl" styleClass="history-import-button" text="New curl" />

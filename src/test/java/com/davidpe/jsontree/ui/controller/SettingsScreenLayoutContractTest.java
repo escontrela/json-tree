@@ -28,5 +28,11 @@ class SettingsScreenLayoutContractTest {
     assertTrue(fxml.contains("fx:id=\"nightModeCheckBox\""));
     assertTrue(fxml.contains("fx:id=\"shortcutsListBox\""));
     assertTrue(fxml.contains("Supported keyboard shortcuts"));
+    assertTrue(fxml.contains("fx:id=\"settingsHeaderBackButton\""));
+    assertTrue(fxml.contains("fx:id=\"settingsToolbarBackButton\""));
+    assertTrue(fxml.contains("/com/davidpe/jsontree/images/back_35dp_000000.png"));
+    assertTrue(fxml.contains("/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"));
+    assertTrue(!fxml.contains("text=\"&lt;&lt; Back\""));
+    assertTrue(!fxml.contains("text=\"Back\""));
   }
 }

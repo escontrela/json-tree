@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
+<?import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton?>
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
@@ -24,7 +25,13 @@
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
                 <VBox alignment="CENTER_RIGHT" spacing="12.0">
-                    <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="&lt;&lt; Back" />
+                    <ToolbarIconButton fx:id="settingsHeaderBackButton"
+                                       accessibleText="Back to main workspace"
+                                       darkIconResource="/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"
+                                       lightIconResource="/com/davidpe/jsontree/images/back_35dp_000000.png"
+                                       onAction="#backToMain"
+                                       styleClass="toolbar-icon-button settings-back-button"
+                                       tooltipText="Back to main workspace" />
                     <Label styleClass="hero-meta" text="Non-modal workspace screen" />
                 </VBox>
             </HBox>
@@ -59,7 +66,13 @@
                                 </VBox>
                                 <Region HBox.hgrow="ALWAYS" />
                                 <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
-                                    <Button mnemonicParsing="false" onAction="#backToMain" styleClass="ghost-button" text="Back" />
+                                    <ToolbarIconButton fx:id="settingsToolbarBackButton"
+                                                       accessibleText="Back to main workspace"
+                                                       darkIconResource="/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"
+                                                       lightIconResource="/com/davidpe/jsontree/images/back_35dp_000000.png"
+                                                       onAction="#backToMain"
+                                                       styleClass="toolbar-icon-button settings-back-button"
+                                                       tooltipText="Back to main workspace" />
                                     <Button fx:id="applyButton" mnemonicParsing="false" onAction="#applySettings" styleClass="primary-button" text="Apply" />
                                 </HBox>
                             </HBox>

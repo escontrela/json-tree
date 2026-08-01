@@ -15,6 +15,7 @@ import com.davidpe.jsontree.ui.support.HistoryFavoritePresentation;
 import com.davidpe.jsontree.ui.support.HistoryFavoritePresentationResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewIndicatorResolver;
 import com.davidpe.jsontree.ui.support.LargePreviewWarningIconFactory;
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.support.ByteSizeFormatter;
 import com.davidpe.jsontree.ui.screen.UiFlowManager;
 import com.davidpe.jsontree.ui.screen.UiScreenController;
@@ -100,7 +101,7 @@ public class HistoryScreenController implements UiScreenController {
 
   @FXML private TextField historySearchField;
 
-  @FXML private Button historySearchButton;
+  @FXML private ToolbarIconButton historySearchButton;
 
   @FXML private Button favoritesFilterButton;
 
