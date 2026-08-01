@@ -46,6 +46,7 @@ public class SettingsScreenController implements UiScreenController {
       new ApplicationShortcutCatalog();
 
   private boolean applyingSnapshot;
+  private LargePreviewSettingsSnapshot currentSnapshot;
 
   @FXML private BorderPane rootPane;
   @FXML private TextField largePreviewThresholdField;
@@ -129,6 +130,7 @@ public class SettingsScreenController implements UiScreenController {
     SettingsFormState state =
         settingsFormStateResolver.initialState(
             snapshot, processMemoryReferenceService.startupMaxMemoryBytes());
+    currentSnapshot = snapshot;
     applyingSnapshot = true;
     largePreviewThresholdField.setText(state.thresholdText());
     viewerChunkBytesField.setText(state.chunkText());
@@ -145,6 +147,7 @@ public class SettingsScreenController implements UiScreenController {
     }
     applyFormState(
         settingsFormStateResolver.resolve(
+            currentSnapshot,
             largePreviewThresholdField.getText(),
             viewerChunkBytesField.getText(),
             defaultCurlUserAgentField.getText(),
@@ -160,6 +163,8 @@ public class SettingsScreenController implements UiScreenController {
     syncErrorLabel(thresholdErrorLabel, state.thresholdErrorText());
     syncErrorLabel(chunkErrorLabel, state.chunkErrorText());
     syncErrorLabel(defaultCurlUserAgentErrorLabel, state.defaultCurlUserAgentErrorText());
+    applyButton.setManaged(state.applyVisible());
+    applyButton.setVisible(state.applyVisible());
     applyButton.setDisable(!state.applyEnabled());
   }
 

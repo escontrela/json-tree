@@ -25,28 +25,62 @@ class SettingsFormStateResolverTest {
     assertTrue(state.prettyLargePreviewSelected());
     assertTrue(state.nightModeSelected());
     assertTrue(state.memoryReferenceText().contains("Startup JVM reference"));
-    assertTrue(state.applyEnabled());
+    assertFalse(state.applyVisible());
+    assertFalse(state.applyEnabled());
   }
 
   @Test
   void activatesWarningWhenThresholdExceedsStartupMemoryReference() {
     SettingsFormState state =
-        resolver.resolve("10485760", "262144", "Chrome Agent", false, false, 8_388_608L);
+        resolver.resolve(
+            new LargePreviewSettingsSnapshot(2_048L, 4_096, "Chrome Agent", false, false),
+            "10485760",
+            "262144",
+            "Chrome Agent",
+            false,
+            false,
+            8_388_608L);
 
     assertTrue(state.warningActive());
     assertTrue(state.warningText().contains("exceeds"));
+    assertTrue(state.applyVisible());
     assertTrue(state.applyEnabled());
   }
 
   @Test
   void disablesApplyAndShowsReadableErrorsForInvalidInput() {
-    SettingsFormState state = resolver.resolve("abc", "", "", false, true, 8_388_608L);
+    SettingsFormState state =
+        resolver.resolve(
+            new LargePreviewSettingsSnapshot(2_048L, 4_096, "Agent", false, false),
+            "abc",
+            "",
+            "",
+            false,
+            true,
+            8_388_608L);
 
     assertFalse(state.applyEnabled());
+    assertFalse(state.applyVisible());
     assertTrue(state.thresholdErrorText().contains("whole number"));
     assertTrue(state.chunkErrorText().contains("Enter a chunk size"));
     assertTrue(state.defaultCurlUserAgentErrorText().contains("User-Agent"));
     assertFalse(state.warningActive());
     assertTrue(state.nightModeSelected());
+  }
+
+  @Test
+  void showsApplyOnlyForValidDirtyChanges() {
+    SettingsFormState state =
+        resolver.resolve(
+            new LargePreviewSettingsSnapshot(2_048L, 4_096, "Agent", false, false),
+            "4096",
+            "4096",
+            "Agent",
+            false,
+            false,
+            8_388_608L);
+
+    assertTrue(state.applyVisible());
+    assertTrue(state.applyEnabled());
   }
 }

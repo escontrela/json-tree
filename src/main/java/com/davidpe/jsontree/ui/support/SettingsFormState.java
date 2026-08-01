@@ -15,4 +15,5 @@ public record SettingsFormState(
     String thresholdErrorText,
     String chunkErrorText,
     String defaultCurlUserAgentErrorText,
+    boolean applyVisible,
     boolean applyEnabled) {}

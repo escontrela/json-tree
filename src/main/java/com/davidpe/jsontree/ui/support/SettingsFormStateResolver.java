@@ -11,6 +11,7 @@ public class SettingsFormStateResolver {
   public SettingsFormState initialState(
       LargePreviewSettingsSnapshot snapshot, long startupMaxMemoryBytes) {
     return resolve(
+        snapshot,
         Long.toString(snapshot.largePreviewThresholdBytes()),
         Integer.toString(snapshot.viewerChunkBytes()),
         snapshot.defaultCurlUserAgent(),
@@ -20,6 +21,7 @@ public class SettingsFormStateResolver {
   }
 
   public SettingsFormState resolve(
+      LargePreviewSettingsSnapshot baselineSnapshot,
       String thresholdText,
       String chunkText,
       String defaultCurlUserAgentText,
@@ -29,6 +31,15 @@ public class SettingsFormStateResolver {
     ParsedLong threshold = parsePositiveLong(thresholdText);
     ParsedInt chunk = parsePositiveInt(chunkText);
     ParsedText userAgent = parseRequiredText(defaultCurlUserAgentText);
+    LargePreviewSettingsSnapshot baseline =
+        baselineSnapshot == null ? new LargePreviewSettingsSnapshot(0L, 0, "", false, false) : baselineSnapshot;
+    boolean dirty =
+        !safeText(thresholdText).trim().equals(Long.toString(baseline.largePreviewThresholdBytes()))
+            || !safeText(chunkText).trim().equals(Integer.toString(baseline.viewerChunkBytes()))
+            || !safeText(defaultCurlUserAgentText).trim().equals(baseline.defaultCurlUserAgent())
+            || prettyLargePreviewSelected != baseline.prettyOnLargePreviewEnabled()
+            || nightModeSelected != baseline.nightModeEnabled();
+    boolean applyEnabled = dirty && threshold.valid() && chunk.valid() && userAgent.valid();
     boolean warningActive =
         threshold.valid() && threshold.value() > 0L && threshold.value() > startupMaxMemoryBytes;
     return new SettingsFormState(
@@ -45,7 +56,8 @@ public class SettingsFormStateResolver {
         threshold.errorText(),
         chunk.errorText(),
         userAgent.errorText(),
-        threshold.valid() && chunk.valid() && userAgent.valid());
+        applyEnabled,
+        applyEnabled);
   }
 
   private ParsedLong parsePositiveLong(String value) {

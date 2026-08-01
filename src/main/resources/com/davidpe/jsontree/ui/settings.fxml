@@ -25,13 +25,16 @@
                 </VBox>
                 <Region HBox.hgrow="ALWAYS" />
                 <VBox alignment="CENTER_RIGHT" spacing="12.0">
-                    <ToolbarIconButton fx:id="settingsHeaderBackButton"
-                                       accessibleText="Back to main workspace"
-                                       darkIconResource="/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"
-                                       lightIconResource="/com/davidpe/jsontree/images/back_35dp_000000.png"
-                                       onAction="#backToMain"
-                                       styleClass="toolbar-icon-button settings-back-button"
-                                       tooltipText="Back to main workspace" />
+                    <HBox alignment="CENTER_RIGHT" spacing="8.0">
+                        <Button fx:id="applyButton" managed="false" mnemonicParsing="false" onAction="#applySettings" styleClass="primary-button" text="Apply" visible="false" />
+                        <ToolbarIconButton fx:id="settingsHeaderBackButton"
+                                           accessibleText="Back to main workspace"
+                                           darkIconResource="/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"
+                                           lightIconResource="/com/davidpe/jsontree/images/back_35dp_000000.png"
+                                           onAction="#backToMain"
+                                           styleClass="toolbar-icon-button settings-back-button"
+                                           tooltipText="Back to main workspace" />
+                    </HBox>
                     <Label styleClass="hero-meta" text="Non-modal workspace screen" />
                 </VBox>
             </HBox>
@@ -65,16 +68,6 @@
                                     <Label styleClass="viewer-card-title" text="Large preview configuration" />
                                 </VBox>
                                 <Region HBox.hgrow="ALWAYS" />
-                                <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
-                                    <ToolbarIconButton fx:id="settingsToolbarBackButton"
-                                                       accessibleText="Back to main workspace"
-                                                       darkIconResource="/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"
-                                                       lightIconResource="/com/davidpe/jsontree/images/back_35dp_000000.png"
-                                                       onAction="#backToMain"
-                                                       styleClass="toolbar-icon-button settings-back-button"
-                                                       tooltipText="Back to main workspace" />
-                                    <Button fx:id="applyButton" mnemonicParsing="false" onAction="#applySettings" styleClass="primary-button" text="Apply" />
-                                </HBox>
                             </HBox>
                             <Region styleClass="viewer-divider" />
                             <HBox spacing="20.0">
