@@ -286,26 +286,6 @@
     -fx-max-width: 520px;
 }
 
-.active-search-strip {
-    -fx-alignment: center-left;
-    -fx-background-color: #f4f7fb;
-    -fx-border-color: #d8dde3;
-    -fx-border-width: 1;
-    -fx-padding: 10 12 10 12;
-}
-
-.active-search-query {
-    -fx-text-fill: #1f242a;
-    -fx-font-size: 13px;
-    -fx-font-weight: 700;
-}
-
-.active-search-occurrence {
-    -fx-text-fill: #5f6c79;
-    -fx-font-size: 12px;
-    -fx-font-weight: 400;
-}
-
 .eyebrow-label {
     -fx-text-fill: #5f6c79;
     -fx-font-size: 11px;
@@ -426,26 +406,49 @@
     -fx-alignment: top-center;
 }
 
-.search-modal-card {
+.search-panel-card {
     -fx-background-color: #ffffff;
     -fx-border-color: #d8dde3;
     -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, rgba(17, 25, 40, 0.12), 22, 0.12, 0, 10);
 }
 
-.search-modal-title {
-    -fx-text-fill: #1a2129;
-    -fx-font-size: 18px;
-    -fx-font-weight: 700;
+.search-panel-drag-handle {
+    -fx-alignment: center-left;
+    -fx-spacing: 8px;
+    -fx-cursor: move;
 }
 
-.search-modal-actions {
+.search-panel-occurrence {
+    -fx-text-fill: #5f6c79;
+    -fx-font-size: 12px;
+    -fx-font-weight: 600;
+}
+
+.search-panel-helper {
+    -fx-font-size: 12px;
+    -fx-font-weight: 400;
+}
+
+.search-panel-helper-muted {
+    -fx-text-fill: #5f6c79;
+}
+
+.search-panel-helper-accent {
+    -fx-text-fill: #315b8a;
+}
+
+.search-panel-helper-error {
+    -fx-text-fill: #9e281f;
+}
+
+.search-panel-actions {
     -fx-alignment: center-right;
 }
 
-.search-modal-error {
-    -fx-text-fill: #9e281f;
-    -fx-font-size: 13px;
-    -fx-font-weight: 400;
+.search-panel-action-button,
+.search-panel-close-button {
+    -fx-padding: 8 12 8 12;
 }
 
 .viewer-card-header {
@@ -695,10 +698,6 @@
     -fx-background-color: #ffffff;
 }
 
-.search-strip-button {
-    -fx-padding: 8 12 8 12;
-}
-
 .button:focused,
 .scroll-pane:focused,
 .text-field:focused,
@@ -906,7 +905,7 @@
 .night-mode .viewer-shell,
 .night-mode .status-rail,
 .night-mode .viewer-toolbar,
-.night-mode .search-modal-card,
+.night-mode .search-panel-card,
 .night-mode .outline-preview-shell,
 .night-mode .list-view,
 .night-mode .viewer-content,
@@ -920,8 +919,6 @@
 .night-mode .zoom-window-viewer-shell .rich-text-viewer-shell .rich-text-viewer-scroll,
 .night-mode .zoom-window-viewer-shell .rich-text-viewer-shell .rich-text-viewer-scroll .viewport,
 .night-mode .zoom-window-viewer-shell .rich-text-viewer .content,
-.night-mode .search-modal-card,
-.night-mode .active-search-strip,
 .night-mode .large-preview-page-strip,
 .night-mode .outline-preview-shell.outline-state-valid,
 .night-mode .outline-preview-shell.outline-state-loading,
@@ -950,11 +947,9 @@
 .night-mode .footer-status,
 .night-mode .metric-value,
 .night-mode .status-detail-value,
-.night-mode .search-modal-title,
 .night-mode .viewer-aid-title,
 .night-mode .history-inline-title,
 .night-mode .history-entry-title,
-.night-mode .active-search-query,
 .night-mode .large-preview-page-label {
     -fx-text-fill: #eef3f8;
 }
@@ -971,7 +966,7 @@
 .night-mode .viewer-aid-meta,
 .night-mode .viewer-toolbar-breadcrumb,
 .night-mode .zoom-search-count,
-.night-mode .active-search-occurrence,
+.night-mode .search-panel-occurrence,
 .night-mode .outline-state-label,
 .night-mode .status-detail-label,
 .night-mode .metric-label,
@@ -1039,11 +1034,19 @@
 
 .night-mode .status-pill.status-error,
 .night-mode .settings-warning-label.settings-warning-label-active,
-.night-mode .search-modal-error,
+.night-mode .search-panel-helper-error,
 .night-mode .settings-error-label {
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-text-fill: #ff8a80;
+}
+
+.night-mode .search-panel-helper-muted {
+    -fx-text-fill: #a8b4c1;
+}
+
+.night-mode .search-panel-helper-accent {
+    -fx-text-fill: #8bb9ff;
 }
 
 .night-mode .curl-editor-text-area,

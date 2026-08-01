@@ -6,6 +6,8 @@ import java.util.Objects;
 import java.util.function.Consumer;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
@@ -38,6 +40,14 @@ public class SearchPanelController {
   @FXML
   public void initialize() {
     searchPanelRoot.getProperties().put("controller", this);
+    searchPanelRoot.addEventFilter(
+        KeyEvent.KEY_PRESSED,
+        event -> {
+          if (event.getCode() == KeyCode.ESCAPE) {
+            closeHandler.run();
+            event.consume();
+          }
+        });
     applyState(SearchPanelViewState.hidden());
   }
 
