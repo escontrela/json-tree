@@ -404,11 +404,11 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private ToolbarIconButton rawJsonButton;
 
-  @FXML private Button structureButton;
+  @FXML private ToolbarIconButton structureButton;
 
   @FXML private ToolbarIconButton searchButton;
 
-  @FXML private Button cropButton;
+  @FXML private ToolbarIconButton cropButton;
 
   @FXML private ToolbarIconButton copyTreeButton;
 
@@ -972,7 +972,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     setRawButtonLabel("Raw JSON");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
@@ -2264,7 +2264,7 @@ public class MainWindowController implements UiScreenController {
     renderRawJsonContent(
         workflowService.currentViewRawJson().orElse(result.asciiTreeDocument().content()));
     setRawButtonLabel("Raw page");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     setViewerScrollPosition(0.0, targetVerticalScrollValue);
     applyState(ViewerVisualState.VALID);
     scheduleOutlineViewportRefresh();
@@ -2370,7 +2370,7 @@ public class MainWindowController implements UiScreenController {
     structureButton.setDisable(true);
     searchButton.setDisable(true);
     cropButton.setDisable(true);
-    cropButton.setText("Crop");
+    setCropButtonLabel("Crop");
     zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
     syncToolbarToggleStates();
@@ -2526,7 +2526,7 @@ public class MainWindowController implements UiScreenController {
     currentPresentationMode = rawPresentationMode;
     setRawButtonLabel(
         largePreviewActive ? "Raw page" : documentFormat.markdown() ? "Markdown" : "ASCII tree");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     applyState(ViewerVisualState.VALID);
     syncToolbarToggleStates();
     scheduleOutlineViewportRefresh();
@@ -2654,7 +2654,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     setRawButtonLabel("Raw Markdown");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     applyState(ViewerVisualState.VALID);
     syncToolbarToggleStates();
     scheduleOutlineViewportRefresh();
@@ -2690,7 +2690,7 @@ public class MainWindowController implements UiScreenController {
               emptyStateLabel.setManaged(false);
               emptyStateLabel.setVisible(false);
               setRawButtonLabel("Raw JSON");
-              structureButton.setText("ASCII tree");
+              setStructureButtonLabel("ASCII tree");
               currentPresentationMode = ViewerPresentationMode.STRUCTURE;
               updateFooterStatusLabel("Rendered " + document.lineCount() + " structure lines");
               setStatusRailValues(
@@ -2805,7 +2805,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     setRawButtonLabel("Raw JSON");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     updateFooterStatusLabel("Showing a cropped JSON view derived from the active regex query");
     setStatusRailValues(
         "CROPPED",
@@ -2854,7 +2854,7 @@ public class MainWindowController implements UiScreenController {
     emptyStateLabel.setManaged(false);
     emptyStateLabel.setVisible(false);
     setRawButtonLabel("ASCII tree");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     updateFooterStatusLabel("Showing a cropped JSON view derived from the active regex query");
     setStatusRailValues(
         "CROPPED",
@@ -2885,7 +2885,7 @@ public class MainWindowController implements UiScreenController {
     ViewerPresentationMode mode = effectivePresentationMode(result);
     boolean available = supportsCropInCurrentContext(result);
     cropButton.setDisable(!(available || cropActive));
-    cropButton.setText(cropActive ? "Full view" : "Crop");
+    setCropButtonLabel(cropActive ? "Full view" : "Crop");
   }
 
   private void deactivateCropView() {
@@ -2940,7 +2940,7 @@ public class MainWindowController implements UiScreenController {
     deactivateCropView();
     currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
     setRawButtonLabel("Raw JSON");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
     resetStructureDocument();
     syncToolbarToggleStates();
@@ -2952,7 +2952,7 @@ public class MainWindowController implements UiScreenController {
       currentPresentationMode = ViewerPresentationMode.ASCII_TREE;
     }
     setRawButtonLabel("Raw JSON");
-    structureButton.setText("Structure");
+    setStructureButtonLabel("Structure");
     currentRawJsonPresentation = new RawJsonPresentation("", new int[] {0});
     resetStructureDocument();
     syncToolbarToggleStates();
@@ -2984,9 +2984,37 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setAccessibleText(affordanceText);
   }
 
+  private void setStructureButtonLabel(String label) {
+    if (structureButton == null) {
+      return;
+    }
+    structureButton.setText(label);
+    String affordanceText =
+        "ASCII tree".equals(label) ? "Show ASCII tree" : "Show structure view";
+    structureButton.setTooltipText(affordanceText);
+    structureButton.setAccessibleText(affordanceText);
+  }
+
+  private void setCropButtonLabel(String label) {
+    if (cropButton == null) {
+      return;
+    }
+    cropButton.setText(label);
+    String affordanceText =
+        "Full view".equals(label) ? "Return to full view" : "Show cropped view";
+    cropButton.setTooltipText(affordanceText);
+    cropButton.setAccessibleText(affordanceText);
+  }
+
   private void syncToolbarToggleStates() {
     if (rawJsonButton != null) {
       rawJsonButton.setSelected(currentPresentationMode.rawTextMode());
+    }
+    if (structureButton != null) {
+      structureButton.setSelected(currentPresentationMode == ViewerPresentationMode.STRUCTURE);
+    }
+    if (cropButton != null) {
+      cropButton.setSelected(cropActive);
     }
     if (outlineToggleButton != null && outlineVBox != null) {
       outlineToggleButton.setSelected(outlineVBox.isVisible());

@@ -89,7 +89,10 @@ class MainFxmlResourceTest {
         String fxml = readResource("/com/davidpe/jsontree/ui/main.fxml");
 
         assertTrue(fxml.contains("onAction=\"#openSettings\""));
-        assertTrue(fxml.contains("text=\"Settings\""));
+        assertTrue(fxml.contains("fx:id=\"settingsButton\""));
+        assertTrue(fxml.contains("<ToolbarIconButton fx:id=\"settingsButton\""));
+        assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/settings_35dp_000000.png\""));
+        assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/settings_35dp_FFFFFF.png\""));
     }
 
     private static void assertReferencedTypesAreImported(String resourcePath) throws IOException {

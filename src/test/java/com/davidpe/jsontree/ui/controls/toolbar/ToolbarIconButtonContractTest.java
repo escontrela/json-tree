@@ -40,6 +40,24 @@ class ToolbarIconButtonContractTest {
     assertNotNull(
         ToolbarIconButtonContractTest.class.getResource(
             "/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/structure_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/structure_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/crop_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/crop_35dp_FFFFFF.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/settings_35dp_000000.png"));
+    assertNotNull(
+        ToolbarIconButtonContractTest.class.getResource(
+            "/com/davidpe/jsontree/images/settings_35dp_FFFFFF.png"));
   }
 
   private static String readResource(String resourcePath) throws IOException {

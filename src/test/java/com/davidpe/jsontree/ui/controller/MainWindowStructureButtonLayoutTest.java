@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class MainWindowStructureButtonLayoutTest {
 
   @Test
-  void keepsStructureInTheHeaderAfterRemovingCopyRawAndSearchTextButtons() throws IOException {
+  void movesStructureAndCropIntoTheViewerToolbarWhileKeepingSettingsInTheHeader() throws IOException {
     String fxml =
         new String(
             MainWindowStructureButtonLayoutTest.class
@@ -18,13 +18,15 @@ class MainWindowStructureButtonLayoutTest {
             StandardCharsets.UTF_8);
 
     int headerIndex = fxml.indexOf("styleClass=\"header-action-bar\"");
+    int settingsIndex = fxml.indexOf("fx:id=\"settingsButton\"");
+    int buttonRowIndex = fxml.indexOf("styleClass=\"viewer-toolbar-button-row\"");
     int structureIndex = fxml.indexOf("fx:id=\"structureButton\"");
     int cropIndex = fxml.indexOf("fx:id=\"cropButton\"");
-    int settingsIndex = fxml.indexOf("text=\"Settings\"");
 
     assertTrue(headerIndex >= 0);
-    assertTrue(structureIndex > headerIndex);
+    assertTrue(settingsIndex > headerIndex);
+    assertTrue(buttonRowIndex > settingsIndex);
+    assertTrue(structureIndex > buttonRowIndex);
     assertTrue(cropIndex > structureIndex);
-    assertTrue(settingsIndex > cropIndex);
   }
 }

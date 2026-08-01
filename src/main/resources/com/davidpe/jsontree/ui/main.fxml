@@ -27,9 +27,12 @@
             </VBox>
             <Region HBox.hgrow="ALWAYS" />
             <HBox alignment="CENTER_RIGHT" spacing="10.0" styleClass="header-action-bar">
-                <Button fx:id="structureButton" disable="true" mnemonicParsing="false" onAction="#toggleStructureMode" styleClass="ghost-button" text="Structure" />
-                <Button fx:id="cropButton" disable="true" mnemonicParsing="false" onAction="#toggleCropView" styleClass="ghost-button" text="Crop" />
-                <Button mnemonicParsing="false" onAction="#openSettings" styleClass="ghost-button" text="Settings" />
+                <ToolbarIconButton fx:id="settingsButton"
+                                   accessibleText="Open settings"
+                                   darkIconResource="/com/davidpe/jsontree/images/settings_35dp_FFFFFF.png"
+                                   lightIconResource="/com/davidpe/jsontree/images/settings_35dp_000000.png"
+                                   onAction="#openSettings"
+                                   tooltipText="Open settings" />
             </HBox>
         </HBox>
     </top>
@@ -130,6 +133,22 @@
                                                lightIconResource="/com/davidpe/jsontree/images/search_35dp_000000.png"
                                                onAction="#openSearchPanel"
                                                tooltipText="Open search panel" />
+                            <ToolbarIconButton fx:id="structureButton"
+                                               accessibleText="Show structure view"
+                                               darkIconResource="/com/davidpe/jsontree/images/structure_35dp_FFFFFF.png"
+                                               disable="true"
+                                               lightIconResource="/com/davidpe/jsontree/images/structure_35dp_000000.png"
+                                               onAction="#toggleStructureMode"
+                                               toggleMode="true"
+                                               tooltipText="Show structure view" />
+                            <ToolbarIconButton fx:id="cropButton"
+                                               accessibleText="Show cropped view"
+                                               darkIconResource="/com/davidpe/jsontree/images/crop_35dp_FFFFFF.png"
+                                               disable="true"
+                                               lightIconResource="/com/davidpe/jsontree/images/crop_35dp_000000.png"
+                                               onAction="#toggleCropView"
+                                               toggleMode="true"
+                                               tooltipText="Show cropped view" />
                             <ToolbarIconButton fx:id="zoomButton"
                                                accessibleText="Open zoom viewer"
                                                darkIconResource="/com/davidpe/jsontree/images/zoom_35dp_FFFFFF.png"
