@@ -52,6 +52,17 @@
                            onAction="#clearSearch"
                            styleClass="toolbar-icon-button search-panel-icon-button"
                            tooltipText="Clear search" />
+        <ToolbarIconButton fx:id="searchPanelCropButton"
+                           accessibleText="Show cropped view"
+                           darkIconResource="/com/davidpe/jsontree/images/crop_35dp_FFFFFF.png"
+                           disable="true"
+                           lightIconResource="/com/davidpe/jsontree/images/crop_35dp_000000.png"
+                           managed="false"
+                           onAction="#toggleCrop"
+                           styleClass="toolbar-icon-button search-panel-icon-button"
+                           toggleMode="true"
+                           tooltipText="Show cropped view"
+                           visible="false" />
         <ToolbarIconButton fx:id="searchPanelSubmitButton"
                            accessibleText="Apply regex search"
                            darkIconResource="/com/davidpe/jsontree/images/filter_35dp_FFFFFF.png"

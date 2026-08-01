@@ -65,6 +65,7 @@ import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchPanelShortcutSupport;
 import com.davidpe.jsontree.ui.controls.search.controller.SearchPanelController;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelCropState;
 import com.davidpe.jsontree.ui.controls.search.support.SearchPanelDragSupport;
 import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
@@ -74,7 +75,10 @@ import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewFactory;
 import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewStateResolver;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentation;
 import com.davidpe.jsontree.ui.support.ViewerCapabilityPresentationResolver;
+import com.davidpe.jsontree.ui.support.ViewerPresentationHeader;
+import com.davidpe.jsontree.ui.support.ViewerPresentationHeaderResolver;
 import com.davidpe.jsontree.ui.support.ViewerPresentationModeResolver;
+import com.davidpe.jsontree.ui.support.ViewerTextScaleStep;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ZoomActionAvailabilityResolver;
@@ -175,6 +179,8 @@ public class MainWindowController implements UiScreenController {
   private final ZoomViewerSnapshotFactory zoomViewerSnapshotFactory;
   private final ViewerPresentationModeResolver viewerPresentationModeResolver =
       new ViewerPresentationModeResolver();
+  private final ViewerPresentationHeaderResolver viewerPresentationHeaderResolver =
+      new ViewerPresentationHeaderResolver();
   private final OutlinePanelVisibilityResolver outlinePanelVisibilityResolver =
       new OutlinePanelVisibilityResolver();
   private final SearchPanelDragSupport searchPanelDragSupport =
@@ -183,6 +189,7 @@ public class MainWindowController implements UiScreenController {
       new SearchPanelShortcutSupport();
   private final ApplicationShortcutCatalog applicationShortcutCatalog =
       new ApplicationShortcutCatalog();
+  private ViewerTextScaleStep viewerTextScaleStep = ViewerTextScaleStep.BASE;
 
   public MainWindowController(
       ImportClipboardJsonUseCase importClipboardJsonUseCase,
@@ -352,6 +359,10 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private Label breadcrumbLabel;
 
+  @FXML private Label viewerModeEyebrowLabel;
+
+  @FXML private Label viewerTitleLabel;
+
   @FXML private Label footerStatusLabel;
 
   @FXML private Label statusStateValueLabel;
@@ -408,7 +419,7 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private ToolbarIconButton searchButton;
 
-  @FXML private ToolbarIconButton cropButton;
+  @FXML private ToolbarIconButton fontSizeButton;
 
   @FXML private ToolbarIconButton copyTreeButton;
 
@@ -469,6 +480,8 @@ public class MainWindowController implements UiScreenController {
   public void initialize() {
     rootPane.getProperties().put("controller", this);
     richTextViewerSurface = richTextViewerFactory.create();
+    applyViewerTextScale();
+    syncViewerTextScaleButton();
     viewerDocumentHost.setManaged(true);
     viewerDocumentHost.setVisible(true);
     viewerDocumentHost.getChildren().setAll(richTextViewerSurface.view());
@@ -523,6 +536,7 @@ public class MainWindowController implements UiScreenController {
         this::showPreviousSearchResult,
         this::showNextSearchResult,
         this::clearSearchSession,
+        this::toggleCropView,
         this::hideSearchPanel);
     workspaceOverlayPane.getChildren().setAll(searchPanelView.root());
     workspaceOverlayPane.setManaged(false);
@@ -951,6 +965,7 @@ public class MainWindowController implements UiScreenController {
     syncLargePreviewPageControls(result);
     resetPresentationArtifactsForNonRawMode();
     applyLargePreviewDocumentScrollShell(result);
+    showViewerHeader(ViewerPresentationMode.ASCII_TREE, false);
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
     updateOutlineShell(result, document);
     syncOutlinePanelVisibility(result);
@@ -995,6 +1010,7 @@ public class MainWindowController implements UiScreenController {
     fileLoadedAtValueLabel.setText("Not loaded");
     fileSourceValueLabel.setText("Waiting for import");
     showOutlineEmptyShell();
+    showNonRenderableViewerHeader("Awaiting document");
     richTextViewerSurface.clear();
     richTextViewerSurface.hide();
     emptyStateLabel.setManaged(true);
@@ -1031,6 +1047,7 @@ public class MainWindowController implements UiScreenController {
         "Release to prepare the outline minimap shell for this file.",
         "The outline panel remains docked and ready for the incoming document.",
         "outline-state-loading");
+    showNonRenderableViewerHeader("Drop to start inspection");
     setValidationBadge("Drop ready", "status-accent");
     updateFooterStatusLabel("Waiting for document drop");
     setStatusRailValues("DROP READY", "--", "--", "Drag payload");
@@ -1065,6 +1082,7 @@ public class MainWindowController implements UiScreenController {
         "Building the outline minimap shell for this document preview.",
         "The panel keeps a reserved minimap surface while validation completes.",
         "outline-state-loading");
+    showNonRenderableViewerHeader("Preparing document preview");
     setValidationBadge("Loading", "status-muted");
     updateFooterStatusLabel("Loading document");
     setStatusRailValues("LOADING", "--", "--", "Local file");
@@ -1101,6 +1119,7 @@ public class MainWindowController implements UiScreenController {
         "The current document cannot produce an outline minimap.",
         "Fix the document or reopen a valid snapshot to restore the minimap.",
         "outline-state-invalid");
+    showNonRenderableViewerHeader("Document needs attention");
     setValidationBadge("Invalid", "status-error");
     updateFooterStatusLabel("Document needs attention");
     publishZoomSnapshot(
@@ -1726,11 +1745,13 @@ public class MainWindowController implements UiScreenController {
   }
 
   @FXML
-  void toggleCropView() {
-    if (cropButton.isDisable()) {
-      return;
-    }
+  void cycleViewerTextScale() {
+    viewerTextScaleStep = viewerTextScaleStep.next();
+    applyViewerTextScale();
+    syncViewerTextScaleButton();
+  }
 
+  void toggleCropView() {
     if (cropActive) {
       deactivateCropView();
       refreshCurrentViewerContent();
@@ -2320,7 +2341,6 @@ public class MainWindowController implements UiScreenController {
         presentation.validationBadgeText(), presentation.validationBadgeStyleClass());
     updateFooterStatusLabel(presentation.footerStatus());
     statusStateValueLabel.setText(presentation.statusState());
-    syncCropButtonState(result);
     syncToolbarToggleStates();
   }
 
@@ -2369,8 +2389,6 @@ public class MainWindowController implements UiScreenController {
     rawJsonButton.setDisable(true);
     structureButton.setDisable(true);
     searchButton.setDisable(true);
-    cropButton.setDisable(true);
-    setCropButtonLabel("Crop");
     zoomButton.setDisable(true);
     outlineToggleButton.setDisable(false);
     syncToolbarToggleStates();
@@ -2392,17 +2410,26 @@ public class MainWindowController implements UiScreenController {
     if (pendingSearchPanelErrorText != null) {
       searchPanelController.applyState(
           searchPanelViewStateResolver.invalid(
-              true, searchPanelQueryText(), pendingSearchPanelErrorText));
+              true,
+              searchPanelQueryText(),
+              pendingSearchPanelErrorText,
+              currentSearchPanelCropState()));
       return;
     }
     searchWorkflowService
         .currentSession()
         .ifPresentOrElse(
-            session -> searchPanelController.applyState(searchPanelViewStateResolver.active(true, session)),
+            session ->
+                searchPanelController.applyState(
+                    searchPanelViewStateResolver.active(
+                        true, session, currentSearchPanelCropState())),
             () ->
                 searchPanelController.applyState(
                     searchPanelViewStateResolver.idle(
-                        true, searchPanelQueryText(), currentSearchIdleMessage())));
+                        true,
+                        searchPanelQueryText(),
+                        currentSearchIdleMessage(),
+                        currentSearchPanelCropState())));
   }
 
   private String searchPanelQueryText() {
@@ -2487,6 +2514,7 @@ public class MainWindowController implements UiScreenController {
         documentFormat.markdown()
             ? ViewerPresentationMode.RAW_MARKDOWN
             : ViewerPresentationMode.RAW_JSON;
+    showViewerHeader(rawPresentationMode, false);
     richTextViewerSurface.showStyledText(
         renderPlan.fragments(),
         documentFormat.markdown() ? "markdown-content" : "raw-json-content");
@@ -2632,6 +2660,7 @@ public class MainWindowController implements UiScreenController {
     syncLargePreviewPageControls(result);
     resetPresentationArtifactsForNonRawMode();
     applyLargePreviewDocumentScrollShell(result);
+    showViewerHeader(ViewerPresentationMode.MARKDOWN_RENDERED, false);
     richTextViewerSurface.showStyledText(renderPlan.fragments(), "markdown-content");
     currentPresentationMode = ViewerPresentationMode.MARKDOWN_RENDERED;
     updateOutlineShell(result, result.asciiTreeDocument());
@@ -2671,6 +2700,7 @@ public class MainWindowController implements UiScreenController {
               applyCapabilityPresentation(result);
               syncLargePreviewPageControls(result);
               applyLargePreviewDocumentScrollShell(result);
+              showViewerHeader(ViewerPresentationMode.STRUCTURE, false);
               richTextViewerSurface.showStyledText(renderPlan.fragments(), "tree-content");
               publishZoomSnapshot(
                   zoomViewerSnapshotFactory.renderable(
@@ -2785,6 +2815,7 @@ public class MainWindowController implements UiScreenController {
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
     applyLargePreviewDocumentScrollShell(result);
+    showViewerHeader(ViewerPresentationMode.ASCII_TREE, true);
     showOutlineValidShell(result, cropDocument.asciiTreeDocument());
     syncOutlinePanelVisibility(result);
     publishZoomSnapshot(
@@ -2834,6 +2865,7 @@ public class MainWindowController implements UiScreenController {
     applyCapabilityPresentation(result);
     syncLargePreviewPageControls(result);
     applyLargePreviewDocumentScrollShell(result);
+    showViewerHeader(ViewerPresentationMode.RAW_JSON, true);
     showOutlineValidShell(result, cropDocument.asciiTreeDocument());
     syncOutlinePanelVisibility(result);
     publishZoomSnapshot(
@@ -2879,13 +2911,6 @@ public class MainWindowController implements UiScreenController {
         && !result.usesLargePreview()
         && !result.markdownDocument()
         && mode != ViewerPresentationMode.STRUCTURE;
-  }
-
-  private void syncCropButtonState(JsonViewerLoadResult result) {
-    ViewerPresentationMode mode = effectivePresentationMode(result);
-    boolean available = supportsCropInCurrentContext(result);
-    cropButton.setDisable(!(available || cropActive));
-    setCropButtonLabel(cropActive ? "Full view" : "Crop");
   }
 
   private void deactivateCropView() {
@@ -2995,17 +3020,6 @@ public class MainWindowController implements UiScreenController {
     structureButton.setAccessibleText(affordanceText);
   }
 
-  private void setCropButtonLabel(String label) {
-    if (cropButton == null) {
-      return;
-    }
-    cropButton.setText(label);
-    String affordanceText =
-        "Full view".equals(label) ? "Return to full view" : "Show cropped view";
-    cropButton.setTooltipText(affordanceText);
-    cropButton.setAccessibleText(affordanceText);
-  }
-
   private void syncToolbarToggleStates() {
     if (rawJsonButton != null) {
       rawJsonButton.setSelected(currentPresentationMode.rawTextMode());
@@ -3013,12 +3027,53 @@ public class MainWindowController implements UiScreenController {
     if (structureButton != null) {
       structureButton.setSelected(currentPresentationMode == ViewerPresentationMode.STRUCTURE);
     }
-    if (cropButton != null) {
-      cropButton.setSelected(cropActive);
-    }
     if (outlineToggleButton != null && outlineVBox != null) {
       outlineToggleButton.setSelected(outlineVBox.isVisible());
     }
+  }
+
+  private void applyViewerTextScale() {
+    if (richTextViewerSurface != null) {
+      richTextViewerSurface.setFontScaleMultiplier(viewerTextScaleStep.multiplier());
+    }
+  }
+
+  private void syncViewerTextScaleButton() {
+    if (fontSizeButton == null) {
+      return;
+    }
+    fontSizeButton.setTooltipText(viewerTextScaleStep.affordanceText());
+    fontSizeButton.setAccessibleText(viewerTextScaleStep.affordanceText());
+    fontSizeButton.setText(viewerTextScaleStep.name());
+  }
+
+  private void showViewerHeader(ViewerPresentationMode presentationMode, boolean cropVisible) {
+    ViewerPresentationHeader header =
+        viewerPresentationHeaderResolver.resolve(presentationMode, cropVisible);
+    viewerModeEyebrowLabel.setText(header.eyebrowText());
+    viewerTitleLabel.setText(header.titleText());
+  }
+
+  private void showNonRenderableViewerHeader(String titleText) {
+    ViewerPresentationHeader header = viewerPresentationHeaderResolver.nonRenderable(titleText);
+    viewerModeEyebrowLabel.setText(header.eyebrowText());
+    viewerTitleLabel.setText(header.titleText());
+  }
+
+  private SearchPanelCropState currentSearchPanelCropState() {
+    return workflowService
+        .currentView()
+        .map(this::resolveSearchPanelCropState)
+        .orElseGet(SearchPanelCropState::hidden);
+  }
+
+  private SearchPanelCropState resolveSearchPanelCropState(JsonViewerLoadResult result) {
+    if (result == null || !supportsCrop(result, effectivePresentationMode(result))) {
+      return SearchPanelCropState.hidden();
+    }
+    boolean enabled = supportsCropInCurrentContext(result) || cropActive;
+    String affordanceText = cropActive ? "Return to full view" : "Show cropped view";
+    return new SearchPanelCropState(true, enabled, cropActive, affordanceText, affordanceText);
   }
 
   private double clamp(double value) {

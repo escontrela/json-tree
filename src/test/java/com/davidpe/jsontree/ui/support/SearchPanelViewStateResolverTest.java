@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.davidpe.jsontree.application.model.JsonSearchMatch;
 import com.davidpe.jsontree.application.model.JsonSearchSession;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelCropState;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelMessageTone;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelViewState;
 import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewStateResolver;
@@ -76,5 +77,27 @@ class SearchPanelViewStateResolverTest {
     assertEquals(SearchPanelMessageTone.ACCENT, state.helperTone());
     assertFalse(state.previousEnabled());
     assertFalse(state.nextEnabled());
+  }
+
+  @Test
+  void carriesTheOptionalCropAffordanceState() {
+    SearchPanelCropState cropState =
+        new SearchPanelCropState(
+            true,
+            true,
+            true,
+            "Return to full view",
+            "Return to full view");
+
+    SearchPanelViewState state =
+        resolver.active(
+            true,
+            new JsonSearchSession("source", "reference.*", List.of(), -1),
+            cropState);
+
+    assertTrue(state.cropState().visible());
+    assertTrue(state.cropState().enabled());
+    assertTrue(state.cropState().selected());
+    assertEquals("Return to full view", state.cropState().tooltipText());
   }
 }

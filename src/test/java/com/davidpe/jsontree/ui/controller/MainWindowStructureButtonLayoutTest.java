@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class MainWindowStructureButtonLayoutTest {
 
   @Test
-  void movesStructureAndCropIntoTheViewerToolbarWhileKeepingSettingsInTheHeader() throws IOException {
+  void keepsStructureInTheViewerToolbarAndSettingsInTheHeaderWhileCropMovesIntoSearch() throws IOException {
     String fxml =
         new String(
             MainWindowStructureButtonLayoutTest.class
@@ -21,12 +21,13 @@ class MainWindowStructureButtonLayoutTest {
     int settingsIndex = fxml.indexOf("fx:id=\"settingsButton\"");
     int buttonRowIndex = fxml.indexOf("styleClass=\"viewer-toolbar-button-row\"");
     int structureIndex = fxml.indexOf("fx:id=\"structureButton\"");
-    int cropIndex = fxml.indexOf("fx:id=\"cropButton\"");
+    int searchIndex = fxml.indexOf("fx:id=\"searchButton\"");
 
     assertTrue(headerIndex >= 0);
     assertTrue(settingsIndex > headerIndex);
     assertTrue(buttonRowIndex > settingsIndex);
-    assertTrue(structureIndex > buttonRowIndex);
-    assertTrue(cropIndex > structureIndex);
+    assertTrue(searchIndex > buttonRowIndex);
+    assertTrue(structureIndex > searchIndex);
+    assertTrue(!fxml.contains("fx:id=\"cropButton\""));
   }
 }

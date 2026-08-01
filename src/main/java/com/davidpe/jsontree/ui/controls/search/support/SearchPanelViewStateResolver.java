@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.controls.search.support;
 
 import com.davidpe.jsontree.application.model.JsonSearchSession;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelCropState;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelMessageTone;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelViewState;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,11 @@ public class SearchPanelViewStateResolver {
   }
 
   public SearchPanelViewState idle(boolean visible, String queryText, String helperText) {
+    return idle(visible, queryText, helperText, SearchPanelCropState.hidden());
+  }
+
+  public SearchPanelViewState idle(
+      boolean visible, String queryText, String helperText, SearchPanelCropState cropState) {
     return new SearchPanelViewState(
         visible,
         safeQuery(queryText),
@@ -32,10 +38,16 @@ public class SearchPanelViewStateResolver {
         true,
         false,
         false,
-        false);
+        false,
+        safeCropState(cropState));
   }
 
   public SearchPanelViewState invalid(boolean visible, String queryText, String errorText) {
+    return invalid(visible, queryText, errorText, SearchPanelCropState.hidden());
+  }
+
+  public SearchPanelViewState invalid(
+      boolean visible, String queryText, String errorText, SearchPanelCropState cropState) {
     return new SearchPanelViewState(
         visible,
         safeQuery(queryText),
@@ -45,10 +57,16 @@ public class SearchPanelViewStateResolver {
         true,
         false,
         false,
-        true);
+        true,
+        safeCropState(cropState));
   }
 
   public SearchPanelViewState active(boolean visible, JsonSearchSession session) {
+    return active(visible, session, SearchPanelCropState.hidden());
+  }
+
+  public SearchPanelViewState active(
+      boolean visible, JsonSearchSession session, SearchPanelCropState cropState) {
     boolean hasMatches = session != null && session.hasMatches();
     boolean hasMultipleMatches = session != null && session.totalMatches() > 1;
     return new SearchPanelViewState(
@@ -62,7 +80,8 @@ public class SearchPanelViewStateResolver {
         true,
         hasMultipleMatches,
         hasMultipleMatches,
-        true);
+        true,
+        safeCropState(cropState));
   }
 
   private String formatOccurrence(JsonSearchSession session) {
@@ -89,5 +108,9 @@ public class SearchPanelViewStateResolver {
     return (helperText == null || helperText.isBlank())
         ? "Java regular expression search. Literal fallback is disabled."
         : helperText;
+  }
+
+  private SearchPanelCropState safeCropState(SearchPanelCropState cropState) {
+    return cropState == null ? SearchPanelCropState.hidden() : cropState;
   }
 }

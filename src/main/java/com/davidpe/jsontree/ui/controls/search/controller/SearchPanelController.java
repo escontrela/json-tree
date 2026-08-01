@@ -1,6 +1,7 @@
 package com.davidpe.jsontree.ui.controls.search.controller;
 
 import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelCropState;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelMessageTone;
 import com.davidpe.jsontree.ui.controls.search.model.SearchPanelViewState;
 import java.util.Objects;
@@ -30,11 +31,13 @@ public class SearchPanelController {
   @FXML private ToolbarIconButton searchPanelPreviousButton;
   @FXML private ToolbarIconButton searchPanelNextButton;
   @FXML private ToolbarIconButton searchPanelClearButton;
+  @FXML private ToolbarIconButton searchPanelCropButton;
 
   private Consumer<String> submitHandler = unused -> {};
   private Runnable previousHandler = () -> {};
   private Runnable nextHandler = () -> {};
   private Runnable clearHandler = () -> {};
+  private Runnable cropHandler = () -> {};
   private Runnable closeHandler = () -> {};
 
   @FXML
@@ -56,11 +59,13 @@ public class SearchPanelController {
       Runnable previousHandler,
       Runnable nextHandler,
       Runnable clearHandler,
+      Runnable cropHandler,
       Runnable closeHandler) {
     this.submitHandler = submitHandler == null ? unused -> {} : submitHandler;
     this.previousHandler = previousHandler == null ? () -> {} : previousHandler;
     this.nextHandler = nextHandler == null ? () -> {} : nextHandler;
     this.clearHandler = clearHandler == null ? () -> {} : clearHandler;
+    this.cropHandler = cropHandler == null ? () -> {} : cropHandler;
     this.closeHandler = closeHandler == null ? () -> {} : closeHandler;
   }
 
@@ -77,6 +82,7 @@ public class SearchPanelController {
     searchPanelPreviousButton.setDisable(!resolvedState.previousEnabled());
     searchPanelNextButton.setDisable(!resolvedState.nextEnabled());
     searchPanelClearButton.setDisable(!resolvedState.clearEnabled());
+    applyCropState(resolvedState.cropState());
     searchPanelHelperLabel
         .getStyleClass()
         .removeAll(
@@ -142,6 +148,11 @@ public class SearchPanelController {
   }
 
   @FXML
+  void toggleCrop() {
+    cropHandler.run();
+  }
+
+  @FXML
   void closePanel() {
     closeHandler.run();
   }
@@ -154,5 +165,16 @@ public class SearchPanelController {
       return "search-panel-helper-accent";
     }
     return "search-panel-helper-muted";
+  }
+
+  private void applyCropState(SearchPanelCropState cropState) {
+    SearchPanelCropState resolvedState =
+        cropState == null ? SearchPanelCropState.hidden() : cropState;
+    searchPanelCropButton.setManaged(resolvedState.visible());
+    searchPanelCropButton.setVisible(resolvedState.visible());
+    searchPanelCropButton.setDisable(!resolvedState.enabled());
+    searchPanelCropButton.setSelected(resolvedState.selected());
+    searchPanelCropButton.setTooltipText(resolvedState.tooltipText());
+    searchPanelCropButton.setAccessibleText(resolvedState.accessibleText());
   }
 }

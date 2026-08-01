@@ -12,7 +12,8 @@ public record SearchPanelViewState(
     boolean submitEnabled,
     boolean previousEnabled,
     boolean nextEnabled,
-    boolean clearEnabled) {
+    boolean clearEnabled,
+    SearchPanelCropState cropState) {
 
   public static SearchPanelViewState hidden() {
     return new SearchPanelViewState(
@@ -24,6 +25,7 @@ public record SearchPanelViewState(
         true,
         false,
         false,
-        false);
+        false,
+        SearchPanelCropState.hidden());
   }
 }

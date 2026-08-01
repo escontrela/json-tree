@@ -24,6 +24,7 @@ class SearchPanelLayoutContractTest {
     assertTrue(fxml.contains("fx:id=\"searchPanelPreviousButton\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelNextButton\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelClearButton\""));
+    assertTrue(fxml.contains("fx:id=\"searchPanelCropButton\""));
     assertTrue(fxml.contains("fx:id=\"searchPanelSubmitButton\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/previous_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/previous_35dp_FFFFFF.png\""));
@@ -31,6 +32,8 @@ class SearchPanelLayoutContractTest {
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/next_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/clear_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/clear_35dp_FFFFFF.png\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/crop_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/crop_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/close_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/close_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/filter_35dp_000000.png\""));

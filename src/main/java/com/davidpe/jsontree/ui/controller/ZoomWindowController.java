@@ -11,6 +11,14 @@ import com.davidpe.jsontree.application.service.JsonCropViewService;
 import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.RegexTextSearchService;
 import com.davidpe.jsontree.application.service.RawJsonPresentationService;
+import com.davidpe.jsontree.domain.model.AsciiTreeDocument;
+import com.davidpe.jsontree.ui.controls.search.controller.SearchPanelController;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelCropState;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelDragSupport;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelPositioner;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewFactory;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewStateResolver;
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.model.BreadcrumbViewerMode;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
@@ -25,6 +33,7 @@ import com.davidpe.jsontree.ui.support.OutlineViewportProjector;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchHighlightRange;
+import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanSearchOverlay;
@@ -37,8 +46,8 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -61,12 +70,17 @@ public class ZoomWindowController {
   private final RawJsonPresentationService rawJsonPresentationService;
   private final JsonBreadcrumbModelService breadcrumbModelService;
   private final JsonOutlineModelService outlineModelService;
+  private final SearchPanelViewFactory searchPanelViewFactory;
+  private final SearchPanelViewStateResolver searchPanelViewStateResolver;
+  private final SearchMatchProjector searchMatchProjector;
   private final ViewerTextRenderPlanFactory viewerTextRenderPlanFactory;
   private final ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay;
   private final JsonBreadcrumbViewportResolver breadcrumbViewportResolver;
   private final OutlineMinimapLayoutPlanner outlineLayoutPlanner;
   private final OutlineMinimapScrollMapper outlineScrollMapper;
   private final OutlineViewportProjector outlineViewportProjector;
+  private final SearchPanelDragSupport searchPanelDragSupport =
+      new SearchPanelDragSupport(new SearchPanelPositioner());
 
   private RichTextViewerSurface richTextViewerSurface;
   private Runnable zoomSubscriptionRelease;
@@ -83,6 +97,10 @@ public class ZoomWindowController {
   private OutlineMinimapLayout currentOutlineLayout = OutlineMinimapLayout.empty();
   private JsonOutlineModel currentOutlineModel = JsonOutlineModel.empty();
   private boolean zoomOutlineAutoClosedForPreview;
+  private SearchPanelController searchPanelController;
+  private String pendingSearchPanelQuery = "";
+  private String pendingSearchPanelErrorText;
+  private boolean searchNormalizedToRawMarkdown;
 
   @FXML private BorderPane rootPane;
 
@@ -92,23 +110,15 @@ public class ZoomWindowController {
 
   @FXML private Label zoomMetaLabel;
 
-  @FXML private TextField zoomSearchField;
-
-  @FXML private Button zoomCropButton;
-
-  @FXML private Button zoomSearchPreviousButton;
-
-  @FXML private Button zoomSearchNextButton;
-
-  @FXML private Label zoomSearchOccurrenceLabel;
-
-  @FXML private Label zoomSearchErrorLabel;
-
   @FXML private Label zoomBreadcrumbLabel;
 
   @FXML private StackPane zoomViewerHost;
 
   @FXML private Label zoomStateLabel;
+
+  @FXML private Pane zoomOverlayPane;
+
+  @FXML private ToolbarIconButton zoomSearchButton;
 
   @FXML private Button zoomOutlineToggleButton;
 
@@ -134,6 +144,9 @@ public class ZoomWindowController {
       RawJsonPresentationService rawJsonPresentationService,
       JsonBreadcrumbModelService breadcrumbModelService,
       JsonOutlineModelService outlineModelService,
+      SearchPanelViewFactory searchPanelViewFactory,
+      SearchPanelViewStateResolver searchPanelViewStateResolver,
+      SearchMatchProjector searchMatchProjector,
       ViewerTextRenderPlanFactory viewerTextRenderPlanFactory,
       ViewerTextRenderPlanSearchOverlay renderPlanSearchOverlay,
       JsonBreadcrumbViewportResolver breadcrumbViewportResolver,
@@ -147,6 +160,9 @@ public class ZoomWindowController {
     this.rawJsonPresentationService = rawJsonPresentationService;
     this.breadcrumbModelService = breadcrumbModelService;
     this.outlineModelService = outlineModelService;
+    this.searchPanelViewFactory = searchPanelViewFactory;
+    this.searchPanelViewStateResolver = searchPanelViewStateResolver;
+    this.searchMatchProjector = searchMatchProjector;
     this.viewerTextRenderPlanFactory = viewerTextRenderPlanFactory;
     this.renderPlanSearchOverlay = renderPlanSearchOverlay;
     this.breadcrumbViewportResolver = breadcrumbViewportResolver;
@@ -160,6 +176,7 @@ public class ZoomWindowController {
     rootPane.getProperties().put("controller", this);
     richTextViewerSurface = richTextViewerFactory.create();
     zoomViewerHost.getChildren().setAll(richTextViewerSurface.view());
+    configureSearchPanel();
     richTextViewerSurface.addViewportChangeListener(
         () -> {
           scheduleBreadcrumbRefresh();
@@ -168,9 +185,29 @@ public class ZoomWindowController {
     zoomOutlinePreviewShell.widthProperty().addListener((unused, oldValue, newValue) -> resizeOutlineCanvas());
     zoomOutlinePreviewShell.heightProperty().addListener((unused, oldValue, newValue) -> resizeOutlineCanvas());
     zoomOutlinePreviewShell.setOnMouseClicked(this::handleOutlineInteraction);
-    syncSearchControls();
-    syncCropButtonState();
+    refreshSearchPanelState(false);
     showAwaitingDocument();
+  }
+
+  private void configureSearchPanel() {
+    if (searchPanelViewFactory == null) {
+      return;
+    }
+    var searchPanelView = searchPanelViewFactory.create();
+    searchPanelController = searchPanelView.controller();
+    searchPanelController.bindHandlers(
+        this::acceptSearchQuery,
+        this::showPreviousSearchResult,
+        this::showNextSearchResult,
+        this::clearSearchSession,
+        this::toggleCropView,
+        this::hideSearchPanel);
+    zoomOverlayPane.getChildren().setAll(searchPanelView.root());
+    zoomOverlayPane.setManaged(false);
+    zoomOverlayPane.setVisible(false);
+    searchPanelDragSupport.attach(
+        zoomOverlayPane, searchPanelController.root(), searchPanelController.dragHandle());
+    searchPanelController.applyState(searchPanelViewStateResolver.hidden());
   }
 
   @FXML
@@ -179,40 +216,22 @@ public class ZoomWindowController {
   }
 
   @FXML
-  void executeSearch() {
-    String previousQuery = searchSession == null ? null : searchSession.query();
-    String query = zoomSearchField.getText();
-    if (query == null || query.trim().isEmpty()) {
-      deactivateCropView();
-      clearSearchState();
+  void openSearchPanel() {
+    if (!supportsSearch() || searchPanelController == null || zoomSearchButton.isDisable()) {
       return;
     }
-    if (currentSnapshot == null || !currentSnapshot.renderable() || currentSnapshot.renderPlan() == null) {
-      showSearchError("No text is available for search.");
-      return;
-    }
-
-    JsonSearchExecutionResult result =
-        regexTextSearchService.search(searchSourceIdentity(), query, currentRenderedText());
-    if (!result.successful()) {
-      showSearchError(result.errorMessage());
-      return;
-    }
-
-    hideSearchError();
-    searchSession = result.session();
-    if (!Objects.equals(previousQuery, searchSession.query())) {
-      deactivateCropView();
-    }
-    syncSearchControls();
-    renderSearchAwareSnapshot();
+    normalizeSearchPresentationIfNeeded();
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery =
+        searchSession != null ? searchSession.query() : searchPanelQueryText();
+    refreshSearchPanelState(true);
+    searchPanelController.revealAndFocus();
+    zoomOverlayPane.setManaged(true);
+    zoomOverlayPane.setVisible(true);
+    searchPanelDragSupport.ensureInitialPosition();
   }
 
-  @FXML
   void toggleCropView() {
-    if (zoomCropButton.isDisable()) {
-      return;
-    }
     if (cropActive) {
       deactivateCropView();
       renderBaseSnapshot();
@@ -229,6 +248,18 @@ public class ZoomWindowController {
             });
   }
 
+  void clearSearchSession() {
+    deactivateCropView();
+    searchSession = null;
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery = "";
+    refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
+    renderBaseSnapshot();
+    if (searchPanelController != null && searchPanelController.isShowing()) {
+      searchPanelController.revealAndFocus();
+    }
+  }
+
   @FXML
   void showPreviousSearchResult() {
     moveSearchSelection(-1);
@@ -237,6 +268,44 @@ public class ZoomWindowController {
   @FXML
   void showNextSearchResult() {
     moveSearchSelection(1);
+  }
+
+  private void acceptSearchQuery(String queryText) {
+    if (!supportsSearch()) {
+      return;
+    }
+    normalizeSearchPresentationIfNeeded();
+    String previousQuery = searchSession == null ? null : searchSession.query();
+    pendingSearchPanelQuery = queryText == null ? "" : queryText;
+    JsonSearchExecutionResult result =
+        regexTextSearchService.search(
+            searchSourceIdentity(), pendingSearchPanelQuery, currentSearchSourceText());
+    if (!result.successful()) {
+      pendingSearchPanelErrorText = result.errorMessage();
+      searchSession = null;
+      refreshSearchPanelState(true);
+      renderBaseSnapshot();
+      return;
+    }
+
+    pendingSearchPanelErrorText = null;
+    searchSession = result.session();
+    if (!Objects.equals(previousQuery, searchSession.query())) {
+      deactivateCropView();
+    }
+    pendingSearchPanelQuery = searchSession.query();
+    refreshSearchPanelState(true);
+    renderSearchAwareSnapshot();
+  }
+
+  private void hideSearchPanel() {
+    if (searchPanelController == null) {
+      return;
+    }
+    pendingSearchPanelQuery = searchPanelQueryText();
+    searchPanelController.hidePanel();
+    zoomOverlayPane.setManaged(false);
+    zoomOverlayPane.setVisible(false);
   }
 
   @FXML
@@ -301,12 +370,14 @@ public class ZoomWindowController {
 
     deactivateCropView();
     currentSnapshot = snapshot;
+    searchNormalizedToRawMarkdown = false;
     currentOutlineModel = snapshot.outlineModel() == null ? JsonOutlineModel.empty() : snapshot.outlineModel();
     zoomModeLabel.setText(snapshot.modeLabel());
     zoomTitleLabel.setText(snapshot.documentTitle());
     applyMeta(snapshot.documentMeta());
     updateWindowTitle(snapshot.windowTitle());
     syncOutlineState(snapshot);
+    syncSearchButtonState();
 
     if (snapshot.renderable() && snapshot.renderPlan() != null) {
       zoomViewerHost.setManaged(true);
@@ -319,8 +390,7 @@ public class ZoomWindowController {
     }
 
     searchSession = null;
-    syncSearchControls();
-    hideSearchError();
+    clearSearchPanelState(false);
     richTextViewerSurface.clear();
     richTextViewerSurface.hide();
     zoomViewerHost.setManaged(false);
@@ -332,27 +402,31 @@ public class ZoomWindowController {
   }
 
   private void refreshSearchAgainstCurrentSnapshot() {
-    String query = zoomSearchField.getText() == null ? "" : zoomSearchField.getText().trim();
+    syncSearchButtonState();
+    String query = searchPanelQueryText().trim();
     if (query.isEmpty()) {
       searchSession = null;
-      syncSearchControls();
+      pendingSearchPanelErrorText = null;
+      refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
       renderBaseSnapshot();
       return;
     }
+    normalizeSearchPresentationIfNeeded();
 
     JsonSearchExecutionResult result =
-        regexTextSearchService.search(searchSourceIdentity(), query, currentRenderedText());
+        regexTextSearchService.search(searchSourceIdentity(), query, currentSearchSourceText());
     if (!result.successful()) {
       searchSession = null;
-      syncSearchControls();
-      showSearchError(result.errorMessage());
+      pendingSearchPanelErrorText = result.errorMessage();
+      refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
       renderBaseSnapshot();
       return;
     }
 
-    hideSearchError();
+    pendingSearchPanelErrorText = null;
     searchSession = result.session();
-    syncSearchControls();
+    pendingSearchPanelQuery = searchSession.query();
+    refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
     renderSearchAwareSnapshot();
   }
 
@@ -366,9 +440,9 @@ public class ZoomWindowController {
     currentOutlineModel =
         currentSnapshot.outlineModel() == null ? JsonOutlineModel.empty() : currentSnapshot.outlineModel();
     restoreBaseModeLabel();
-    richTextViewerSurface.showStyledText(
-        currentSnapshot.renderPlan().fragments(), currentSnapshot.contentStyleClass());
+    richTextViewerSurface.showStyledText(baseRenderPlan().fragments(), baseContentStyleClass());
     richTextViewerSurface.scrollToTop();
+    scheduleBreadcrumbRefresh();
     scheduleOutlineViewportRefresh();
   }
 
@@ -385,26 +459,21 @@ public class ZoomWindowController {
 
     ViewerTextRenderPlan renderPlan =
         searchSession == null || !searchSession.hasMatches()
-            ? currentSnapshot.renderPlan()
-            : renderPlanSearchOverlay.apply(currentSnapshot.renderPlan(), currentHighlightRanges());
-    richTextViewerSurface.showStyledText(renderPlan.fragments(), currentSnapshot.contentStyleClass());
-    if (searchSession != null) {
-      searchSession
-          .activeMatch()
+            ? baseRenderPlan()
+            : renderPlanSearchOverlay.apply(baseRenderPlan(), currentHighlightRanges());
+    richTextViewerSurface.showStyledText(renderPlan.fragments(), baseContentStyleClass());
+    if (searchSession != null && searchSession.hasMatches()) {
+      currentHighlightRanges().stream()
+          .filter(SearchHighlightRange::active)
+          .findFirst()
           .ifPresentOrElse(
-              match -> richTextViewerSurface.scrollToOffset(match.startIndex()),
+              range -> richTextViewerSurface.scrollToOffset(range.startIndex()),
               richTextViewerSurface::scrollToTop);
     } else {
       richTextViewerSurface.scrollToTop();
     }
     scheduleBreadcrumbRefresh();
     scheduleOutlineViewportRefresh();
-  }
-
-  private String currentRenderedText() {
-    return currentSnapshot == null || currentSnapshot.renderPlan() == null
-        ? ""
-        : renderPlanSearchOverlay.flatten(currentSnapshot.renderPlan());
   }
 
   private void moveSearchSelection(int delta) {
@@ -416,7 +485,7 @@ public class ZoomWindowController {
           searchSession.withActiveMatchIndex(
               Math.floorMod(searchSession.activeMatchIndex() + delta, searchSession.totalMatches()));
     }
-    syncSearchControls();
+    refreshSearchPanelState(searchPanelController != null && searchPanelController.isShowing());
     renderSearchAwareSnapshot();
   }
 
@@ -424,25 +493,15 @@ public class ZoomWindowController {
     if (searchSession == null || !searchSession.hasMatches()) {
       return List.of();
     }
-
-    Optional<com.davidpe.jsontree.application.model.JsonSearchMatch> activeMatch =
-        searchSession.activeMatch();
-    return searchSession.matches().stream()
-        .map(
-            match ->
-                new SearchHighlightRange(
-                    match.startIndex(),
-                    match.endIndex(),
-                    activeMatch.map(match::equals).orElse(false)))
-        .toList();
-  }
-
-  private void clearSearchState() {
-    deactivateCropView();
-    searchSession = null;
-    hideSearchError();
-    syncSearchControls();
-    renderBaseSnapshot();
+    ViewerPresentationMode presentationMode = currentSearchPresentationMode();
+    if (presentationMode == ViewerPresentationMode.RAW_JSON) {
+      return searchMatchProjector.rawRanges(
+          searchSession, currentRawPresentation.sourceToDisplayBoundaries());
+    }
+    if (presentationMode == ViewerPresentationMode.RAW_MARKDOWN) {
+      return searchMatchProjector.rawRanges(searchSession);
+    }
+    return searchMatchProjector.asciiRanges(currentDisplayText(), searchSession);
   }
 
   private boolean renderCropSnapshot() {
@@ -512,17 +571,11 @@ public class ZoomWindowController {
     return currentSnapshot != null
         && currentSnapshot.renderable()
         && !currentSnapshot.largePreview()
-        && !currentSnapshot.presentationMode().markdownMode()
-        && currentSnapshot.presentationMode() != ViewerPresentationMode.STRUCTURE
+        && !currentSearchPresentationMode().markdownMode()
+        && currentSearchPresentationMode() != ViewerPresentationMode.STRUCTURE
         && !currentSnapshot.sourceRawText().isBlank()
         && searchSession != null
         && searchSession.hasMatches();
-  }
-
-  private void syncCropButtonState() {
-    boolean available = supportsCrop();
-    zoomCropButton.setDisable(!(available || cropActive));
-    zoomCropButton.setText(cropActive ? "Full view" : "Crop");
   }
 
   private void deactivateCropView() {
@@ -532,7 +585,6 @@ public class ZoomWindowController {
     currentCropSourceIdentity = null;
     currentCropQuery = null;
     currentRawPresentation = new RawJsonPresentation("", new int[] {0});
-    syncCropButtonState();
   }
 
   private String snapshotSourceIdentity() {
@@ -555,41 +607,137 @@ public class ZoomWindowController {
     return currentSnapshot == null ? JsonBreadcrumbModel.unavailable() : currentSnapshot.breadcrumbModel();
   }
 
-  private void syncSearchControls() {
-    if (searchSession == null) {
-      zoomSearchOccurrenceLabel.setText("Ready");
-      zoomSearchPreviousButton.setDisable(true);
-      zoomSearchNextButton.setDisable(true);
-      syncCropButtonState();
-      return;
-    }
-    zoomSearchOccurrenceLabel.setText(
-        searchSession.hasMatches()
-            ? (searchSession.activeMatchIndex() + 1) + " of " + searchSession.totalMatches()
-            : "0 matches");
-    boolean navigationEnabled = searchSession.totalMatches() > 1;
-    zoomSearchPreviousButton.setDisable(!navigationEnabled);
-    zoomSearchNextButton.setDisable(!navigationEnabled);
-    syncCropButtonState();
-  }
-
-  private void showSearchError(String errorMessage) {
-    zoomSearchErrorLabel.setText(errorMessage == null ? "Invalid regular expression." : errorMessage);
-    zoomSearchErrorLabel.setManaged(true);
-    zoomSearchErrorLabel.setVisible(true);
-  }
-
-  private void hideSearchError() {
-    zoomSearchErrorLabel.setText("");
-    zoomSearchErrorLabel.setManaged(false);
-    zoomSearchErrorLabel.setVisible(false);
-  }
-
   private String searchSourceIdentity() {
     if (currentSnapshot == null) {
       return "zoom";
     }
     return currentSnapshot.windowTitle() + "::" + currentSnapshot.modeLabel();
+  }
+
+  private void syncSearchButtonState() {
+    if (zoomSearchButton != null) {
+      zoomSearchButton.setDisable(!supportsSearch());
+    }
+  }
+
+  private boolean supportsSearch() {
+    return currentSnapshot != null
+        && currentSnapshot.renderable()
+        && !currentSnapshot.largePreview()
+        && currentSnapshot.presentationMode() != ViewerPresentationMode.STRUCTURE
+        && !currentSnapshot.sourceRawText().isBlank();
+  }
+
+  private void normalizeSearchPresentationIfNeeded() {
+    if (currentSnapshot == null) {
+      return;
+    }
+    searchNormalizedToRawMarkdown =
+        currentSnapshot.presentationMode() == ViewerPresentationMode.MARKDOWN_RENDERED;
+  }
+
+  private ViewerPresentationMode currentSearchPresentationMode() {
+    if (searchNormalizedToRawMarkdown) {
+      return ViewerPresentationMode.RAW_MARKDOWN;
+    }
+    return currentSnapshot == null ? ViewerPresentationMode.ASCII_TREE : currentSnapshot.presentationMode();
+  }
+
+  private String currentSearchSourceText() {
+    return currentSnapshot == null ? "" : currentSnapshot.sourceRawText();
+  }
+
+  private String searchPanelQueryText() {
+    if (searchPanelController != null && searchPanelController.isShowing()) {
+      return searchPanelController.queryText();
+    }
+    return pendingSearchPanelQuery == null ? "" : pendingSearchPanelQuery;
+  }
+
+  private void refreshSearchPanelState(boolean visible) {
+    if (searchPanelController == null) {
+      return;
+    }
+    if (!visible) {
+      searchPanelController.applyState(searchPanelViewStateResolver.hidden());
+      return;
+    }
+    if (pendingSearchPanelErrorText != null) {
+      searchPanelController.applyState(
+          searchPanelViewStateResolver.invalid(
+              true,
+              searchPanelQueryText(),
+              pendingSearchPanelErrorText,
+              currentSearchPanelCropState()));
+      return;
+    }
+    if (searchSession != null) {
+      searchPanelController.applyState(
+          searchPanelViewStateResolver.active(true, searchSession, currentSearchPanelCropState()));
+      return;
+    }
+    searchPanelController.applyState(
+        searchPanelViewStateResolver.idle(
+            true,
+            searchPanelQueryText(),
+            currentSearchIdleMessage(),
+            currentSearchPanelCropState()));
+  }
+
+  private SearchPanelCropState currentSearchPanelCropState() {
+    if (!supportsCrop() && !cropActive) {
+      return SearchPanelCropState.hidden();
+    }
+    String affordanceText = cropActive ? "Return to full view" : "Show cropped view";
+    return new SearchPanelCropState(true, supportsCrop() || cropActive, cropActive, affordanceText, affordanceText);
+  }
+
+  private String currentSearchIdleMessage() {
+    if (currentSnapshot == null) {
+      return "Java regular expression search. Literal fallback is disabled.";
+    }
+    if (currentSnapshot.presentationMode() == ViewerPresentationMode.MARKDOWN_RENDERED) {
+      return "Regex search switches rendered Markdown into raw source mode so highlights stay source-aligned.";
+    }
+    if (currentSnapshot.presentationMode() == ViewerPresentationMode.RAW_MARKDOWN) {
+      return "Regex search runs against the exact Markdown source. Literal fallback is disabled.";
+    }
+    return "Java regular expression search. Literal fallback is disabled.";
+  }
+
+  private void clearSearchPanelState(boolean visible) {
+    searchSession = null;
+    pendingSearchPanelErrorText = null;
+    pendingSearchPanelQuery = "";
+    if (!visible) {
+      hideSearchPanel();
+    }
+    refreshSearchPanelState(visible);
+  }
+
+  private ViewerTextRenderPlan baseRenderPlan() {
+    if (currentSnapshot == null || currentSnapshot.renderPlan() == null) {
+      return ViewerTextRenderPlan.normal(List.of());
+    }
+    if (searchNormalizedToRawMarkdown) {
+      currentRawPresentation = rawJsonPresentationService.presentPlainText(currentSnapshot.sourceRawText());
+      return viewerTextRenderPlanFactory.buildRawMarkdownPlan(currentRawPresentation.content(), List.of());
+    }
+    if (currentSearchPresentationMode() == ViewerPresentationMode.RAW_JSON) {
+      currentRawPresentation = rawJsonPresentationService.present(currentSnapshot.sourceRawText());
+    }
+    return currentSnapshot.renderPlan();
+  }
+
+  private String baseContentStyleClass() {
+    return currentSearchPresentationMode() == ViewerPresentationMode.RAW_MARKDOWN
+        ? "markdown-content"
+        : currentSnapshot == null ? "" : currentSnapshot.contentStyleClass();
+  }
+
+  private String currentDisplayText() {
+    ViewerTextRenderPlan basePlan = baseRenderPlan();
+    return renderPlanSearchOverlay.flatten(basePlan);
   }
 
   private void scheduleBreadcrumbRefresh() {

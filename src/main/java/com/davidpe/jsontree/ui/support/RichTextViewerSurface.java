@@ -21,6 +21,7 @@ public final class RichTextViewerSurface {
 
   private static final List<String> CONTENT_STYLE_CLASSES =
       List.of("tree-content", "raw-json-content", "markdown-content");
+  private static final double BASE_FONT_SIZE_PX = 14.0;
 
   private final CodeArea codeArea;
   private final StackPane container;
@@ -176,6 +177,15 @@ public final class RichTextViewerSurface {
     codeArea.estimatedScrollYProperty().addListener(metricsListener);
     codeArea.totalHeightEstimateProperty().addListener(metricsListener);
     codeArea.heightProperty().addListener(metricsListener);
+  }
+
+  public void setFontScaleMultiplier(double multiplier) {
+    double safeMultiplier = multiplier <= 0.0 ? 1.0 : multiplier;
+    if (Math.abs(safeMultiplier - 1.0) < 0.0001) {
+      codeArea.setStyle("");
+      return;
+    }
+    codeArea.setStyle("-fx-font-size: " + (BASE_FONT_SIZE_PX * safeMultiplier) + "px;");
   }
 
   private void applyContentStyleClass(String contentStyleClass) {

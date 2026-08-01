@@ -13,6 +13,11 @@ import com.davidpe.jsontree.application.service.JsonOutlineModelService;
 import com.davidpe.jsontree.application.service.RegexTextSearchService;
 import com.davidpe.jsontree.application.service.RawJsonPresentationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.davidpe.jsontree.ui.controls.search.controller.SearchPanelController;
+import com.davidpe.jsontree.ui.controls.search.model.SearchPanelView;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewFactory;
+import com.davidpe.jsontree.ui.controls.search.support.SearchPanelViewStateResolver;
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 import com.davidpe.jsontree.ui.model.ViewerPresentationMode;
 import com.davidpe.jsontree.ui.model.ZoomViewerSnapshot;
 import com.davidpe.jsontree.ui.service.ZoomViewerStateBridge;
@@ -27,6 +32,7 @@ import com.davidpe.jsontree.ui.support.RenderedMarkdownTextRenderer;
 import com.davidpe.jsontree.ui.support.RichTextViewerFactory;
 import com.davidpe.jsontree.ui.support.RichTextViewerSurface;
 import com.davidpe.jsontree.ui.support.SearchTextSpanHighlighter;
+import com.davidpe.jsontree.ui.support.SearchMatchProjector;
 import com.davidpe.jsontree.ui.support.SearchHighlightRangeNormalizer;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderFragment;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlan;
@@ -38,7 +44,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import org.junit.jupiter.api.Test;
 
 class ZoomWindowControllerSearchTest {
@@ -54,26 +63,30 @@ class ZoomWindowControllerSearchTest {
           controller.activate();
           bridge.publish(renderableSnapshot("alpha beta alpha"));
 
-          TextField searchField = (TextField) getField(controller, "zoomSearchField");
-          Label occurrenceLabel = (Label) getField(controller, "zoomSearchOccurrenceLabel");
-          Button previousButton = (Button) getField(controller, "zoomSearchPreviousButton");
-          Button nextButton = (Button) getField(controller, "zoomSearchNextButton");
-          Label errorLabel = (Label) getField(controller, "zoomSearchErrorLabel");
+          controller.openSearchPanel();
+          SearchPanelController searchPanel = (SearchPanelController) getField(controller, "searchPanelController");
+          TextField searchField = (TextField) getField(searchPanel, "searchPanelQueryField");
+          Label occurrenceLabel = (Label) getField(searchPanel, "searchPanelOccurrenceLabel");
+          ToolbarIconButton previousButton =
+              (ToolbarIconButton) getField(searchPanel, "searchPanelPreviousButton");
+          ToolbarIconButton nextButton =
+              (ToolbarIconButton) getField(searchPanel, "searchPanelNextButton");
+          Label helperLabel = (Label) getField(searchPanel, "searchPanelHelperLabel");
 
           searchField.setText("alpha");
-          controller.executeSearch();
+          invokeMethod(searchPanel, "submitSearch");
 
           assertEquals("1 of 2", occurrenceLabel.getText());
           assertFalse(previousButton.isDisable());
           assertFalse(nextButton.isDisable());
-          assertFalse(errorLabel.isVisible());
+          assertTrue(helperLabel.getText().contains("Search session active"));
           assertTrue(richTextSurface(controller).styleClassesAt(0).contains("search-match-active"));
 
           controller.showNextSearchResult();
           assertEquals("2 of 2", occurrenceLabel.getText());
 
           searchField.setText("");
-          controller.executeSearch();
+          invokeMethod(searchPanel, "submitSearch");
           assertEquals("Ready", occurrenceLabel.getText());
           assertTrue(previousButton.isDisable());
           assertTrue(nextButton.isDisable());
@@ -91,15 +104,54 @@ class ZoomWindowControllerSearchTest {
           controller.activate();
           bridge.publish(renderableSnapshot("alpha beta alpha"));
 
-          TextField searchField = (TextField) getField(controller, "zoomSearchField");
-          Label errorLabel = (Label) getField(controller, "zoomSearchErrorLabel");
+          controller.openSearchPanel();
+          SearchPanelController searchPanel = (SearchPanelController) getField(controller, "searchPanelController");
+          TextField searchField = (TextField) getField(searchPanel, "searchPanelQueryField");
+          Label helperLabel = (Label) getField(searchPanel, "searchPanelHelperLabel");
 
           searchField.setText("[");
-          controller.executeSearch();
+          invokeMethod(searchPanel, "submitSearch");
 
-          assertTrue(errorLabel.isVisible());
-          assertFalse(errorLabel.getText().isBlank());
+          assertTrue(helperLabel.getText().contains("Unclosed"));
           assertEquals("alpha beta alpha", controller.viewerText());
+        });
+  }
+
+  @Test
+  void searchesAgainstSourceAlignedTextInsteadOfRenderedZoomText() {
+    JavaFxThreadTestSupport.runOnFxThread(
+        () -> {
+          ZoomViewerStateBridge bridge = new ZoomViewerStateBridge();
+          ZoomWindowController controller = controller(bridge);
+
+          controller.initialize();
+          controller.activate();
+          bridge.publish(
+              ZoomViewerSnapshot.renderable(
+                  false,
+                  "JSON -> TREE • Zoom • doc.md",
+                  "Markdown",
+                  "doc.md",
+                  "1.0 KB • markdown",
+                  "reference\n- item",
+                  ViewerTextRenderPlan.normal(
+                      List.of(
+                          new ViewerTextRenderFragment(
+                              "reference item", "markdown-paragraph", "#2d333a", false, false))),
+                  "markdown-content",
+                  ViewerPresentationMode.MARKDOWN_RENDERED,
+                  JsonBreadcrumbModel.unavailable(),
+                  JsonOutlineModel.empty()));
+
+          controller.openSearchPanel();
+          SearchPanelController searchPanel = (SearchPanelController) getField(controller, "searchPanelController");
+          TextField searchField = (TextField) getField(searchPanel, "searchPanelQueryField");
+          Label occurrenceLabel = (Label) getField(searchPanel, "searchPanelOccurrenceLabel");
+
+          searchField.setText("reference.*item");
+          invokeMethod(searchPanel, "submitSearch");
+
+          assertEquals("0 matches", occurrenceLabel.getText());
         });
   }
 
@@ -107,6 +159,24 @@ class ZoomWindowControllerSearchTest {
     ObjectMapper objectMapper = new ObjectMapper();
     RawJsonPresentationService rawJsonPresentationService =
         new RawJsonPresentationService(objectMapper, new BestEffortJsonPrettyPrinter());
+    SearchPanelViewFactory searchPanelViewFactory = new SearchPanelViewFactory(null) {
+      @Override
+      public SearchPanelView create() {
+        SearchPanelController controller = new SearchPanelController();
+        setField(controller, "searchPanelRoot", new VBox());
+        setField(controller, "searchPanelDragHandle", new HBox());
+        setField(controller, "searchPanelOccurrenceLabel", new Label());
+        setField(controller, "searchPanelQueryField", new TextField());
+        setField(controller, "searchPanelHelperLabel", new Label());
+        setField(controller, "searchPanelSubmitButton", new ToolbarIconButton());
+        setField(controller, "searchPanelPreviousButton", new ToolbarIconButton());
+        setField(controller, "searchPanelNextButton", new ToolbarIconButton());
+        setField(controller, "searchPanelClearButton", new ToolbarIconButton());
+        setField(controller, "searchPanelCropButton", new ToolbarIconButton());
+        controller.initialize();
+        return new SearchPanelView((VBox) getField(controller, "searchPanelRoot"), controller);
+      }
+    };
     ZoomWindowController controller =
         new ZoomWindowController(
             new RichTextViewerFactory(),
@@ -119,6 +189,9 @@ class ZoomWindowControllerSearchTest {
             rawJsonPresentationService,
             new JsonBreadcrumbModelService(objectMapper, rawJsonPresentationService),
             new JsonOutlineModelService(objectMapper),
+            searchPanelViewFactory,
+            new SearchPanelViewStateResolver(),
+            new SearchMatchProjector(),
             new ViewerTextRenderPlanFactory(
                 new AsciiTreeSyntaxHighlighter(),
                 new SearchTextSpanHighlighter(),
@@ -134,15 +207,11 @@ class ZoomWindowControllerSearchTest {
     setField(controller, "zoomModeLabel", new Label());
     setField(controller, "zoomTitleLabel", new Label());
     setField(controller, "zoomMetaLabel", new Label());
-    setField(controller, "zoomSearchField", new TextField());
-    setField(controller, "zoomCropButton", new Button("Crop"));
-    setField(controller, "zoomSearchPreviousButton", new Button("Previous"));
-    setField(controller, "zoomSearchNextButton", new Button("Next"));
-    setField(controller, "zoomSearchOccurrenceLabel", new Label());
-    setField(controller, "zoomSearchErrorLabel", new Label());
     setField(controller, "zoomBreadcrumbLabel", new Label());
     setField(controller, "zoomViewerHost", new StackPane());
     setField(controller, "zoomStateLabel", new Label());
+    setField(controller, "zoomOverlayPane", new Pane());
+    setField(controller, "zoomSearchButton", new ToolbarIconButton());
     setField(controller, "zoomOutlineToggleButton", new Button("Outline"));
     setField(controller, "zoomOutlineVBox", new javafx.scene.layout.VBox());
     setField(controller, "zoomOutlineTitleLabel", new Label());
@@ -189,6 +258,16 @@ class ZoomWindowControllerSearchTest {
       Field field = target.getClass().getDeclaredField(fieldName);
       field.setAccessible(true);
       field.set(target, value);
+    } catch (ReflectiveOperationException exception) {
+      throw new AssertionError(exception);
+    }
+  }
+
+  private static void invokeMethod(Object target, String methodName) {
+    try {
+      var method = target.getClass().getDeclaredMethod(methodName);
+      method.setAccessible(true);
+      method.invoke(target);
     } catch (ReflectiveOperationException exception) {
       throw new AssertionError(exception);
     }

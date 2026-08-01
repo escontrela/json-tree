@@ -30,7 +30,7 @@ class MainWindowToolbarCleanupTest {
     int rawIndex = fxml.indexOf("fx:id=\"rawJsonButton\"");
     int searchIndex = fxml.indexOf("fx:id=\"searchButton\"");
     int structureIndex = fxml.indexOf("fx:id=\"structureButton\"");
-    int cropIndex = fxml.indexOf("fx:id=\"cropButton\"");
+    int fontSizeIndex = fxml.indexOf("fx:id=\"fontSizeButton\"");
     int zoomIndex = fxml.indexOf("fx:id=\"zoomButton\"");
     int outlineIndex = fxml.indexOf("fx:id=\"outlineToggleButton\"");
 
@@ -38,8 +38,8 @@ class MainWindowToolbarCleanupTest {
     assertTrue(rawIndex > copyIndex);
     assertTrue(searchIndex > rawIndex);
     assertTrue(structureIndex > searchIndex);
-    assertTrue(cropIndex > structureIndex);
-    assertTrue(zoomIndex > cropIndex);
+    assertTrue(fontSizeIndex > structureIndex);
+    assertTrue(zoomIndex > fontSizeIndex);
     assertTrue(outlineIndex > zoomIndex);
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/copy_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/copy_35dp_FFFFFF.png\""));
@@ -49,8 +49,8 @@ class MainWindowToolbarCleanupTest {
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/search_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/structure_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/structure_35dp_FFFFFF.png\""));
-    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/crop_35dp_000000.png\""));
-    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/crop_35dp_FFFFFF.png\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/font_size_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/font_size_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/outline_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png\""));
     assertTrue(fxml.contains("toggleMode=\"true\""));
@@ -58,8 +58,9 @@ class MainWindowToolbarCleanupTest {
     assertTrue(fxml.contains("tooltipText=\"Show raw view\""));
     assertTrue(fxml.contains("tooltipText=\"Open search panel\""));
     assertTrue(fxml.contains("tooltipText=\"Show structure view\""));
-    assertTrue(fxml.contains("tooltipText=\"Show cropped view\""));
+    assertTrue(fxml.contains("tooltipText=\"Viewer text size: default\""));
     assertTrue(fxml.contains("tooltipText=\"Toggle outline panel\""));
     assertTrue(fxml.contains("tooltipText=\"Open zoom viewer\""));
+    assertFalse(fxml.contains("fx:id=\"cropButton\""));
   }
 }
