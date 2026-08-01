@@ -26,6 +26,8 @@ class MainWindowToolbarCleanupTest {
     assertFalse(fxml.contains("text=\"Structure\""));
     assertFalse(fxml.contains("text=\"Crop\""));
     assertFalse(fxml.contains("text=\"Settings\""));
+    assertFalse(fxml.contains("text=\"Previous\""));
+    assertFalse(fxml.contains("text=\"Next\""));
     int copyIndex = fxml.indexOf("fx:id=\"copyTreeButton\"");
     int rawIndex = fxml.indexOf("fx:id=\"rawJsonButton\"");
     int searchIndex = fxml.indexOf("fx:id=\"searchButton\"");
@@ -41,6 +43,12 @@ class MainWindowToolbarCleanupTest {
     assertTrue(fontSizeIndex > structureIndex);
     assertTrue(zoomIndex > fontSizeIndex);
     assertTrue(outlineIndex > zoomIndex);
+    assertTrue(fxml.contains("fx:id=\"largePreviewPreviousButton\""));
+    assertTrue(fxml.contains("fx:id=\"largePreviewNextButton\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/previous_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/previous_35dp_FFFFFF.png\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/next_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/next_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/copy_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/copy_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/raw_on_35dp_000000.png\""));

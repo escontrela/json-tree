@@ -40,7 +40,6 @@ import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanFactory;
 import com.davidpe.jsontree.ui.support.ViewerTextRenderPlanSearchOverlay;
 import java.lang.reflect.Field;
 import java.util.List;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
@@ -212,7 +211,7 @@ class ZoomWindowControllerSearchTest {
     setField(controller, "zoomStateLabel", new Label());
     setField(controller, "zoomOverlayPane", new Pane());
     setField(controller, "zoomSearchButton", new ToolbarIconButton());
-    setField(controller, "zoomOutlineToggleButton", new Button("Outline"));
+    setField(controller, "zoomOutlineToggleButton", new ToolbarIconButton());
     setField(controller, "zoomOutlineVBox", new javafx.scene.layout.VBox());
     setField(controller, "zoomOutlineTitleLabel", new Label());
     setField(controller, "zoomOutlinePreviewShell", new StackPane());

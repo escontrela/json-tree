@@ -14,12 +14,18 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 /**
- * Controller for the floating search panel shown on the main workspace.
+ * Controller for a single floating search panel instance.
+ *
+ * <p>The panel can be loaded independently into the main workspace and the zoom window, so the
+ * controller must be prototype-scoped to avoid cross-window state leakage between those surfaces.
  */
 @Component
+@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
 public class SearchPanelController {
 
   @FXML private VBox searchPanelRoot;

@@ -96,15 +96,15 @@ class MainFxmlResourceTest {
     }
 
     @Test
-    @DisplayName("history and settings FXML use the normalized back icon resources")
-    void historyAndSettingsFxmlUseNormalizedBackIconResources() throws IOException {
+    @DisplayName("history and settings FXML use the close icon resources")
+    void historyAndSettingsFxmlUseCloseIconResources() throws IOException {
         String historyFxml = readResource("/com/davidpe/jsontree/ui/history.fxml");
         String settingsFxml = readResource("/com/davidpe/jsontree/ui/settings.fxml");
 
-        assertTrue(historyFxml.contains("/com/davidpe/jsontree/images/back_35dp_000000.png"));
-        assertTrue(historyFxml.contains("/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"));
-        assertTrue(settingsFxml.contains("/com/davidpe/jsontree/images/back_35dp_000000.png"));
-        assertTrue(settingsFxml.contains("/com/davidpe/jsontree/images/back_35dp_FFFFFF.png"));
+        assertTrue(historyFxml.contains("/com/davidpe/jsontree/images/close_35dp_000000.png"));
+        assertTrue(historyFxml.contains("/com/davidpe/jsontree/images/close_35dp_FFFFFF.png"));
+        assertTrue(settingsFxml.contains("/com/davidpe/jsontree/images/close_35dp_000000.png"));
+        assertTrue(settingsFxml.contains("/com/davidpe/jsontree/images/close_35dp_FFFFFF.png"));
         assertTrue(!historyFxml.contains("arrow_back_35dp_000000_FILL0_wght400_GRAD0_opsz40.png"));
         assertTrue(!settingsFxml.contains("arrow_back_35dp_FFFFFF_FILL0_wght400_GRAD0_opsz40.png"));
     }

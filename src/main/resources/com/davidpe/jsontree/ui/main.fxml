@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.ScrollPane?>
@@ -113,10 +112,24 @@
                     <VBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-actions">
                         <HBox alignment="CENTER_RIGHT" spacing="8.0" styleClass="viewer-toolbar-button-row">
                             <HBox fx:id="largePreviewPageControls" alignment="CENTER_RIGHT" managed="false" spacing="6.0" styleClass="large-preview-page-strip" visible="false">
-                                <Button fx:id="largePreviewPreviousButton" disable="true" mnemonicParsing="false" onAction="#showPreviousLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Previous" />
+                                <ToolbarIconButton fx:id="largePreviewPreviousButton"
+                                                   accessibleText="Previous large preview page"
+                                                   darkIconResource="/com/davidpe/jsontree/images/previous_35dp_FFFFFF.png"
+                                                   disable="true"
+                                                   lightIconResource="/com/davidpe/jsontree/images/previous_35dp_000000.png"
+                                                   onAction="#showPreviousLargePreviewPage"
+                                                   styleClass="toolbar-icon-button large-preview-page-button"
+                                                   tooltipText="Previous large preview page" />
                                 <Label fx:id="largePreviewCurrentPageLabel" styleClass="large-preview-page-label" text="Page 1" />
                                 <Label fx:id="largePreviewTotalPagesLabel" styleClass="large-preview-page-meta" text="of 1" />
-                                <Button fx:id="largePreviewNextButton" disable="true" mnemonicParsing="false" onAction="#showNextLargePreviewPage" styleClass="ghost-button large-preview-page-button" text="Next" />
+                                <ToolbarIconButton fx:id="largePreviewNextButton"
+                                                   accessibleText="Next large preview page"
+                                                   darkIconResource="/com/davidpe/jsontree/images/next_35dp_FFFFFF.png"
+                                                   disable="true"
+                                                   lightIconResource="/com/davidpe/jsontree/images/next_35dp_000000.png"
+                                                   onAction="#showNextLargePreviewPage"
+                                                   styleClass="toolbar-icon-button large-preview-page-button"
+                                                   tooltipText="Next large preview page" />
                             </HBox>
                             <ToolbarIconButton fx:id="copyTreeButton"
                                                accessibleText="Copy tree"

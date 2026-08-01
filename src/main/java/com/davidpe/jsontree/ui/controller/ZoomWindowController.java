@@ -44,7 +44,6 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
@@ -56,6 +55,7 @@ import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 import org.springframework.stereotype.Component;
+import com.davidpe.jsontree.ui.controls.toolbar.ToolbarIconButton;
 
 /**
  * Controller for the dedicated secondary zoom window shell.
@@ -122,7 +122,7 @@ public class ZoomWindowController {
 
   @FXML private ToolbarIconButton zoomSearchButton;
 
-  @FXML private Button zoomOutlineToggleButton;
+  @FXML private ToolbarIconButton zoomOutlineToggleButton;
 
   @FXML private VBox zoomOutlineVBox;
 

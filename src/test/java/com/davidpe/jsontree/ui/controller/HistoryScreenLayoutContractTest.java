@@ -22,11 +22,11 @@ class HistoryScreenLayoutContractTest {
 
     assertTrue(fxml.contains("fx:id=\"historyBackButton\""));
     assertTrue(fxml.contains("fx:id=\"historySearchButton\""));
-    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/back_35dp_000000.png\""));
-    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/back_35dp_FFFFFF.png\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/close_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/close_35dp_FFFFFF.png\""));
     assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/search_35dp_000000.png\""));
     assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/search_35dp_FFFFFF.png\""));
-    assertFalse(fxml.contains("text=\"<< Back\""));
+    assertFalse(fxml.contains("text=\"Back\""));
     assertFalse(fxml.contains("text=\"Search\""));
   }
 }

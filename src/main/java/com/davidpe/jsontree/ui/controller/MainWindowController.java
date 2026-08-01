@@ -406,9 +406,9 @@ public class MainWindowController implements UiScreenController {
 
   @FXML private HBox largePreviewPageControls;
 
-  @FXML private Button largePreviewPreviousButton;
+  @FXML private ToolbarIconButton largePreviewPreviousButton;
 
-  @FXML private Button largePreviewNextButton;
+  @FXML private ToolbarIconButton largePreviewNextButton;
 
   @FXML private Label largePreviewCurrentPageLabel;
 

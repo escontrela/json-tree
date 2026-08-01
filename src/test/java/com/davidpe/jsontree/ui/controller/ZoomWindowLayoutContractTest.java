@@ -20,11 +20,16 @@ class ZoomWindowLayoutContractTest {
 
     assertTrue(fxml.contains("fx:id=\"zoomViewerHost\""));
     assertTrue(fxml.contains("fx:id=\"zoomSearchButton\""));
+    assertTrue(fxml.contains("fx:id=\"zoomOutlineToggleButton\""));
     assertTrue(fxml.contains("fx:id=\"zoomOverlayPane\""));
     assertTrue(fxml.contains("fx:id=\"zoomBreadcrumbLabel\""));
-    assertTrue(fxml.contains("text=\"Close\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/close_35dp_FFFFFF.png\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/close_35dp_000000.png\""));
+    assertTrue(fxml.contains("darkIconResource=\"/com/davidpe/jsontree/images/outline_35dp_FFFFFFF.png\""));
+    assertTrue(fxml.contains("lightIconResource=\"/com/davidpe/jsontree/images/outline_35dp_000000.png\""));
+    assertTrue(fxml.contains("toggleMode=\"true\""));
+    assertTrue(fxml.contains("selected=\"true\""));
     assertTrue(fxml.contains("onAction=\"#openSearchPanel\""));
-    assertFalse(fxml.contains("outlineToggleButton"));
     assertFalse(fxml.contains("searchButton"));
     assertFalse(fxml.contains("activeSearchStrip"));
     assertFalse(fxml.contains("fx:id=\"zoomSearchField\""));

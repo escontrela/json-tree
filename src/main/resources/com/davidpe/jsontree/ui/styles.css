@@ -287,6 +287,15 @@
     -fx-max-height: 40;
 }
 
+.viewer-toolbar-button-row .large-preview-page-strip .toolbar-icon-button {
+    -fx-min-width: 36;
+    -fx-pref-width: 36;
+    -fx-max-width: 36;
+    -fx-min-height: 36;
+    -fx-pref-height: 36;
+    -fx-max-height: 36;
+}
+
 .viewer-toolbar-breadcrumb {
     -fx-alignment: center-right;
     -fx-text-alignment: right;
@@ -397,7 +406,7 @@
 }
 
 .large-preview-page-button {
-    -fx-padding: 8 12 8 12;
+    -fx-padding: 0;
 }
 
 .large-preview-page-label {
